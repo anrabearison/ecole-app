@@ -7,7 +7,7 @@ const baseScheduleSlotSchema = z.object({
   classroomId: z.string().min(1, "Classroom ID is required"),
   subjectId: z.string().min(1, "Subject ID is required"),
   teacherId: z.string().min(1, "Teacher ID is required"),
-  room: z.string().optional(),
+  roomId: z.string().nullable().optional(),
 })
 
 export const scheduleSlotSchema = baseScheduleSlotSchema.refine((data) => {

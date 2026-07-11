@@ -1,7 +1,7 @@
 type Role = "PLATFORM_SUPER_ADMIN" | "SCHOOL_ADMIN" | "STAFF_ADMIN" | "TEACHER" | "STUDENT"
 
 type Action = "create" | "update" | "delete" | "view"
-type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track"
+type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track" | "room"
 
 interface PermissionContext {
   ownerId?: string
@@ -50,6 +50,7 @@ export function can(
       case "subject":
       case "school-grade":
       case "track":
+      case "room":
         // Full access to school resources
         return true
       case "grade":
@@ -97,7 +98,8 @@ export function can(
         return false
       case "classroom":
       case "subject":
-        // Can view classrooms and subjects they're assigned to
+      case "room":
+        // Can view classrooms, subjects and rooms they're assigned to
         if (action === "view") return true
         return false
       case "student":

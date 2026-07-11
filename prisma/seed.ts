@@ -55,11 +55,25 @@ async function main() {
 
   // Basic Subjects — skip duplicates
   await Promise.all(
-    ["Mathématiques", "Français", "Sciences de la Vie et de la Terre", "Histoire-Géographie"].map(
+    ["Mathématiques", "Français", "Sciences de la Vie et de la Terre", "Histoire-Géographie", "EPS"].map(
       (name) =>
         prisma.subject.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
           if (!existing) {
             await prisma.subject.create({
+              data: { name, schoolId: school.id },
+            })
+          }
+        })
+    )
+  )
+
+  // Rooms — skip duplicates
+  await Promise.all(
+    ["Salle 1", "Salle 2", "Labo Sciences", "Gymnase"].map(
+      (name) =>
+        prisma.room.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
+          if (!existing) {
+            await prisma.room.create({
               data: { name, schoolId: school.id },
             })
           }

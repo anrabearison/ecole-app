@@ -80,7 +80,7 @@ export function ScheduleView({ slots }: ScheduleViewProps) {
                         <div className="font-medium text-gray-900">{slot.subject.name}</div>
                         <div className="text-gray-600">{slot.teacher.firstName} {slot.teacher.lastName}</div>
                         <div className="text-gray-500">{slot.classroom.schoolGrade.name} {slot.classroom.section}</div>
-                        {slot.room && <div className="text-gray-500">Salle {slot.room}</div>}
+                        {slot.room && <div className="text-gray-500">Salle {slot.room.name}</div>}
                       </div>
                     </td>
                   )

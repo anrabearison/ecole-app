@@ -64,6 +64,7 @@ model School {
   enrollments     Enrollment[]
   grades          Grade[]
   scheduleSlots   ScheduleSlot[]
+  rooms           Room[]
 }
 
 // ============================================================
@@ -285,12 +286,25 @@ model Grade {
 // Schedule (emploi du temps)
 // ============================================================
 
+model Room {
+  id   String @id @default(cuid())
+  name String // "Salle 1", "Labo Sciences", "Gymnase"
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  scheduleSlots ScheduleSlot[]
+
+  @@unique([name, schoolId])
+}
+
 model ScheduleSlot {
   id        String  @id @default(cuid())
   day       Weekday
   startTime String // "08:00"
   endTime   String // "10:00"
-  room      String?
+  roomId    String?
+  room      Room?   @relation(fields: [roomId], references: [id])
 
   classroomId String
   classroom   Classroom @relation(fields: [classroomId], references: [id])

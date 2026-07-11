@@ -18,6 +18,8 @@ const mockStudentId1 = "student-1"
 const mockStudentId2 = "student-2"
 const mockClassroomId = "classroom-1"
 const mockSubjectId = "subject-1"
+const mockRoomId = "room-1"
+const mockEPSSubjectId = "subject-eps"
 
 function mockSession(role: string, schoolId?: string, teacherId?: string | null, studentId?: string | null) {
   vi.mocked(auth).mockResolvedValue({
@@ -48,7 +50,8 @@ describe("ScheduleSlot Server Actions", () => {
           day: "MONDAY",
           startTime: "08:00",
           endTime: "10:00",
-          room: "101",
+          roomId: mockRoomId,
+          room: { id: mockRoomId, name: "Salle 1" },
           classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
           subject: { id: mockSubjectId, name: "Mathématiques" },
           teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
@@ -78,7 +81,8 @@ describe("ScheduleSlot Server Actions", () => {
           day: "MONDAY",
           startTime: "08:00",
           endTime: "10:00",
-          room: "101",
+          roomId: mockRoomId,
+          room: { id: mockRoomId, name: "Salle 1" },
           classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
           subject: { id: mockSubjectId, name: "Mathématiques" },
           teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
@@ -109,7 +113,8 @@ describe("ScheduleSlot Server Actions", () => {
           day: "MONDAY",
           startTime: "08:00",
           endTime: "10:00",
-          room: "101",
+          roomId: mockRoomId,
+          room: { id: mockRoomId, name: "Salle 1" },
           classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
           subject: { id: mockSubjectId, name: "Mathématiques" },
           teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
@@ -147,7 +152,7 @@ describe("ScheduleSlot Server Actions", () => {
         day: "MONDAY",
         startTime: "08:00",
         endTime: "10:00",
-        room: "101",
+        roomId: mockRoomId,
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
@@ -165,7 +170,7 @@ describe("ScheduleSlot Server Actions", () => {
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
-        room: "101",
+        roomId: mockRoomId,
       })
       
       expect(result.success).toBe(true)
@@ -183,7 +188,7 @@ describe("ScheduleSlot Server Actions", () => {
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
-        room: "101",
+        roomId: mockRoomId,
       })
       
       expect(result.success).toBe(false)
@@ -208,6 +213,7 @@ describe("ScheduleSlot Server Actions", () => {
         {
           id: "existing-slot",
           teacherId: mockTeacherId1,
+          roomId: mockRoomId,
           startTime: "09:00",
           endTime: "11:00",
         }
@@ -218,7 +224,7 @@ describe("ScheduleSlot Server Actions", () => {
         day: "MONDAY",
         startTime: "08:00",
         endTime: "10:00",
-        room: "101",
+        roomId: mockRoomId,
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
@@ -226,6 +232,7 @@ describe("ScheduleSlot Server Actions", () => {
         classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
         subject: { id: mockSubjectId, name: "Mathématiques" },
         teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: { id: mockRoomId, name: "Salle 1" },
         createdAt: new Date()
       } as any)
       
@@ -236,12 +243,122 @@ describe("ScheduleSlot Server Actions", () => {
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
-        room: "101",
+        roomId: mockRoomId,
       })
       
       expect(result.success).toBe(true)
       if (result.success && result.warning) {
         expect(result.warning).toBeDefined()
+      }
+    })
+
+    it("should detect room conflict and return warning", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
+        id: "ts1",
+        teacherId: mockTeacherId1,
+        subjectId: mockSubjectId,
+        classroomId: mockClassroomId,
+        schoolId: mockSchoolId,
+      } as any)
+      
+      // Mock existing slot with same room that conflicts
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "existing-slot",
+          teacherId: mockTeacherId2,
+          roomId: mockRoomId,
+          startTime: "09:00",
+          endTime: "11:00",
+        }
+      ] as any)
+      
+      vi.mocked(prisma.scheduleSlot.create as any).mockResolvedValue({
+        id: "slot1",
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        roomId: mockRoomId,
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
+        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+        subject: { id: mockSubjectId, name: "Mathématiques" },
+        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: { id: mockRoomId, name: "Salle 1" },
+        createdAt: new Date()
+      } as any)
+      
+      const result = await createScheduleSlot({
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        roomId: mockRoomId,
+      })
+      
+      expect(result.success).toBe(true)
+      if (result.success && result.warning) {
+        expect(result.warning).toContain("Room already occupied")
+      }
+    })
+
+    it("should NOT detect room conflict when roomId is null (EPS case)", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
+        id: "ts1",
+        teacherId: mockTeacherId1,
+        subjectId: mockEPSSubjectId,
+        classroomId: mockClassroomId,
+        schoolId: mockSchoolId,
+      } as any)
+      
+      // Mock existing slots - should not trigger room conflict since roomId is null
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "existing-slot",
+          teacherId: mockTeacherId2,
+          roomId: mockRoomId,
+          startTime: "09:00",
+          endTime: "11:00",
+        }
+      ] as any)
+      
+      vi.mocked(prisma.scheduleSlot.create as any).mockResolvedValue({
+        id: "slot1",
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        roomId: null,
+        classroomId: mockClassroomId,
+        subjectId: mockEPSSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
+        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+        subject: { id: mockEPSSubjectId, name: "EPS" },
+        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: null,
+        createdAt: new Date()
+      } as any)
+      
+      const result = await createScheduleSlot({
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        classroomId: mockClassroomId,
+        subjectId: mockEPSSubjectId,
+        teacherId: mockTeacherId1,
+        roomId: null,
+      })
+      
+      expect(result.success).toBe(true)
+      if (result.success && result.warning) {
+        expect(result.warning).not.toContain("Room")
       }
     })
   })
@@ -271,7 +388,7 @@ describe("ScheduleSlot Server Actions", () => {
         day: "TUESDAY",
         startTime: "09:00",
         endTime: "11:00",
-        room: "102",
+        roomId: mockRoomId,
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
         teacherId: mockTeacherId1,
@@ -279,6 +396,7 @@ describe("ScheduleSlot Server Actions", () => {
         classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
         subject: { id: mockSubjectId, name: "Mathématiques" },
         teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: { id: mockRoomId, name: "Salle 1" },
         createdAt: new Date()
       } as any)
       

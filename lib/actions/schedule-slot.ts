@@ -11,7 +11,11 @@ export type ScheduleSlotWithRelations = {
   day: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY"
   startTime: string
   endTime: string
-  room: string | null
+  roomId: string | null
+  room?: {
+    id: string
+    name: string
+  } | null
   classroom: {
     id: string
     section: string
@@ -52,7 +56,7 @@ async function detectConflicts(
   endTime: string,
   teacherId: string,
   classroomId: string,
-  room: string | null | undefined,
+  roomId: string | null | undefined,
   excludeSlotId?: string
 ): Promise<string[]> {
   const conflicts: string[] = []
@@ -76,11 +80,11 @@ async function detectConflicts(
     conflicts.push(`Teacher already scheduled at this time`)
   }
 
-  // Check for room conflicts (if room is specified)
-  if (room) {
+  // Check for room conflicts (if roomId is specified)
+  if (roomId) {
     const roomConflict = existingSlots.find(
       (slot: any) => 
-        slot.room === room && 
+        slot.roomId === roomId && 
         timeOverlaps(startTime, endTime, slot.startTime, slot.endTime)
     )
     if (roomConflict) {
@@ -139,6 +143,12 @@ export async function listScheduleSlotsForTeacher(): Promise<ActionResult<Schedu
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        room: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -215,6 +225,12 @@ export async function listScheduleSlotsForStudent(): Promise<ActionResult<Schedu
             lastName: true,
           },
         },
+        room: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: [
         { day: "asc" },
@@ -279,6 +295,12 @@ export async function listScheduleSlotsForAdmin(filters?: {
             lastName: true,
           },
         },
+        room: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: [
         { day: "asc" },
@@ -338,7 +360,7 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
       validation.data.endTime,
       validation.data.teacherId,
       validation.data.classroomId,
-      validation.data.room
+      validation.data.roomId
     )
 
     const slot = await prisma.scheduleSlot.create({
@@ -346,7 +368,7 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
         day: validation.data.day,
         startTime: validation.data.startTime,
         endTime: validation.data.endTime,
-        room: validation.data.room,
+        roomId: validation.data.roomId,
         classroomId: validation.data.classroomId,
         subjectId: validation.data.subjectId,
         teacherId: validation.data.teacherId,
@@ -375,6 +397,12 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        room: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },
@@ -451,7 +479,7 @@ export async function updateScheduleSlot(id: string, data: ScheduleSlotUpdateInp
       validation.data.endTime || existingSlot.endTime,
       validation.data.teacherId || existingSlot.teacherId,
       validation.data.classroomId || existingSlot.classroomId,
-      validation.data.room !== undefined ? validation.data.room : existingSlot.room,
+      validation.data.roomId !== undefined ? validation.data.roomId : existingSlot.roomId,
       id // Exclude current slot from conflict check
     )
 
@@ -461,7 +489,7 @@ export async function updateScheduleSlot(id: string, data: ScheduleSlotUpdateInp
         ...(validation.data.day !== undefined && { day: validation.data.day }),
         ...(validation.data.startTime !== undefined && { startTime: validation.data.startTime }),
         ...(validation.data.endTime !== undefined && { endTime: validation.data.endTime }),
-        ...(validation.data.room !== undefined && { room: validation.data.room }),
+        ...(validation.data.roomId !== undefined && { roomId: validation.data.roomId }),
         ...(validation.data.classroomId !== undefined && { classroomId: validation.data.classroomId }),
         ...(validation.data.subjectId !== undefined && { subjectId: validation.data.subjectId }),
         ...(validation.data.teacherId !== undefined && { teacherId: validation.data.teacherId }),
@@ -489,6 +517,12 @@ export async function updateScheduleSlot(id: string, data: ScheduleSlotUpdateInp
             id: true,
             firstName: true,
             lastName: true,
+          },
+        },
+        room: {
+          select: {
+            id: true,
+            name: true,
           },
         },
       },

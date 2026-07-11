@@ -1,9 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createScheduleSlot } from "@/lib/actions/schedule-slot"
+import { listClassrooms } from "@/lib/actions/classroom"
+import { listSubjects } from "@/lib/actions/subject"
+import { listTeachers } from "@/lib/actions/teacher"
+import { listRooms } from "@/lib/actions/room"
 import { scheduleSlotSchema, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
 
@@ -11,14 +15,44 @@ export default function NewScheduleSlotPage() {
   const [warning, setWarning] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [classrooms, setClassrooms] = useState<any[]>([])
+  const [subjects, setSubjects] = useState<any[]>([])
+  const [teachers, setTeachers] = useState<any[]>([])
+  const [rooms, setRooms] = useState<any[]>([])
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("")
 
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<ScheduleSlotInput>({
     resolver: zodResolver(scheduleSlotSchema),
   })
+
+  useEffect(() => {
+    async function loadData() {
+      const [classroomsResult, subjectsResult, teachersResult, roomsResult] = await Promise.all([
+        listClassrooms(),
+        listSubjects(),
+        listTeachers(),
+        listRooms(),
+      ])
+
+      if (classroomsResult.success) setClassrooms(classroomsResult.data)
+      if (subjectsResult.success) setSubjects(subjectsResult.data)
+      if (teachersResult.success) setTeachers(teachersResult.data)
+      if (roomsResult.success) setRooms(roomsResult.data)
+    }
+    loadData()
+  }, [])
+
+  const watchedSubjectId = watch("subjectId")
+  useEffect(() => {
+    setSelectedSubjectId(watchedSubjectId || "")
+  }, [watchedSubjectId])
+
+  const isEPS = selectedSubjectId && subjects.find(s => s.id === selectedSubjectId)?.name === "EPS"
 
   const onSubmit = async (data: ScheduleSlotInput) => {
     setIsSubmitting(true)
@@ -37,6 +71,10 @@ export default function NewScheduleSlotPage() {
     }
 
     setIsSubmitting(false)
+  }
+
+  const getDisplayName = (classroom: any) => {
+    return `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
   }
 
   return (
@@ -94,44 +132,69 @@ export default function NewScheduleSlotPage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Salle (optionnel)</label>
-          <input
-            type="text"
-            {...register("room")}
-            className="w-full border rounded px-3 py-2"
-            placeholder="Ex: Salle 101"
-          />
-          {errors.room && <p className="text-red-600 text-sm mt-1">{errors.room.message}</p>}
-        </div>
+        {!isEPS && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Salle</label>
+            <select
+              {...register("roomId")}
+              className="w-full border rounded px-3 py-2"
+            >
+              <option value="">Sélectionner une salle</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
+            </select>
+            {errors.roomId && <p className="text-red-600 text-sm mt-1">{errors.roomId.message}</p>}
+          </div>
+        )}
 
         <div>
-          <label className="block text-sm font-medium mb-1">ID Classe</label>
-          <input
-            type="text"
+          <label className="block text-sm font-medium mb-1">Classe</label>
+          <select
             {...register("classroomId")}
             className="w-full border rounded px-3 py-2"
-          />
+          >
+            <option value="">Sélectionner une classe</option>
+            {classrooms.map((classroom) => (
+              <option key={classroom.id} value={classroom.id}>
+                {getDisplayName(classroom)}
+              </option>
+            ))}
+          </select>
           {errors.classroomId && <p className="text-red-600 text-sm mt-1">{errors.classroomId.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">ID Matière</label>
-          <input
-            type="text"
+          <label className="block text-sm font-medium mb-1">Matière</label>
+          <select
             {...register("subjectId")}
             className="w-full border rounded px-3 py-2"
-          />
+          >
+            <option value="">Sélectionner une matière</option>
+            {subjects.map((subject) => (
+              <option key={subject.id} value={subject.id}>
+                {subject.name}
+              </option>
+            ))}
+          </select>
           {errors.subjectId && <p className="text-red-600 text-sm mt-1">{errors.subjectId.message}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">ID Enseignant</label>
-          <input
-            type="text"
+          <label className="block text-sm font-medium mb-1">Enseignant</label>
+          <select
             {...register("teacherId")}
             className="w-full border rounded px-3 py-2"
-          />
+          >
+            <option value="">Sélectionner un enseignant</option>
+            {teachers.map((teacher) => (
+              <option key={teacher.id} value={teacher.id}>
+                {teacher.firstName} {teacher.lastName}
+              </option>
+            ))}
+          </select>
           {errors.teacherId && <p className="text-red-600 text-sm mt-1">{errors.teacherId.message}</p>}
         </div>
 
