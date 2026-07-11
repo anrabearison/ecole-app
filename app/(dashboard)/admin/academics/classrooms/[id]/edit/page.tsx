@@ -3,18 +3,25 @@
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { useRouter } from "next/navigation"
-import { updateClassroom, getSchoolGrades, getTracks } from "@/lib/actions/classroom"
+import { useRouter, useParams } from "next/navigation"
+import { updateClassroom, getSchoolGrades, getTracks, getClassroomById } from "@/lib/actions/classroom"
 import { classroomUpdateSchema, type ClassroomUpdateInput } from "@/lib/validations/classroom"
 import { Button } from "@/components/ui/button"
 
-export default function EditClassroomPage({ params }: { params: { id: string } }) {
+export default function EditClassroomPage() {
   const router = useRouter()
+  const params = useParams()
+  const id = params.id as string | undefined
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [schoolGrades, setSchoolGrades] = useState<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>([])
   const [tracks, setTracks] = useState<Array<{ id: string; name: string }>>([])
   const [selectedSchoolGrade, setSelectedSchoolGrade] = useState<string | null>(null)
+  const [loadingData, setLoadingData] = useState(true)
+
+  if (!id) {
+    return <div className="p-8">ID non valide</div>
+  }
 
   const {
     register,
@@ -28,14 +35,34 @@ export default function EditClassroomPage({ params }: { params: { id: string } }
 
   const schoolGradeId = watch("schoolGradeId")
 
-  // Fetch school grades on mount
+  // Fetch classroom data and school grades on mount
   useEffect(() => {
-    getSchoolGrades().then((result) => {
-      if (result.success) {
-        setSchoolGrades(result.data)
+    async function loadData() {
+      try {
+        const [classroomResult, gradesResult] = await Promise.all([
+          getClassroomById(id!),
+          getSchoolGrades(),
+        ])
+
+        if (classroomResult.success) {
+          const classroom = classroomResult.data
+          setValue("schoolGradeId", classroom.schoolGradeId)
+          setValue("trackId", classroom.trackId || undefined)
+          setValue("section", classroom.section)
+          setValue("schoolYear", classroom.schoolYear)
+        }
+
+        if (gradesResult.success) {
+          setSchoolGrades(gradesResult.data)
+        }
+      } catch (err) {
+        setError("Failed to load data")
+      } finally {
+        setLoadingData(false)
       }
-    })
-  }, [])
+    }
+    loadData()
+  }, [params.id, setValue])
 
   // Fetch tracks when school grade changes
   useEffect(() => {
@@ -60,10 +87,10 @@ export default function EditClassroomPage({ params }: { params: { id: string } }
     setError(null)
 
     try {
-      const result = await updateClassroom(params.id, data)
+      const result = await updateClassroom(id!, data)
 
       if (result.success) {
-        router.push(`/admin/academics/classrooms/${params.id}`)
+        router.push(`/admin/academics/classrooms/${id}`)
       } else {
         setError(result.error || "Failed to update classroom")
       }
@@ -81,6 +108,10 @@ export default function EditClassroomPage({ params }: { params: { id: string } }
     PRIMARY: "Primaire",
     MIDDLE_SCHOOL: "Collège",
     HIGH_SCHOOL: "Lycée",
+  }
+
+  if (loadingData) {
+    return <div className="p-8">Chargement...</div>
   }
 
   return (

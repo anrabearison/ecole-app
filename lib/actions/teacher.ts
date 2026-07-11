@@ -28,6 +28,55 @@ type TeacherCreateResult = {
   temporaryPassword: string
 }
 
+export async function getTeacherById(id: string): Promise<ActionResult<TeacherWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const teacher = await prisma.teacher.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            active: true,
+          },
+        },
+        _count: {
+          select: {
+            subjects: true,
+          },
+        },
+      },
+    })
+
+    if (!teacher) {
+      return { success: false, error: "Teacher not found" }
+    }
+
+    if (teacher.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Forbidden" }
+    }
+
+    return { success: true, data: teacher }
+  } catch (error) {
+    console.error("Error getting teacher by id:", error)
+    return { success: false, error: "Failed to get teacher" }
+  }
+}
+
 export async function listTeachers(): Promise<ActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 

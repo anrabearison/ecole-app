@@ -85,6 +85,8 @@ type ClassroomWithRelations = {
   id: string
   section: string
   schoolYear: string
+  schoolGradeId: string
+  trackId: string | null
   schoolGrade: {
     id: string
     name: string
@@ -96,6 +98,57 @@ type ClassroomWithRelations = {
   } | null
   _count: {
     students: number
+  }
+}
+
+export async function getClassroomById(id: string): Promise<ActionResult<ClassroomWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const classroom = await prisma.classroom.findUnique({
+      where: { id },
+      include: {
+        schoolGrade: {
+          select: {
+            id: true,
+            name: true,
+            cycle: true,
+          },
+        },
+        track: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        _count: {
+          select: {
+            students: true,
+          },
+        },
+      },
+    })
+
+    if (!classroom) {
+      return { success: false, error: "Classroom not found" }
+    }
+
+    if (classroom.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Forbidden" }
+    }
+
+    return { success: true, data: classroom }
+  } catch (error) {
+    console.error("Error getting classroom by id:", error)
+    return { success: false, error: "Failed to get classroom" }
   }
 }
 

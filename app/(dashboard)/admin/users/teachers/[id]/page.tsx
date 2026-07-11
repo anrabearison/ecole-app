@@ -1,112 +1,55 @@
-"use client"
-
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { listTeachers, deleteTeacher } from "@/lib/actions/teacher"
+import { listTeachers, deleteTeacher, getTeacherById } from "@/lib/actions/teacher"
 import { listTeacherSubjects, assignTeacherSubject, removeTeacherSubject, getSubjects, getClassrooms } from "@/lib/actions/teacher-subject"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { redirect } from "next/navigation"
 
-export default function TeacherDetailPage({
+export default async function TeacherDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
-  const router = useRouter()
-  const [teacher, setTeacher] = useState<any>(null)
-  const [teacherSubjects, setTeacherSubjects] = useState<any[]>([])
-  const [subjects, setSubjects] = useState<Array<{ id: string; name: string }>>([])
-  const [classrooms, setClassrooms] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
-  const [activeTab, setActiveTab] = useState("info")
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { id } = await params
+  const [teacherResult, subjectsResult, subjectsListResult, classroomsResult] = await Promise.all([
+    getTeacherById(id),
+    listTeacherSubjects(id),
+    getSubjects(),
+    getClassrooms(),
+  ])
 
-  // Form state for adding teacher subject
-  const [subjectId, setSubjectId] = useState("")
-  const [classroomId, setClassroomId] = useState("")
-  const [isAdding, setIsAdding] = useState(false)
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const teachersResult = await listTeachers()
-        if (teachersResult.success) {
-          const foundTeacher = teachersResult.data.find((t) => t.id === params.id)
-          setTeacher(foundTeacher || null)
-        }
-
-        const subjectsResult = await listTeacherSubjects(params.id)
-        if (subjectsResult.success) {
-          setTeacherSubjects(subjectsResult.data)
-        }
-
-        const subjectsListResult = await getSubjects()
-        if (subjectsListResult.success) {
-          setSubjects(subjectsListResult.data)
-        }
-
-        const classroomsResult = await getClassrooms()
-        if (classroomsResult.success) {
-          setClassrooms(classroomsResult.data)
-        }
-      } catch (err) {
-        setError("Failed to load data")
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [params.id])
+  const teacher = teacherResult.success ? teacherResult.data : null
+  const teacherSubjects = subjectsResult.success ? subjectsResult.data : []
+  const subjects = subjectsListResult.success ? subjectsListResult.data : []
+  const classrooms = classroomsResult.success ? classroomsResult.data : []
 
   async function handleDelete() {
-    if (!confirm("Êtes-vous sûr de vouloir désactiver ce compte enseignant ?")) {
-      return
-    }
-
-    const result = await deleteTeacher(params.id)
+    "use server"
+    const result = await deleteTeacher(id)
     if (result.success) {
-      router.push("/admin/users/teachers")
-      router.refresh()
-    } else {
-      setError(result.error)
+      redirect("/admin/users/teachers")
     }
   }
 
-  async function handleAddSubject(e: React.FormEvent) {
-    e.preventDefault()
-    setIsAdding(true)
-    setError(null)
-
+  async function handleAddSubject(formData: FormData) {
+    "use server"
+    const subjectId = formData.get("subjectId") as string
+    const classroomId = formData.get("classroomId") as string
+    
     const result = await assignTeacherSubject({
-      teacherId: params.id,
+      teacherId: id,
       subjectId,
       classroomId,
     })
 
-    if (result.success) {
-      setTeacherSubjects([...teacherSubjects, result.data])
-      setSubjectId("")
-      setClassroomId("")
-    } else {
-      setError(result.error)
-    }
-
-    setIsAdding(false)
+    redirect(`/admin/users/teachers/${id}`)
   }
 
-  async function handleRemoveSubject(id: string) {
-    const result = await removeTeacherSubject(id)
-    if (result.success) {
-      setTeacherSubjects(teacherSubjects.filter((ts) => ts.id !== id))
-    } else {
-      setError(result.error)
-    }
-  }
-
-  if (loading) {
-    return <div className="p-8">Chargement...</div>
+  async function handleRemoveSubject(teacherSubjectId: string) {
+    "use server"
+    await removeTeacherSubject(teacherSubjectId)
+    redirect(`/admin/users/teachers/${id}`)
   }
 
   if (!teacher) {
@@ -131,211 +74,169 @@ export default function TeacherDetailPage({
             <Button variant="outline">Retour</Button>
           </Link>
           <Button variant="outline">Modifier</Button>
-          <Button variant="destructive" onClick={handleDelete}>Désactiver</Button>
+          <form action={handleDelete}>
+            <Button variant="destructive">Désactiver</Button>
+          </form>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200 mb-6">
         <nav className="-mb-px flex space-x-8" aria-label="Tabs">
-          <button
-            onClick={() => setActiveTab("info")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "info"
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
+          <button className="border-indigo-500 text-indigo-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             Informations
           </button>
-          <button
-            onClick={() => setActiveTab("subjects")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "subjects"
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
+          <button className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             Matières & classes
           </button>
-          <button
-            onClick={() => setActiveTab("grades")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "grades"
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
+          <button className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             Notes saisies
           </button>
-          <button
-            onClick={() => setActiveTab("schedule")}
-            className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === "schedule"
-                ? "border-indigo-500 text-indigo-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
-          >
+          <button className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
             Emploi du temps
           </button>
         </nav>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
-
       {/* Tab Content: Informations */}
-      {activeTab === "info" && (
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-gray-500">Prénom</p>
-              <p className="text-lg font-medium">{teacher.firstName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Nom</p>
-              <p className="text-lg font-medium">{teacher.lastName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="text-lg font-medium">{teacher.user.email}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Statut</p>
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                teacher.user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-                {teacher.user.active ? 'Actif' : 'Inactif'}
-              </span>
-            </div>
+      <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-500">Prénom</p>
+            <p className="text-lg font-medium">{teacher.firstName}</p>
           </div>
 
           <div>
-            <p className="text-sm text-gray-500">Matières/Classes assignées</p>
-            <p className="text-lg font-medium">{teacher._count.subjects} assignation(s)</p>
+            <p className="text-sm text-gray-500">Nom</p>
+            <p className="text-lg font-medium">{teacher.lastName}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Email</p>
+            <p className="text-lg font-medium">{teacher.user.email}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Statut</p>
+            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+              teacher.user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {teacher.user.active ? 'Actif' : 'Inactif'}
+            </span>
           </div>
         </div>
-      )}
+
+        <div>
+          <p className="text-sm text-gray-500">Matières/Classes assignées</p>
+          <p className="text-lg font-medium">{teacher._count.subjects} assignation(s)</p>
+        </div>
+      </div>
 
       {/* Tab Content: Matières & classes */}
-      {activeTab === "subjects" && (
-        <div className="space-y-6">
-          {/* Add Subject Form */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter une matière et classe</h2>
-            <form onSubmit={handleAddSubject} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="subjectId">Matière</Label>
-                  <select
-                    id="subjectId"
-                    value={subjectId}
-                    onChange={(e) => setSubjectId(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                  >
-                    <option value="">Sélectionner une matière</option>
-                    {subjects.map((subject) => (
-                      <option key={subject.id} value={subject.id}>
-                        {subject.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <Label htmlFor="classroomId">Classe</Label>
-                  <select
-                    id="classroomId"
-                    value={classroomId}
-                    onChange={(e) => setClassroomId(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                  >
-                    <option value="">Sélectionner une classe</option>
-                    {classrooms.map((classroom) => (
-                      <option key={classroom.id} value={classroom.id}>
-                        {classroom.name} ({classroom.schoolYear})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+      <div className="mt-8 space-y-6">
+        {/* Add Subject Form */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter une matière et classe</h2>
+          <form action={handleAddSubject} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="subjectId">Matière</Label>
+                <select
+                  id="subjectId"
+                  name="subjectId"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                >
+                  <option value="">Sélectionner une matière</option>
+                  {subjects.map((subject) => (
+                    <option key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <Button type="submit" disabled={isAdding || !subjectId || !classroomId}>
-                {isAdding ? "Ajout..." : "Ajouter"}
-              </Button>
-            </form>
-          </div>
+              <div>
+                <Label htmlFor="classroomId">Classe</Label>
+                <select
+                  id="classroomId"
+                  name="classroomId"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                >
+                  <option value="">Sélectionner une classe</option>
+                  {classrooms.map((classroom) => (
+                    <option key={classroom.id} value={classroom.id}>
+                      {classroom.name} ({classroom.schoolYear})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-          {/* Teacher Subjects List */}
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Assignations actuelles</h2>
-            {teacherSubjects.length === 0 ? (
-              <p className="text-gray-500">Aucune assignation</p>
-            ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Matière
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Classe
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {teacherSubjects.map((ts) => (
-                    <tr key={ts.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ts.subject.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {ts.classroom.schoolGrade.name} {ts.classroom.section} ({ts.classroom.schoolYear})
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleRemoveSubject(ts.id)}
-                        >
+            <Button type="submit">Ajouter</Button>
+          </form>
+        </div>
+
+        {/* Teacher Subjects List */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Assignations actuelles</h2>
+          {teacherSubjects.length === 0 ? (
+            <p className="text-gray-500">Aucune assignation</p>
+          ) : (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Matière
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Classe
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {teacherSubjects.map((ts) => (
+                  <tr key={ts.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {ts.subject.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {ts.classroom.schoolGrade.name} {ts.classroom.section} ({ts.classroom.schoolYear})
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <form action={handleRemoveSubject.bind(null, ts.id)}>
+                        <Button variant="destructive" size="sm" type="submit">
                           Retirer
                         </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Tab Content: Notes saisies (placeholder) */}
-      {activeTab === "grades" && (
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes saisies</h2>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes saisies</h2>
           <p className="text-gray-500">Historique des notes saisies par cet enseignant.</p>
           <p className="text-sm text-gray-400 mt-2">Cette fonctionnalité sera implémentée ultérieurement.</p>
         </div>
-      )}
+      </div>
 
       {/* Tab Content: Emploi du temps (placeholder) */}
-      {activeTab === "schedule" && (
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Emploi du temps</h2>
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Emploi du temps</h2>
           <p className="text-gray-500">Emploi du temps de l'enseignant.</p>
           <p className="text-sm text-gray-400 mt-2">Cette fonctionnalité sera implémentée ultérieurement.</p>
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { listStudents, deleteStudent, getClassrooms } from "@/lib/actions/student"
+import { listStudents, deleteStudent, getClassrooms, getStudentById } from "@/lib/actions/student"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -7,25 +7,30 @@ import { Button } from "@/components/ui/button"
 export default async function StudentDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const session = await auth()
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listStudents()
+  const [studentResult, classroomsResult] = await Promise.all([
+    getStudentById(id),
+    getClassrooms(),
+  ])
 
-  if (!result.success) {
-    return (
-      <div className="p-8">
-        <p className="text-red-600">Error: {result.error}</p>
-      </div>
-    )
+  const student = studentResult.success ? studentResult.data : null
+  const classrooms = classroomsResult.success ? classroomsResult.data : []
+
+  async function handleDelete() {
+    "use server"
+    const result = await deleteStudent(id)
+    if (result.success) {
+      redirect("/admin/users/students")
+    }
   }
-
-  const student = result.data.find((s) => s.id === params.id)
 
   if (!student) {
     return (
@@ -36,17 +41,6 @@ export default async function StudentDetailPage({
         </Link>
       </div>
     )
-  }
-
-  const classroomsResult = await getClassrooms()
-  const classrooms = classroomsResult.success ? classroomsResult.data : []
-
-  async function handleDelete() {
-    "use server"
-    const result = await deleteStudent(params.id)
-    if (result.success) {
-      redirect("/admin/users/students")
-    }
   }
 
   return (

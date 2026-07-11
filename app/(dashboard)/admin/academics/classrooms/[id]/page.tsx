@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 export default async function ClassroomDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const session = await auth()
 
   if (!session?.user) {
@@ -25,7 +26,7 @@ export default async function ClassroomDetailPage({
     )
   }
 
-  const classroom = result.data.find((c) => c.id === params.id)
+  const classroom = result.data.find((c) => c.id === id)
 
   if (!classroom) {
     return (
@@ -46,7 +47,7 @@ export default async function ClassroomDetailPage({
 
   async function handleDelete() {
     "use server"
-    const result = await deleteClassroom(params.id)
+    const result = await deleteClassroom(id)
     if (result.success) {
       redirect("/admin/academics/classrooms")
     }
@@ -63,7 +64,7 @@ export default async function ClassroomDetailPage({
           <Link href="/admin/academics/classrooms">
             <Button variant="outline">Retour</Button>
           </Link>
-          <Link href={`/admin/academics/classrooms/${params.id}/edit`}>
+          <Link href={`/admin/academics/classrooms/${id}/edit`}>
             <Button variant="outline">Modifier</Button>
           </Link>
           <form action={handleDelete}>

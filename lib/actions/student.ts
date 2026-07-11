@@ -77,6 +77,61 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
   }
 }
 
+export async function getStudentById(id: string): Promise<ActionResult<StudentWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "student", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            active: true,
+          },
+        },
+        classroom: {
+          include: {
+            schoolGrade: {
+              select: {
+                id: true,
+                name: true,
+                cycle: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!student) {
+      return { success: false, error: "Student not found" }
+    }
+
+    if (student.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Forbidden" }
+    }
+
+    return { success: true, data: student }
+  } catch (error) {
+    console.error("Error getting student by id:", error)
+    return { success: false, error: "Failed to get student" }
+  }
+}
+
 export async function listStudents(): Promise<ActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
