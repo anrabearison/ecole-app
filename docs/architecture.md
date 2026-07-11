@@ -7,7 +7,7 @@
 
 - **Framework** : Next.js 15 (App Router), TypeScript strict
 - **Base de données** : PostgreSQL (Vercel Postgres ou Neon)
-- **ORM** : Prisma
+- **ORM** : Prisma 7 — la connexion DB se configure dans `prisma.config.ts` (pas de `url` dans `schema.prisma`, propriété supprimée en v7)
 - **Authentification** : Auth.js (NextAuth v5) — session doit transporter `role` et `schoolId`
 - **UI** : Tailwind CSS + shadcn/ui
 - **Formulaires** : React Hook Form + Zod

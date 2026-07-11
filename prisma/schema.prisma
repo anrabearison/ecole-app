@@ -9,7 +9,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================================
@@ -141,6 +140,7 @@ model Classroom {
   school   School @relation(fields: [schoolId], references: [id])
 
   students        Student[]
+  enrollments     Enrollment[]
   teacherSubjects TeacherSubject[]
   grades          Grade[]
   scheduleSlots   ScheduleSlot[]
