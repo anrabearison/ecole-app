@@ -126,8 +126,8 @@ describe("permissions", () => {
       expect(can(role, "create", "grade", { teacherId })).toBe(true)
       expect(can(role, "update", "grade", { teacherId })).toBe(true)
       
-      // Cannot delete grades
-      expect(can(role, "delete", "grade", { teacherId })).toBe(false)
+      // Can delete grades (additional validation needed in action)
+      expect(can(role, "delete", "grade", { teacherId })).toBe(true)
     })
 
     it("should have access to their own schedule only", () => {

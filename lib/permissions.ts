@@ -1,4 +1,4 @@
-import type { Role } from "@prisma/client"
+type Role = "PLATFORM_SUPER_ADMIN" | "SCHOOL_ADMIN" | "STAFF_ADMIN" | "TEACHER" | "STUDENT"
 
 type Action = "create" | "update" | "delete" | "view"
 type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject"
@@ -70,14 +70,20 @@ export function can(
   // TEACHER has limited access to their own data
   if (role === "TEACHER") {
     switch (resource) {
+      case "teacher":
+        // Can view only their own profile
+        if (action === "view" && context?.teacherId && context?.ownerId === context.teacherId) {
+          return true
+        }
+        return false
       case "grade":
         // Can view only their own grades
         if (action === "view" && context?.teacherId && context?.ownerId === context.teacherId) {
           return true
         }
-        // Can create/update grades if assigned to the subject and classroom
+        // Can create/update/delete grades if assigned to the subject and classroom
         // (This check should be done with TeacherSubject lookup in the action)
-        if ((action === "create" || action === "update") && context?.teacherId) {
+        if ((action === "create" || action === "update" || action === "delete") && context?.teacherId) {
           return true // Additional validation needed in the action
         }
         return false
