@@ -1,0 +1,15 @@
+# Règles du projet — Ecole App
+
+Avant toute tâche, consulte :
+- docs/architecture.md
+- docs/domaine-metier.md
+- docs/interfaces.md
+- docs/conventions.md
+- prisma/schema.prisma
+
+Respecte strictement ces règles, notamment :
+- Nommage du code en anglais (variables, fonctions, modèles, champs)
+- Filtrage systématique par schoolId sur toute requête Prisma scopée
+- Toute vérification de permission passe par lib/permissions.ts::can()
+- Une demande = une fonctionnalité complète (Server Action + validation + UI)
+- Suivre le pattern de la première entité codée pour toutes les suivantes

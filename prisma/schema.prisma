@@ -1,0 +1,306 @@
+// ============================================================
+// School management app — Prisma schema
+// Naming convention: English for all models/fields (see docs/conventions.md)
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums
+// ============================================================
+
+enum Role {
+  PLATFORM_SUPER_ADMIN // no school (schoolId null) — manages all schools
+  SCHOOL_ADMIN // full access, scoped to one school
+  STAFF_ADMIN // administrative tasks only, scoped to one school
+  TEACHER // own classrooms/subjects/grades/schedule only
+  STUDENT // read-only, own data only
+}
+
+enum Cycle {
+  PRIMARY
+  MIDDLE_SCHOOL
+  HIGH_SCHOOL
+}
+
+enum GradeType {
+  EXAM
+  DAILY
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+// ============================================================
+// Multi-tenant root
+// ============================================================
+
+model School {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+
+  users           User[]
+  schoolGrades    SchoolGrade[]
+  tracks          Track[]
+  classrooms      Classroom[]
+  subjects        Subject[]
+  students        Student[]
+  teachers        Teacher[]
+  teacherSubjects TeacherSubject[]
+  enrollments     Enrollment[]
+  grades          Grade[]
+  scheduleSlots   ScheduleSlot[]
+}
+
+// ============================================================
+// Users & auth
+// ============================================================
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         Role
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  // null only for PLATFORM_SUPER_ADMIN
+  schoolId String?
+  school   School? @relation(fields: [schoolId], references: [id])
+
+  // one-to-one with the role-specific profile, when applicable
+  teacher Teacher?
+  student Student?
+}
+
+// ============================================================
+// School structure: Cycle -> SchoolGrade -> [Track] -> Classroom
+// ============================================================
+
+// "Niveau" — pedagogical level, e.g. "6ème", "Seconde", "Première"
+// Named SchoolGrade to avoid clashing with the academic Grade (note) model.
+model SchoolGrade {
+  id    String @id @default(cuid())
+  name  String // "6ème", "Seconde", "Première"
+  cycle Cycle
+  order Int // used for sorting levels logically
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  tracks     Track[] // empty unless this level has tracks (from Première onward)
+  classrooms Classroom[] // direct classrooms when the level has no track
+
+  @@unique([name, cycle, schoolId])
+}
+
+// "Série" — only relevant from Première onward (Littéraire/Scientifique: A, C, D, OSE)
+model Track {
+  id   String @id @default(cuid())
+  name String // "A", "C", "D", "OSE"
+
+  schoolGradeId String
+  schoolGrade   SchoolGrade @relation(fields: [schoolGradeId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  classrooms Classroom[]
+
+  @@unique([name, schoolGradeId])
+}
+
+// Physical classroom with students, e.g. "6ème A", "Première C1"
+model Classroom {
+  id       String @id @default(cuid())
+  section  String // parallel class label: "A", "B", "1", "2"...
+  schoolYear String // "2025-2026" — a classroom is scoped to one school year
+
+  schoolGradeId String
+  schoolGrade   SchoolGrade @relation(fields: [schoolGradeId], references: [id])
+
+  trackId String? // null if the level has no track (before Première)
+  track   Track?  @relation(fields: [trackId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  students        Student[]
+  teacherSubjects TeacherSubject[]
+  grades          Grade[]
+  scheduleSlots   ScheduleSlot[]
+
+  @@unique([schoolGradeId, trackId, section, schoolYear])
+}
+
+// ============================================================
+// People: Student, Teacher
+// ============================================================
+
+model Student {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  firstName String
+  lastName  String
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  // current classroom — convenience shortcut for the active school year,
+  // kept in sync with the latest Enrollment. Full history lives in Enrollment.
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id])
+
+  enrollments   Enrollment[]
+  grades        Grade[]
+  createdAt     DateTime @default(now())
+}
+
+// Historizes a student's classroom assignment per school year.
+// One row per (student, schoolYear) — enables showing past classrooms
+// even after the student has moved to a new classroom.
+model Enrollment {
+  id         String @id @default(cuid())
+  schoolYear String // "2025-2026"
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, schoolYear])
+}
+
+model Teacher {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  firstName String
+  lastName  String
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  subjects      TeacherSubject[]
+  grades        Grade[] // grades this teacher has personally entered
+  scheduleSlots ScheduleSlot[]
+  createdAt     DateTime @default(now())
+}
+
+// ============================================================
+// Subjects & teacher assignments
+// ============================================================
+
+model Subject {
+  id   String @id @default(cuid())
+  name String // "Mathématiques", "Français"
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  teacherSubjects TeacherSubject[]
+  grades          Grade[]
+  scheduleSlots   ScheduleSlot[]
+
+  @@unique([name, schoolId])
+}
+
+// Which teacher teaches which subject, in which classroom
+// A teacher may teach a subject in some classrooms but not others.
+model TeacherSubject {
+  id String @id @default(cuid())
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  @@unique([teacherId, subjectId, classroomId])
+}
+
+// ============================================================
+// Grades (notes)
+// ============================================================
+
+model Grade {
+  id      String    @id @default(cuid())
+  value   Float
+  type    GradeType
+  date    DateTime
+  comment String?
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  // the teacher who personally entered this grade — visibility is scoped to this field
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  // denormalized on purpose: enables querying "all grades for classroom X in subject Y"
+  // without joining through Student every time
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// Schedule (emploi du temps)
+// ============================================================
+
+model ScheduleSlot {
+  id        String  @id @default(cuid())
+  day       Weekday
+  startTime String // "08:00"
+  endTime   String // "10:00"
+  room      String?
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id])
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+}
