@@ -13,7 +13,7 @@
 
 | Rôle | Portée | Peut faire |
 |---|---|---|
-| `PLATFORM_SUPER_ADMIN` | Toutes les écoles (`schoolId` null) | Tout, sur toutes les écoles |
+| `PLATFORM_SUPER_ADMIN` | Toutes les écoles (`schoolId` null) | Gestion des écoles (création, statistiques globales). **Limitation volontaire :** ne peut pas naviguer dans le détail métier d'une école (pas d'accès aux classes/élèves/notes d'une école spécifique). |
 | `SCHOOL_ADMIN` | Une école | Tout, dans son école uniquement |
 | `STAFF_ADMIN` | Une école | Tâches administratives uniquement |
 | `TEACHER` | Une école | Actions le concernant uniquement (ses classes, ses notes saisies, son emploi du temps) |

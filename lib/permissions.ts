@@ -1,7 +1,7 @@
 type Role = "PLATFORM_SUPER_ADMIN" | "SCHOOL_ADMIN" | "STAFF_ADMIN" | "TEACHER" | "STUDENT"
 
 type Action = "create" | "update" | "delete" | "view"
-type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track" | "room"
+type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track" | "room" | "school"
 
 interface PermissionContext {
   ownerId?: string

@@ -42,16 +42,15 @@ app/(auth)/
 
 ```
 app/(dashboard)/platform/
+  page.tsx                    # liste de toutes les écoles avec statistiques globales
   schools/
-    page.tsx              # liste de toutes les écoles
-    new/page.tsx           # créer une école
-    [id]/page.tsx           # fiche école (infos, admins rattachés, statistiques)
+    new/page.tsx              # créer une école + son premier SCHOOL_ADMIN
 ```
 
-- Liste des écoles avec recherche, statut (active/inactive).
-- Fiche école : informations générales, liste des `SCHOOL_ADMIN` rattachés, nombre d'élèves/enseignants/classes.
-- Seul rôle avec un **sélecteur d'école** dans l'interface — tous les autres rôles ont l'école implicite via leur session.
-- Création d'une école inclut la création du premier compte `SCHOOL_ADMIN`.
+- Liste des écoles avec statistiques globales (nombre d'élèves, enseignants, classes).
+- **Limitation volontaire :** le PLATFORM_SUPER_ADMIN ne peut pas naviguer dans le détail métier d'une école spécifique (pas d'accès aux classes/élèves/notes d'une école). Il voit uniquement des statistiques globales.
+- Création d'une école inclut la création du premier compte `SCHOOL_ADMIN` avec mot de passe temporaire.
+- Aucun lien vers le détail d'une école — l'interface se limite à la vue liste + création.
 
 ---
 

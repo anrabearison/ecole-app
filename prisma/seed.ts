@@ -94,10 +94,24 @@ async function main() {
     },
   })
 
+  // PLATFORM_SUPER_ADMIN user — upsert by email (no schoolId)
+  const platformPasswordHash = await bcrypt.hash("platform123", 10)
+  await prisma.user.upsert({
+    where: { email: "platform@ecole-app.mg" },
+    update: {},
+    create: {
+      email: "platform@ecole-app.mg",
+      passwordHash: platformPasswordHash,
+      role: "PLATFORM_SUPER_ADMIN",
+      schoolId: null,
+    },
+  })
+
   console.log("✓ Seed terminé — school:", school.id)
   console.log("  Niveaux :", primaryGrade.name, middleSchoolGrade.name, "Seconde", premiereGrade.name)
   console.log("  Séries Première : A, C, D")
   console.log("  Admin : admin@sekoly-test.mg / motdepasse123")
+  console.log("  Platform Super Admin : platform@ecole-app.mg / platform123")
 }
 
 main()
