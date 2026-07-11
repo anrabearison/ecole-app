@@ -44,7 +44,7 @@ async function main() {
     }),
   ])
 
-  // Track unique: (name, schoolGradeId)
+  // Tracks for Première — skip duplicates
   await Promise.all(["A", "C", "D"].map((name) =>
     prisma.track.upsert({
       where: { name_schoolGradeId: { name, schoolGradeId: premiereGrade.id } },
@@ -53,7 +53,21 @@ async function main() {
     })
   ))
 
-  // User unique: (email)
+  // Basic Subjects — skip duplicates
+  await Promise.all(
+    ["Mathématiques", "Français", "Sciences de la Vie et de la Terre", "Histoire-Géographie"].map(
+      (name) =>
+        prisma.subject.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
+          if (!existing) {
+            await prisma.subject.create({
+              data: { name, schoolId: school.id },
+            })
+          }
+        })
+    )
+  )
+
+  // Admin user — upsert by email)
   const passwordHash = await bcrypt.hash("motdepasse123", 10)
   await prisma.user.upsert({
     where: { email: "admin@sekoly-test.mg" },
