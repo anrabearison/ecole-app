@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { DashboardNav } from "@/components/dashboard-nav"
 
-export default async function AdminLayout({
+export default async function TeacherLayout({
   children,
 }: {
   children: React.ReactNode
@@ -13,7 +13,7 @@ export default async function AdminLayout({
     redirect("/login")
   }
 
-  if (!["SCHOOL_ADMIN", "STAFF_ADMIN", "PLATFORM_SUPER_ADMIN"].includes(session.user.role)) {
+  if (session.user.role !== "TEACHER") {
     redirect("/unauthorized")
   }
 
