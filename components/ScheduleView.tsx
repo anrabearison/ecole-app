@@ -45,7 +45,7 @@ export function ScheduleView({ slots }: ScheduleViewProps) {
             const minute = i % 2 === 0 ? "00" : "30"
             const timeLabel = `${hour.toString().padStart(2, "0")}:${minute}`
             const nextHour = minute === "00" ? hour : hour + 1
-            const nextMinute = minute === "00" ? "00" : "00"
+            const nextMinute = minute === "00" ? "30" : "00"
             const endTimeLabel = `${nextHour.toString().padStart(2, "0")}:${nextMinute}`
 
             return (
@@ -64,13 +64,22 @@ export function ScheduleView({ slots }: ScheduleViewProps) {
 
                   if (!slot) {
                     return (
-                      <td key={day} className="border border-gray-300 px-2 py-2 bg-white h-16" />
+                      <td key={`${day}-${i}`} className="border border-gray-300 px-2 py-2 bg-white h-16" />
+                    )
+                  }
+
+                  // Only render if this is the first time slot of the slot's duration
+                  const slotStart = parseInt(slot.startTime.replace(":", ""))
+                  const currentStart = parseInt(timeLabel.replace(":", ""))
+                  if (slotStart !== currentStart) {
+                    return (
+                      <td key={`${day}-${i}`} className="border border-gray-300 px-2 py-2 bg-white h-16" />
                     )
                   }
 
                   return (
                     <td
-                      key={day}
+                      key={`${day}-${i}`}
                       className="border border-gray-300 px-2 py-2 bg-blue-50 h-16"
                       rowSpan={Math.ceil(
                         (parseInt(slot.endTime.replace(":", "")) - parseInt(slot.startTime.replace(":", ""))) / 30
@@ -80,7 +89,7 @@ export function ScheduleView({ slots }: ScheduleViewProps) {
                         <div className="font-medium text-gray-900">{slot.subject.name}</div>
                         <div className="text-gray-600">{slot.teacher.firstName} {slot.teacher.lastName}</div>
                         <div className="text-gray-500">{slot.classroom.schoolGrade.name} {slot.classroom.section}</div>
-                        {slot.room && <div className="text-gray-500">Salle {slot.room.name}</div>}
+                        {slot.room && <div className="text-gray-500">{slot.room.name}</div>}
                       </div>
                     </td>
                   )

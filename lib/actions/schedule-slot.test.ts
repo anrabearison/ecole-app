@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { listScheduleSlotsForTeacher, listScheduleSlotsForStudent, listScheduleSlotsForAdmin, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from "./schedule-slot"
+import { listScheduleSlotsForTeacher, listScheduleSlotsForStudent, listScheduleSlotsForAdmin, listScheduleSlotsByClassroom, listScheduleSlotsByTeacher, listScheduleSlotsByRoom, createScheduleSlot, updateScheduleSlot, deleteScheduleSlot } from "./schedule-slot"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -519,6 +519,105 @@ describe("ScheduleSlot Server Actions", () => {
       const result = await updateScheduleSlot("slot1", { day: "TUESDAY" })
       
       expect(result.success).toBe(true)
+    })
+  })
+
+  describe("listScheduleSlotsByClassroom", () => {
+    it("should return schedule slots for a specific classroom", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "slot1",
+          day: "MONDAY",
+          startTime: "08:00",
+          endTime: "10:00",
+          roomId: mockRoomId,
+          classroomId: mockClassroomId,
+          subjectId: mockSubjectId,
+          teacherId: mockTeacherId1,
+          schoolId: mockSchoolId,
+          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+          subject: { id: mockSubjectId, name: "Mathématiques" },
+          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+          room: { id: mockRoomId, name: "Salle 1" },
+          createdAt: new Date()
+        }
+      ] as any)
+      
+      const result = await listScheduleSlotsByClassroom(mockClassroomId)
+      
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].classroomId).toBe(mockClassroomId)
+      }
+    })
+  })
+
+  describe("listScheduleSlotsByTeacher", () => {
+    it("should return schedule slots for a specific teacher", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "slot1",
+          day: "MONDAY",
+          startTime: "08:00",
+          endTime: "10:00",
+          roomId: mockRoomId,
+          classroomId: mockClassroomId,
+          subjectId: mockSubjectId,
+          teacherId: mockTeacherId1,
+          schoolId: mockSchoolId,
+          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+          subject: { id: mockSubjectId, name: "Mathématiques" },
+          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+          room: { id: mockRoomId, name: "Salle 1" },
+          createdAt: new Date()
+        }
+      ] as any)
+      
+      const result = await listScheduleSlotsByTeacher(mockTeacherId1)
+      
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].teacherId).toBe(mockTeacherId1)
+      }
+    })
+  })
+
+  describe("listScheduleSlotsByRoom", () => {
+    it("should return schedule slots for a specific room", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "slot1",
+          day: "MONDAY",
+          startTime: "08:00",
+          endTime: "10:00",
+          roomId: mockRoomId,
+          classroomId: mockClassroomId,
+          subjectId: mockSubjectId,
+          teacherId: mockTeacherId1,
+          schoolId: mockSchoolId,
+          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+          subject: { id: mockSubjectId, name: "Mathématiques" },
+          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+          room: { id: mockRoomId, name: "Salle 1" },
+          createdAt: new Date()
+        }
+      ] as any)
+      
+      const result = await listScheduleSlotsByRoom(mockRoomId)
+      
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].roomId).toBe(mockRoomId)
+      }
     })
   })
 

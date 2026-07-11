@@ -12,6 +12,10 @@ export type ScheduleSlotWithRelations = {
   startTime: string
   endTime: string
   roomId: string | null
+  classroomId: string
+  subjectId: string
+  teacherId: string
+  schoolId: string
   room?: {
     id: string
     name: string
@@ -35,7 +39,6 @@ export type ScheduleSlotWithRelations = {
     firstName: string
     lastName: string
   }
-  schoolId: string
 }
 
 // Helper function to detect time overlap
@@ -258,6 +261,7 @@ export async function listScheduleSlotsForStudent(): Promise<ActionResult<Schedu
 export async function listScheduleSlotsForAdmin(filters?: {
   classroomId?: string
   teacherId?: string
+  roomId?: string
 }): Promise<ActionResult<ScheduleSlotWithRelations[]>> {
   const session = await auth()
 
@@ -279,6 +283,7 @@ export async function listScheduleSlotsForAdmin(filters?: {
         schoolId: session.user.schoolId,
         ...(filters?.classroomId && { classroomId: filters.classroomId }),
         ...(filters?.teacherId && { teacherId: filters.teacherId }),
+        ...(filters?.roomId && { roomId: filters.roomId }),
       },
       include: {
         classroom: {
@@ -323,6 +328,18 @@ export async function listScheduleSlotsForAdmin(filters?: {
     console.error("Error listing schedule slots for admin:", error)
     return { success: false, error: "Failed to list schedule slots" }
   }
+}
+
+export async function listScheduleSlotsByClassroom(classroomId: string): Promise<ActionResult<ScheduleSlotWithRelations[]>> {
+  return listScheduleSlotsForAdmin({ classroomId })
+}
+
+export async function listScheduleSlotsByTeacher(teacherId: string): Promise<ActionResult<ScheduleSlotWithRelations[]>> {
+  return listScheduleSlotsForAdmin({ teacherId })
+}
+
+export async function listScheduleSlotsByRoom(roomId: string): Promise<ActionResult<ScheduleSlotWithRelations[]>> {
+  return listScheduleSlotsForAdmin({ roomId })
 }
 
 export async function createScheduleSlot(data: ScheduleSlotInput): Promise<ActionResult<ScheduleSlotWithRelations>> {
