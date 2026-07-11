@@ -68,6 +68,14 @@ type ActionResult<T = void> =
   2. Server Actions de mutation (validation + cas d'erreur)
   3. Composants de formulaire complexes
   4. Parcours E2E critiques uniquement (connexion, création élève, saisie de notes) — pas de couverture E2E exhaustive
+- **Mocking de Prisma** : Les tests unitaires (hors E2E) ne doivent pas se connecter à une vraie base de données.
+  - Le client Prisma est globalement mocké dans `vitest.setup.ts` via `vitest-mock-extended`.
+  - **Pattern obligatoire pour chaque fichier de test** (voir `lib/actions/classroom.test.ts`) :
+    1. **Mock de session** : Définir une fonction `mockSession(role, schoolId)` qui utilise `vi.mocked(auth).mockResolvedValue(...)` pour simuler le contexte utilisateur.
+    2. **Reset des mocks** : Toujours inclure `beforeEach(() => vi.clearAllMocks())` pour éviter les fuites entre les tests.
+    3. **Mocking des requêtes Prisma** : Utiliser `vi.mocked(prisma.[model].[action]).mockResolvedValue(...)` pour simuler un retour de la base.
+    4. **Validation des arguments** : Vérifier que Prisma est appelé avec les bons arguments de sécurité, ex : `expect(prisma.classroom.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { schoolId: mockSchoolId } }))`.
+    5. **Tests de refus d'accès** : S'assurer que les cas d'erreurs (validation Zod invalide, rôle non autorisé) n'appellent **jamais** Prisma (`expect(prisma.*).not.toHaveBeenCalled()`).
 
 ## Processus pour les agents IA
 
