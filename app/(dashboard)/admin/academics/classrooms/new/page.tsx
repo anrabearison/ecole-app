@@ -25,7 +25,7 @@ export default function NewClassroomPage() {
   } = useForm<ClassroomInput>({
     resolver: zodResolver(classroomSchema),
     defaultValues: {
-      schoolYear: new Date().getFullYear().toString(),
+      schoolYear: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
     }
   })
 
@@ -85,6 +85,14 @@ export default function NewClassroomPage() {
     MIDDLE_SCHOOL: "Collège",
     HIGH_SCHOOL: "Lycée",
   }
+
+  // Generate school year options (current year and next 2 years)
+  const currentYear = new Date().getFullYear()
+  const schoolYearOptions = [
+    `${currentYear}-${currentYear + 1}`,
+    `${currentYear + 1}-${currentYear + 2}`,
+    `${currentYear + 2}-${currentYear + 3}`,
+  ]
 
   return (
     <div className="p-8">
@@ -162,13 +170,17 @@ export default function NewClassroomPage() {
             <label htmlFor="schoolYear" className="block text-sm font-medium text-gray-700 mb-2">
               Année scolaire
             </label>
-            <input
+            <select
               {...register("schoolYear")}
-              type="text"
               id="schoolYear"
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="2025-2026"
-            />
+            >
+              {schoolYearOptions.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
             {errors.schoolYear && (
               <p className="mt-1 text-sm text-red-600">{errors.schoolYear.message}</p>
             )}
