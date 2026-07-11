@@ -96,6 +96,21 @@ export async function createSchoolGrade(data: SchoolGradeInput): Promise<ActionR
   }
 
   try {
+    // Check if school grade already exists (unique constraint)
+    const existing = await prisma.schoolGrade.findUnique({
+      where: {
+        name_cycle_schoolId: {
+          name: validation.data.name,
+          cycle: validation.data.cycle,
+          schoolId: session.user.schoolId,
+        },
+      },
+    })
+
+    if (existing) {
+      return { success: false, error: "A school grade with this name and cycle already exists" }
+    }
+
     const grade = await prisma.schoolGrade.create({
       data: {
         name: validation.data.name,

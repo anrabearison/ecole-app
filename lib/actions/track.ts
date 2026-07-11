@@ -104,6 +104,20 @@ export async function createTrack(data: TrackInput): Promise<ActionResult<TrackW
       return { success: false, error: "School grade not found or does not belong to your school" }
     }
 
+    // Check if track already exists (unique constraint)
+    const existing = await prisma.track.findUnique({
+      where: {
+        name_schoolGradeId: {
+          name: validation.data.name,
+          schoolGradeId: validation.data.schoolGradeId,
+        },
+      },
+    })
+
+    if (existing) {
+      return { success: false, error: "A track with this name already exists for this school grade" }
+    }
+
     const track = await prisma.track.create({
       data: {
         name: validation.data.name,

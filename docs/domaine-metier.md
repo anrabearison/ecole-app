@@ -76,6 +76,15 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - `SCHOOL_ADMIN` → tout, dans son école (y compris désactiver/changer un rôle)
 - `STAFF_ADMIN` → peut voir et modifier les infos administratives, ne peut pas supprimer un compte ni changer un rôle
 
+### Matières (`subject`)
+- `TEACHER` → `view` : uniquement les matières auxquelles il est assigné (via `TeacherSubject`)
+- `SCHOOL_ADMIN` / `STAFF_ADMIN` → `view`/`create`/`update`/`delete` : toutes les matières de leur école
+
+### Classes (`classroom`)
+- `TEACHER` → `view` : uniquement les classes auxquelles il est assigné (via `TeacherSubject`)
+- `SCHOOL_ADMIN` / `STAFF_ADMIN` → `view`/`create`/`update`/`delete` : toutes les classes de leur école
+- `STUDENT` → `view` : uniquement via son emploi du temps (créneaux de sa classe)
+
 ## Points volontairement non traités pour l'instant
 
 - Cycle Université (structure différente : semestres, UE, filières) — à concevoir plus tard, sans réutiliser tel quel le modèle `Grade`/`Track` actuel.

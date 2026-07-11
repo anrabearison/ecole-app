@@ -37,7 +37,7 @@ export async function listTeacherSubjects(teacherId: string): Promise<ActionResu
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined })) {
+  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined, teacherId, ownerId: teacherId })) {
     return { success: false, error: "Forbidden" }
   }
 

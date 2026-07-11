@@ -273,42 +273,57 @@ export async function listGradesForAdmin(filters?: {
 export async function createGrades(data: BulkGradeCreateInput): Promise<ActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
+  console.log("createGrades called with data:", JSON.stringify(data, null, 2))
+
   if (!session?.user) {
+    console.log("createGrades - Unauthorized: no session")
     return { success: false, error: "Unauthorized" }
   }
 
   if (!session.user.teacherId) {
+    console.log("createGrades - Teacher ID required")
     return { success: false, error: "Teacher ID is required" }
   }
 
-  // CRITICAL: Check if teacher is assigned to this subject+class via TeacherSubject
-  const teacherSubject = await prisma.teacherSubject.findUnique({
-    where: {
-      teacherId_subjectId_classroomId: {
-        teacherId: session.user.teacherId,
-        subjectId: data.subjectId,
-        classroomId: data.classroomId,
-      },
-    },
-  })
-
-  if (!teacherSubject) {
-    return { success: false, error: "You are not assigned to teach this subject in this classroom" }
+  if (!can(session.user.role, "create", "grade", { teacherId: session.user.teacherId, schoolId: session.user.schoolId || undefined })) {
+    console.log("createGrades - Forbidden: permission check failed")
+    return { success: false, error: "Forbidden" }
   }
 
   if (!session.user.schoolId) {
+    console.log("createGrades - School ID required")
     return { success: false, error: "School ID is required" }
   }
 
   const validation = bulkGradeCreateSchema.safeParse(data)
 
   if (!validation.success) {
+    console.log("createGrades - Validation failed:", validation.error.issues)
     return { success: false, error: validation.error.issues[0].message }
   }
 
   try {
+    console.log("createGrades - Checking TeacherSubject for teacherId:", session.user.teacherId, "subjectId:", data.subjectId, "classroomId:", data.classroomId)
+    // CRITICAL: Check if teacher is assigned to this subject+class via TeacherSubject
+    const teacherSubject = await prisma.teacherSubject.findUnique({
+      where: {
+        teacherId_subjectId_classroomId: {
+          teacherId: session.user.teacherId,
+          subjectId: data.subjectId,
+          classroomId: data.classroomId,
+        },
+      },
+    })
+
+    console.log("createGrades - TeacherSubject found:", !!teacherSubject)
+
+    if (!teacherSubject) {
+      return { success: false, error: "You are not assigned to teach this subject in this classroom" }
+    }
+
     const date = typeof data.date === 'string' ? new Date(data.date) : data.date
 
+    console.log("createGrades - Creating", validation.data.entries.length, "grades in transaction")
     // Create all grades in a transaction
     const result = await prisma.$transaction(async (tx: any) => {
       const grades = await Promise.all(
@@ -363,6 +378,7 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
       return grades
     })
 
+    console.log("createGrades - Successfully created", result.length, "grades")
     return { success: true, data: result }
   } catch (error) {
     console.error("Error creating grades:", error)

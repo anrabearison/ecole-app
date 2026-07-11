@@ -8,10 +8,13 @@ import { redirect } from "next/navigation"
 
 export default async function TeacherDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ error?: string }>
 }) {
   const { id } = await params
+  const { error: urlError } = await searchParams
   const [teacherResult, subjectsResult, subjectsListResult, classroomsResult] = await Promise.all([
     getTeacherById(id),
     listTeacherSubjects(id),
@@ -42,6 +45,10 @@ export default async function TeacherDetailPage({
       subjectId,
       classroomId,
     })
+
+    if (!result.success) {
+      redirect(`/admin/users/teachers/${id}?error=${encodeURIComponent(result.error)}`)
+    }
 
     redirect(`/admin/users/teachers/${id}`)
   }
@@ -137,6 +144,11 @@ export default async function TeacherDetailPage({
         {/* Add Subject Form */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter une matière et classe</h2>
+          {urlError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              {decodeURIComponent(urlError)}
+            </div>
+          )}
           <form action={handleAddSubject} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>

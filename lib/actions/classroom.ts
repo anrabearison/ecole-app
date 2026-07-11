@@ -247,6 +247,22 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
       }
     }
 
+    // Check if classroom already exists (unique constraint)
+    const existing = await prisma.classroom.findUnique({
+      where: {
+        schoolGradeId_trackId_section_schoolYear: {
+          schoolGradeId: data.schoolGradeId,
+          trackId: data.trackId ?? null,
+          section: data.section,
+          schoolYear: data.schoolYear,
+        },
+      },
+    } as any)
+
+    if (existing) {
+      return { success: false, error: "A classroom with this configuration already exists" }
+    }
+
     const classroom = await prisma.classroom.create({
       data: {
         schoolGradeId: data.schoolGradeId,
