@@ -71,6 +71,44 @@ type StudentCreateResult = {
 - Utiliser `prismaForSchool(schoolId)` plutôt que `prisma` directement dans les Server Actions qui touchent une entité scopée.
 - Ne jamais accepter un `schoolId` en paramètre venant du client — toujours depuis la session serveur.
 
+## Frontière serveur/client (bundling)
+
+Ces règles évitent l'erreur `Module not found: Can't resolve 'dns'` ou `'net'` causée par l'import accidentel de modules Node (`pg`, `@prisma/adapter-pg`) dans le bundle navigateur.
+
+### Règles obligatoires — à vérifier sur chaque nouveau fichier
+
+**1. Tout fichier `lib/actions/*.ts` doit commencer par `"use server"` en toute première ligne, avant tout import.**
+```ts
+// ✅ Correct
+"use server"
+
+import { auth } from "@/lib/auth"
+```
+
+**2. Un Client Component (`"use client"`) ne peut jamais importer directement `@/lib/auth` ni `@/lib/prisma`.**
+
+Ces deux fichiers dépendent de `@prisma/adapter-pg` → `pg` → modules Node natifs (`dns`, `net`, `tls`, `fs`) qui ne peuvent pas être bundlés côté navigateur.
+
+```ts
+// ❌ Interdit dans un "use client"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+
+// ✅ Correct : lire la session côté client via next-auth/react
+import { getSession } from "next-auth/react"
+
+// ✅ Correct : appeler une Server Action (fichier "use server") qui fait la requête Prisma
+import { listClassrooms } from "@/lib/actions/classroom"
+```
+
+**3. Un Client Component peut importer des Server Actions** (fichiers `lib/actions/*.ts` marqués `"use server"`) — Next.js gère la frontière automatiquement et n'embarque que la référence RPC, pas le code serveur.
+
+### Checklist avant de créer un nouveau fichier
+- [ ] `lib/actions/[entité].ts` : première ligne = `"use server"`
+- [ ] Pages/composants `"use client"` : aucun import de `@/lib/auth` ou `@/lib/prisma`
+- [ ] Si une page client a besoin de la session : utiliser `getSession()` de `next-auth/react`
+- [ ] `npm run build` passe sans erreur de bundling (pas seulement `next dev`)
+
 ## Data fetching
 
 - Server Components pour l'affichage initial, Server Actions pour les mutations.
