@@ -63,7 +63,9 @@ export default async function ClassroomDetailPage({
           <Link href="/admin/academics/classrooms">
             <Button variant="outline">Retour</Button>
           </Link>
-          <Button variant="outline">Modifier</Button>
+          <Link href={`/admin/academics/classrooms/${params.id}/edit`}>
+            <Button variant="outline">Modifier</Button>
+          </Link>
           <form action={handleDelete}>
             <Button variant="destructive">Supprimer</Button>
           </form>
