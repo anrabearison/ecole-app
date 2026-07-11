@@ -47,6 +47,24 @@ type ActionResult<T = void> =
 - Le rôle et le `schoolId` sont lus depuis `auth()` côté serveur, jamais reçus en paramètre d'une fonction appelée depuis le client.
 - Toute Server Action de mutation appelle `can()` en première ligne, avant toute lecture/écriture en base.
 
+## Gestion des mots de passe temporaires
+
+Lors de la création d'un compte utilisateur (Student, Teacher, etc.) avec un mot de passe temporaire :
+
+- **Jamais de `console.log`** du mot de passe en clair dans le code serveur.
+- **Retourner le mot de passe une seule fois** dans l'ActionResult de création (ex: `{ success: true, data: { student, temporaryPassword } }`).
+- **Afficher le mot de passe dans l'interface** via une modale ou un encart après création réussie, avec un avertissement clair qu'il ne sera plus affiché.
+- **Ne jamais stocker** le mot de passe en clair — uniquement le hash bcrypt en base.
+- **Appliquer ce pattern** à toute entité qui crée un compte utilisateur (Student, Teacher, etc.).
+
+Exemple de structure de retour :
+```ts
+type StudentCreateResult = {
+  student: StudentWithRelations
+  temporaryPassword: string  // Retourné une seule fois pour affichage UI
+}
+```
+
 ## Multi-tenant
 
 - Toute requête Prisma sur une entité scopée par école filtre explicitement sur `schoolId`.

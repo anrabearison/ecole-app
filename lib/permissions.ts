@@ -104,6 +104,12 @@ export function can(
   // STUDENT has read-only access to their own data
   if (role === "STUDENT") {
     switch (resource) {
+      case "student":
+        // Can view only their own profile
+        if (action === "view" && context?.studentId && context?.ownerId === context.studentId) {
+          return true
+        }
+        return false
       case "grade":
         // Can view only their own grades
         if (action === "view" && context?.studentId && context?.ownerId === context.studentId) {

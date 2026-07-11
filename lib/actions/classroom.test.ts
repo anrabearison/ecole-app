@@ -2,12 +2,11 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { listClassrooms, createClassroom, updateClassroom, deleteClassroom } from "./classroom"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-import type { Role } from "@prisma/client"
 
 describe("Classroom Server Actions", () => {
   const mockSchoolId = "school-123"
 
-  const mockSession = (role: Role = "SCHOOL_ADMIN", schoolId: string | null = mockSchoolId) => {
+  const mockSession = (role: any = "SCHOOL_ADMIN", schoolId: string | null = mockSchoolId) => {
     vi.mocked(auth).mockResolvedValue({
       user: {
         id: "user-123",
@@ -18,7 +17,7 @@ describe("Classroom Server Actions", () => {
         studentId: null,
       },
       expires: "9999-12-31T23:59:59.999Z"
-    })
+    } as any)
   }
 
   beforeEach(() => {
