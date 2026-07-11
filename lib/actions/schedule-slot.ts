@@ -77,7 +77,7 @@ async function detectConflicts(
       timeOverlaps(startTime, endTime, slot.startTime, slot.endTime)
   )
   if (teacherConflict) {
-    conflicts.push(`Teacher already scheduled at this time`)
+    conflicts.push(`L'enseignant a déjà un créneau sur cet horaire`)
   }
 
   // Check for room conflicts (if roomId is specified)
@@ -88,8 +88,18 @@ async function detectConflicts(
         timeOverlaps(startTime, endTime, slot.startTime, slot.endTime)
     )
     if (roomConflict) {
-      conflicts.push(`Room already occupied at this time`)
+      conflicts.push(`La salle est déjà occupée sur cet horaire`)
     }
+  }
+
+  // Check for classroom conflicts
+  const classroomConflict = existingSlots.find(
+    (slot: any) => 
+      slot.classroomId === classroomId && 
+      timeOverlaps(startTime, endTime, slot.startTime, slot.endTime)
+  )
+  if (classroomConflict) {
+    conflicts.push(`La classe a déjà un cours sur cet horaire`)
   }
 
   return conflicts
@@ -409,7 +419,7 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
     })
 
     if (conflicts.length > 0) {
-      return { success: true, data: slot as ScheduleSlotWithRelations, warning: conflicts.join("; ") }
+      return { success: true, data: slot as ScheduleSlotWithRelations, warnings: conflicts }
     }
 
     return { success: true, data: slot as ScheduleSlotWithRelations }
@@ -529,7 +539,7 @@ export async function updateScheduleSlot(id: string, data: ScheduleSlotUpdateInp
     })
 
     if (conflicts.length > 0) {
-      return { success: true, data: slot as ScheduleSlotWithRelations, warning: conflicts.join("; ") }
+      return { success: true, data: slot as ScheduleSlotWithRelations, warnings: conflicts }
     }
 
     return { success: true, data: slot as ScheduleSlotWithRelations }

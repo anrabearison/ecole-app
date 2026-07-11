@@ -20,7 +20,7 @@ export default async function TeacherGradesPage() {
   if (!gradesResult.success) {
     return (
       <div className="p-8">
-        <p className="text-red-600">Error: {gradesResult.error}</p>
+        <p className="text-red-600">Erreur : {gradesResult.error}</p>
       </div>
     )
   }

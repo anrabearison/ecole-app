@@ -16,7 +16,7 @@ export default async function StudentsPage() {
   if (!result.success) {
     return (
       <div className="p-8">
-        <p className="text-red-600">Error: {result.error}</p>
+        <p className="text-red-600">Erreur : {result.error}</p>
       </div>
     )
   }

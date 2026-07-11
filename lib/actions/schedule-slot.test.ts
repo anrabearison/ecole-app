@@ -208,7 +208,7 @@ describe("ScheduleSlot Server Actions", () => {
         schoolId: mockSchoolId,
       } as any)
       
-      // Mock existing slot that conflicts
+      // Mock existing slot that conflicts (same teacher)
       vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
         {
           id: "existing-slot",
@@ -247,8 +247,9 @@ describe("ScheduleSlot Server Actions", () => {
       })
       
       expect(result.success).toBe(true)
-      if (result.success && result.warning) {
-        expect(result.warning).toBeDefined()
+      if (result.success && result.warnings) {
+        expect(result.warnings).toBeDefined()
+        expect(result.warnings.length).toBeGreaterThan(0)
       }
     })
 
@@ -263,11 +264,12 @@ describe("ScheduleSlot Server Actions", () => {
         schoolId: mockSchoolId,
       } as any)
       
-      // Mock existing slot with same room that conflicts
+      // Mock existing slot with same room that conflicts (different teacher and classroom)
       vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
         {
           id: "existing-slot",
           teacherId: mockTeacherId2,
+          classroomId: "classroom-2",
           roomId: mockRoomId,
           startTime: "09:00",
           endTime: "11:00",
@@ -302,8 +304,9 @@ describe("ScheduleSlot Server Actions", () => {
       })
       
       expect(result.success).toBe(true)
-      if (result.success && result.warning) {
-        expect(result.warning).toContain("Room already occupied")
+      if (result.success && result.warnings) {
+        expect(result.warnings.length).toBeGreaterThan(0)
+        expect(result.warnings).toContain("La salle est déjà occupée sur cet horaire")
       }
     })
 
@@ -357,8 +360,121 @@ describe("ScheduleSlot Server Actions", () => {
       })
       
       expect(result.success).toBe(true)
-      if (result.success && result.warning) {
-        expect(result.warning).not.toContain("Room")
+      if (result.success && result.warnings) {
+        expect(result.warnings).not.toContain("Room")
+      }
+    })
+
+    it("should detect classroom conflict and return warning", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
+        id: "ts1",
+        teacherId: mockTeacherId1,
+        subjectId: mockSubjectId,
+        classroomId: mockClassroomId,
+        schoolId: mockSchoolId,
+      } as any)
+      
+      // Mock existing slot with same classroom that conflicts (different teacher and room)
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "existing-slot",
+          teacherId: mockTeacherId2,
+          classroomId: mockClassroomId,
+          roomId: "room-2",
+          startTime: "09:00",
+          endTime: "11:00",
+        }
+      ] as any)
+      
+      vi.mocked(prisma.scheduleSlot.create as any).mockResolvedValue({
+        id: "slot1",
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        roomId: mockRoomId,
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
+        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+        subject: { id: mockSubjectId, name: "Mathématiques" },
+        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: { id: mockRoomId, name: "Salle 1" },
+        createdAt: new Date()
+      } as any)
+      
+      const result = await createScheduleSlot({
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        roomId: mockRoomId,
+      })
+      
+      expect(result.success).toBe(true)
+      if (result.success && result.warnings) {
+        expect(result.warnings).toContain("La classe a déjà un cours sur cet horaire")
+      }
+    })
+
+    it("should detect multiple conflicts (classroom + room) and return all warnings", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+      
+      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
+        id: "ts1",
+        teacherId: mockTeacherId1,
+        subjectId: mockSubjectId,
+        classroomId: mockClassroomId,
+        schoolId: mockSchoolId,
+      } as any)
+      
+      // Mock existing slot with same classroom AND same room (different teacher)
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([
+        {
+          id: "existing-slot",
+          teacherId: mockTeacherId2,
+          classroomId: mockClassroomId,
+          roomId: mockRoomId,
+          startTime: "09:00",
+          endTime: "11:00",
+        }
+      ] as any)
+      
+      vi.mocked(prisma.scheduleSlot.create as any).mockResolvedValue({
+        id: "slot1",
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        roomId: mockRoomId,
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
+        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+        subject: { id: mockSubjectId, name: "Mathématiques" },
+        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        room: { id: mockRoomId, name: "Salle 1" },
+        createdAt: new Date()
+      } as any)
+      
+      const result = await createScheduleSlot({
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        roomId: mockRoomId,
+      })
+      
+      expect(result.success).toBe(true)
+      if (result.success && result.warnings) {
+        expect(result.warnings).toContain("La classe a déjà un cours sur cet horaire")
+        expect(result.warnings).toContain("La salle est déjà occupée sur cet horaire")
       }
     })
   })

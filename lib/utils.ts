@@ -6,6 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export type ActionResult<T = void> =
-  | { success: true; data: T; warning?: string }
+  | { success: true; data: T; warnings?: string[] }
   | { success: false; error: string }
 

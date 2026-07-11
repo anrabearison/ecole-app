@@ -305,3 +305,63 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
     return { success: false, error: "Failed to fetch classrooms" }
   }
 }
+
+export async function listTeacherSubjectsByClassroom(classroomId: string): Promise<ActionResult<TeacherSubjectWithRelations[]>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const teacherSubjects = await prisma.teacherSubject.findMany({
+      where: {
+        classroomId,
+        schoolId: session.user.schoolId,
+      },
+      include: {
+        teacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        subject: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        classroom: {
+          include: {
+            schoolGrade: {
+              select: {
+                id: true,
+                name: true,
+                cycle: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { subject: { name: "asc" } },
+        { teacher: { lastName: "asc" } },
+      ],
+    })
+
+    return { success: true, data: teacherSubjects }
+  } catch (error) {
+    console.error("Error listing teacher subjects by classroom:", error)
+    return { success: false, error: "Failed to list teacher subjects" }
+  }
+}

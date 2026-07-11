@@ -58,6 +58,16 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - Un enseignant ne voit que **son propre** emploi du temps (créneaux où il est l'enseignant assigné).
 - Un élève voit l'emploi du temps de **sa classe** (tous les créneaux de sa `Classroom`).
 
+### Détection de conflits
+
+Lors de la création ou modification d'un créneau, le système détecte les conflits suivants et retourne des avertissements non bloquants :
+
+- **Conflit enseignant** : un enseignant ne peut pas avoir deux créneaux qui se chevauchent au même moment.
+- **Conflit salle** : une salle ne peut pas être occupée par deux créneaux qui se chevauchent au même moment (si `roomId` est spécifié).
+- **Conflit classe** : une classe ne peut pas avoir deux créneaux qui se chevauchent au même moment, quelle que soit la matière, l'enseignant ou la salle.
+
+Plusieurs conflits peuvent être détectés simultanément (ex: conflit classe + salle) et tous sont affichés à l'utilisateur.
+
 ## Règles de permission par ressource
 
 > `PLATFORM_SUPER_ADMIN` : accès `view`/`create`/`update`/`delete` total sur **toutes** les ressources ci-dessous, sur **toutes** les écoles, sans exception. Cette règle prime sur toutes les autres listées par ressource — elle n'est pas répétée à chaque ligne ci-dessous.
