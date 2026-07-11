@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createGrades, getClassroomStudents } from "@/lib/actions/grade"
 import { listTeacherSubjects } from "@/lib/actions/teacher-subject"
-import { auth } from "@/lib/auth"
+import { getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,7 +27,7 @@ export default function NewGradesPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const session = await auth()
+        const session = await getSession()
         if (!session?.user?.teacherId) {
           router.push("/login")
           return

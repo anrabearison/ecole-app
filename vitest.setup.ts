@@ -1,6 +1,15 @@
-import { vi } from "vitest"
+import { vi, beforeEach } from "vitest"
+import { mockDeep, mockReset } from "vitest-mock-extended"
+import { PrismaClient } from "@prisma/client"
 
-// Mock Next.js modules
+// Shared Prisma mock — reset before each test to prevent state leakage
+const prismaMock = mockDeep<PrismaClient>()
+
+beforeEach(() => {
+  mockReset(prismaMock)
+})
+
+// Mock Next.js server auth (prevents Node/pg modules leaking into test runner)
 vi.mock("next-auth", () => ({
   default: () => ({
     handlers: {},
@@ -18,16 +27,7 @@ vi.mock("next/navigation", () => ({
   }),
 }))
 
-import { mockDeep, mockReset } from "vitest-mock-extended"
-import { PrismaClient } from "@prisma/client"
-import { beforeEach } from "vitest"
-
-const prismaMock = mockDeep<PrismaClient>()
-
-beforeEach(() => {
-  mockReset(prismaMock)
-})
-
+// Override Prisma client with the shared mock
 vi.mock("@/lib/prisma", () => ({
-  prisma: prismaMock
+  prisma: prismaMock,
 }))
