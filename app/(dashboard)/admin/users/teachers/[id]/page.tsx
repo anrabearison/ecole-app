@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { ScheduleView } from "@/components/ScheduleView"
 import { redirect } from "next/navigation"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function TeacherDetailPage({
   params,
@@ -68,16 +69,14 @@ export default async function TeacherDetailPage({
             <Button variant="outline">Modifier</Button>
           </Link>
           <form action={handleDelete}>
-            <Button
-              variant="destructive"
-              onClick={(e) => {
-                if (!confirm(`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`)) {
-                  e.preventDefault()
-                }
-              }}
+            <ConfirmActionButton
+              message={`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`}
+              confirmLabel="Désactiver"
+              cancelLabel="Annuler"
+              destructive
             >
               Désactiver
-            </Button>
+            </ConfirmActionButton>
           </form>
         </div>
       </div>

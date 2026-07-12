@@ -1,5 +1,6 @@
 import { listSchoolGrades, deleteSchoolGrade } from "@/lib/actions/school-grade"
 import Link from "next/link"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function SchoolGradesPage() {
   const result = await listSchoolGrades()
@@ -86,17 +87,14 @@ export default async function SchoolGradesPage() {
                           "use server"
                           await deleteSchoolGrade(grade.id)
                         }}>
-                          <button
-                            type="submit"
-                            className="text-red-600 hover:text-red-800"
-                            onClick={(e) => {
-                              if (!confirm(`Êtes-vous sûr de vouloir supprimer le niveau ${grade.name} ? Cette action est irréversible.`)) {
-                                e.preventDefault()
-                              }
-                            }}
+                          <ConfirmActionButton
+                            message={`Êtes-vous sûr de vouloir supprimer le niveau ${grade.name} ? Cette action est irréversible.`}
+                            confirmLabel="Supprimer"
+                            cancelLabel="Annuler"
+                            destructive
                           >
                             Supprimer
-                          </button>
+                          </ConfirmActionButton>
                         </form>
                       </td>
                   </tr>

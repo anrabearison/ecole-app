@@ -1,6 +1,7 @@
 import { listPeriods, deletePeriod } from "@/lib/actions/period"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function PeriodsPage() {
   const result = await listPeriods()
@@ -58,18 +59,15 @@ export default async function PeriodsPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <form action={deletePeriod as any}>
                     <input type="hidden" name="id" value={period.id} />
-                    <Button
-                      type="submit"
-                      variant="destructive"
+                    <ConfirmActionButton
+                      message={`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`}
+                      confirmLabel="Supprimer"
+                      cancelLabel="Annuler"
+                      destructive
                       size="sm"
-                      onClick={(e) => {
-                        if (!confirm(`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`)) {
-                          e.preventDefault()
-                        }
-                      }}
                     >
                       Supprimer
-                    </Button>
+                    </ConfirmActionButton>
                   </form>
                 </td>
               </tr>

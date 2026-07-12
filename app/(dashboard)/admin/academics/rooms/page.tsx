@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { listRooms, deleteRoom } from "@/lib/actions/room"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function RoomsPage() {
   const result = await listRooms()
@@ -57,18 +58,15 @@ export default async function RoomsPage() {
                       "use server"
                       await deleteRoom(room.id)
                     }}>
-                      <Button
-                        variant="destructive"
+                      <ConfirmActionButton
+                        message={`Êtes-vous sûr de vouloir supprimer ${room.name} ? Cette action est irréversible.`}
+                        confirmLabel="Supprimer"
+                        cancelLabel="Annuler"
+                        destructive
                         size="sm"
-                        type="submit"
-                        onClick={(e) => {
-                          if (!confirm(`Êtes-vous sûr de vouloir supprimer ${room.name} ? Cette action est irréversible.`)) {
-                            e.preventDefault()
-                          }
-                        }}
                       >
                         Supprimer
-                      </Button>
+                      </ConfirmActionButton>
                     </form>
                   </td>
                 </tr>

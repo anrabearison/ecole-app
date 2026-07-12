@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function SubjectsPage() {
   const result = await listSubjects()
@@ -57,18 +58,15 @@ export default async function SubjectsPage() {
                       "use server"
                       await deleteSubject(subject.id)
                     }}>
-                      <Button
-                        variant="destructive"
+                      <ConfirmActionButton
+                        message={`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`}
+                        confirmLabel="Supprimer"
+                        cancelLabel="Annuler"
+                        destructive
                         size="sm"
-                        type="submit"
-                        onClick={(e) => {
-                          if (!confirm(`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`)) {
-                            e.preventDefault()
-                          }
-                        }}
                       >
                         Supprimer
-                      </Button>
+                      </ConfirmActionButton>
                     </form>
                   </td>
                 </tr>

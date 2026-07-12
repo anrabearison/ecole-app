@@ -1,6 +1,7 @@
 import { listTracks, deleteTrack } from "@/lib/actions/track"
 import { listSchoolGrades } from "@/lib/actions/school-grade"
 import Link from "next/link"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default async function TracksPage() {
   const [tracksResult, gradesResult] = await Promise.all([
@@ -79,17 +80,14 @@ export default async function TracksPage() {
                           "use server"
                           await deleteTrack(track.id)
                         }}>
-                          <button
-                            type="submit"
-                            className="text-red-600 hover:text-red-800"
-                            onClick={(e) => {
-                              if (!confirm(`Êtes-vous sûr de vouloir supprimer la série ${track.name} ? Cette action est irréversible.`)) {
-                                e.preventDefault()
-                              }
-                            }}
+                          <ConfirmActionButton
+                            message={`Êtes-vous sûr de vouloir supprimer la série ${track.name} ? Cette action est irréversible.`}
+                            confirmLabel="Supprimer"
+                            cancelLabel="Annuler"
+                            destructive
                           >
                             Supprimer
-                          </button>
+                          </ConfirmActionButton>
                         </form>
                       </td>
                     </tr>
