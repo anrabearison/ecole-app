@@ -94,38 +94,33 @@ async function main() {
     )
   )
 
-  // Admin user — upsert by email)
-  const passwordHash = await bcrypt.hash("motdepasse123", 10)
-  await prisma.user.upsert({
-    where: { email: "admin@sekoly-test.mg" },
-    update: {},
-    create: {
-      email: "admin@sekoly-test.mg",
-      passwordHash,
-      role: "SCHOOL_ADMIN",
-      schoolId: school.id,
-    },
-  })
+  // Seed admin and platform admin users from shared dev account list
+  const { devSeedAccounts } = await import("../lib/dev-seed-accounts")
 
-  // PLATFORM_SUPER_ADMIN user — upsert by email (no schoolId)
-  const platformPasswordHash = await bcrypt.hash("platform123", 10)
-  await prisma.user.upsert({
-    where: { email: "platform@ecole-app.mg" },
-    update: {},
-    create: {
-      email: "platform@ecole-app.mg",
-      passwordHash: platformPasswordHash,
-      role: "PLATFORM_SUPER_ADMIN",
-      schoolId: null,
-    },
-  })
+  await Promise.all(
+    devSeedAccounts.map(async (account) => {
+      const passwordHash = await bcrypt.hash(account.password, 10)
+      await prisma.user.upsert({
+        where: { email: account.email },
+        update: {},
+        create: {
+          email: account.email,
+          passwordHash,
+          role: account.role,
+          schoolId: account.role === "PLATFORM_SUPER_ADMIN" ? null : school.id,
+        },
+      })
+    })
+  )
 
   console.log("✓ Seed terminé — school:", school.id)
   console.log("  Niveaux :", primaryGrade.name, middleSchoolGrade.name, "Seconde", premiereGrade.name)
   console.log("  Séries Première : A, C, D")
-  console.log("  Admin : admin@sekoly-test.mg / motdepasse123")
-  console.log("  Platform Super Admin : platform@ecole-app.mg / platform123")
+  devSeedAccounts.forEach((account) => {
+    console.log(`  ${account.label} : ${account.email} / ${account.password}`)
+  })
 }
+
 
 main()
   .catch(console.error)
