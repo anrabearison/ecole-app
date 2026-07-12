@@ -93,7 +93,10 @@ app/(dashboard)/admin/
 ```
 - **Informations** : identité, coordonnées (ou contact représentant légal).
 - **Classe & scolarité** : classe actuelle, historique des classes par année scolaire.
-- **Notes** : toutes ses notes, groupées par matière (vue identique à celle de l'élève lui-même, en lecture seule pour l'admin).
+- **Notes** : toutes ses notes, groupées par matière (vue identique à celle de l'élève lui-même, en lecture seule pour l'admin). Inclut :
+  - Sélecteur de période
+  - Champ d'appréciation (texte libre) pour le bulletin
+  - Bouton "Télécharger le bulletin PDF"
 - **Emploi du temps** : celui de sa classe.
 
 ### Différenciation `SCHOOL_ADMIN` vs `STAFF_ADMIN` sur ces écrans
@@ -207,6 +210,8 @@ app/(dashboard)/student/
 ▾ Français
   • 10/06 — Journalière — 12/20
 ```
+- Affiche la moyenne générale pour la période sélectionnée
+- Bouton "Télécharger le bulletin PDF" pour générer le bulletin de la période sélectionnée
 
 ### `SCHOOL_ADMIN` / `STAFF_ADMIN`
 

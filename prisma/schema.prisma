@@ -66,6 +66,7 @@ model School {
   scheduleSlots   ScheduleSlot[]
   rooms           Room[]
   periods         Period[]
+  reportCardComments ReportCardComment[]
 }
 
 // ============================================================
@@ -172,6 +173,7 @@ model Student {
 
   enrollments   Enrollment[]
   grades        Grade[]
+  reportCardComments ReportCardComment[]
   createdAt     DateTime @default(now())
 }
 
@@ -303,8 +305,31 @@ model Period {
   school   School @relation(fields: [schoolId], references: [id])
 
   grades   Grade[]
+  reportCardComments ReportCardComment[]
 
   @@unique([name, schoolYear, schoolId])
+}
+
+// ============================================================
+// Report Card Comments (appréciations bulletin)
+// ============================================================
+
+model ReportCardComment {
+  id        String   @id @default(cuid())
+  comment   String
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  periodId String
+  period   Period @relation(fields: [periodId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([studentId, periodId])
 }
 
 // ============================================================

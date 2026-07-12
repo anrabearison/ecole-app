@@ -1,8 +1,11 @@
 import { listGradesForStudent } from "@/lib/actions/grade"
 import { listPeriods } from "@/lib/actions/period"
 import { getStudentSubjectAverages, calculateGeneralAverage } from "@/lib/actions/average"
+import { getStudentById } from "@/lib/actions/student"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { DownloadPdfButton } from "./download-pdf-button"
 
 export default async function StudentGradesPage() {
   const session = await auth()
@@ -26,6 +29,15 @@ export default async function StudentGradesPage() {
 
   const grades = gradesResult.data
   const periods = periodsResult.success ? periodsResult.data : []
+
+  // Get student data for name
+  let studentName = ""
+  if (session.user.studentId) {
+    const studentResult = await getStudentById(session.user.studentId)
+    if (studentResult.success && studentResult.data) {
+      studentName = `${studentResult.data.firstName} ${studentResult.data.lastName}`
+    }
+  }
 
   // Get the first period for averages (in a real app, this would be user-selectable)
   const selectedPeriod = periods.length > 0 ? periods[0] : null
@@ -73,6 +85,14 @@ export default async function StudentGradesPage() {
               <p className="text-sm text-blue-800 font-medium">Moyenne générale - {selectedPeriod.name}</p>
               <p className="text-2xl font-bold text-blue-900">{generalAverage.toFixed(2)}/20</p>
             </div>
+            {session.user.studentId && (
+              <DownloadPdfButton
+                studentId={session.user.studentId}
+                periodId={selectedPeriod.id}
+                studentName={studentName}
+                periodName={selectedPeriod.name}
+              />
+            )}
           </div>
         </div>
       )}

@@ -60,6 +60,21 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - **Moyenne générale** : moyenne pondérée des moyennes matière, en utilisant les coefficients de chaque matière.
 - **Classement** : calculé en comparant les moyennes générales des élèves d'une même classe pour une période donnée.
 
+## Bulletins scolaires (Report Cards)
+
+- Le bulletin est un document PDF généré pour un élève et une période donnée.
+- Il contient :
+  - En-tête : nom et adresse de l'école, année scolaire, nom de la période
+  - Identité de l'élève : prénom, nom, classe complète
+  - Tableau des matières : nom, coefficient, moyenne de la matière pour la période
+  - Moyenne générale de la période
+  - Rang dans la classe (X / Y élèves)
+  - Appréciation : texte libre saisi par un enseignant ou l'admin
+- L'appréciation est stockée dans le modèle `ReportCardComment` (une appréciation par élève × période).
+- Permissions :
+  - `SCHOOL_ADMIN` / `STAFF_ADMIN` / `TEACHER` peuvent générer le bulletin de n'importe quel élève de leur école.
+  - `STUDENT` ne peut générer que son propre bulletin.
+
 ## Enseignants et matières
 
 - Un enseignant peut enseigner une ou plusieurs matières.

@@ -1,8 +1,11 @@
 import { listStudents, deleteStudent, getClassrooms, getStudentById } from "@/lib/actions/student"
+import { listPeriods } from "@/lib/actions/period"
+import { getReportCardComment } from "@/lib/actions/report-card-comment"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { GradesTab } from "./grades-tab"
 
 export default async function StudentDetailPage({
   params,
@@ -16,13 +19,15 @@ export default async function StudentDetailPage({
     redirect("/login")
   }
 
-  const [studentResult, classroomsResult] = await Promise.all([
+  const [studentResult, classroomsResult, periodsResult] = await Promise.all([
     getStudentById(id),
     getClassrooms(),
+    listPeriods(),
   ])
 
   const student = studentResult.success ? studentResult.data : null
   const classrooms = classroomsResult.success ? classroomsResult.data : []
+  const periods = periodsResult.success ? periodsResult.data : []
 
   async function handleDelete() {
     "use server"
@@ -125,13 +130,14 @@ export default async function StudentDetailPage({
         </div>
       </div>
 
-      {/* Tab Content: Notes (placeholder) */}
+      {/* Tab Content: Notes */}
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <p className="text-gray-500">Notes de l'élève, groupées par matière.</p>
-          <p className="text-sm text-gray-400 mt-2">Cette fonctionnalité sera implémentée ultérieurement.</p>
-        </div>
+        <GradesTab 
+          studentId={student.id} 
+          studentName={`${student.firstName} ${student.lastName}`} 
+          periods={periods}
+        />
       </div>
 
       {/* Tab Content: Emploi du temps (placeholder) */}
