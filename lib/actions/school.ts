@@ -183,3 +183,21 @@ export async function getSchoolStats(schoolId: string): Promise<ActionResult<Sch
     return { success: false, error: "Erreur lors de la récupération des statistiques de l'école" }
   }
 }
+
+export async function getSchoolNameById(schoolId: string): Promise<ActionResult<{ name: string }>> {
+  try {
+    const school = await prisma.school.findUnique({
+      where: { id: schoolId },
+      select: { name: true },
+    })
+
+    if (!school) {
+      return { success: false, error: "School not found" }
+    }
+
+    return { success: true, data: { name: school.name } }
+  } catch (error: any) {
+    console.error("Error getting school name:", error)
+    return { success: false, error: "Erreur lors de la récupération du nom de l'école" }
+  }
+}

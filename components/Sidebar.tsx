@@ -26,7 +26,11 @@ function isLinkActive(href: string, pathname: string) {
   return href !== "/" && pathname.startsWith(href + "/")
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  schoolName?: string
+}
+
+export function Sidebar({ schoolName }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
   const role = session?.user?.role as keyof typeof navByRole | undefined
@@ -85,6 +89,9 @@ export function Sidebar() {
       <div className="flex flex-col gap-4">
         <div className="px-2">
           <div className="text-sm font-semibold text-gray-900">Navigation</div>
+          {schoolName ? (
+            <p className="mt-1 text-xs font-medium text-slate-800">École {schoolName}</p>
+          ) : null}
           <p className="mt-1 text-xs text-gray-500">Espace {roleLabel}</p>
         </div>
 
