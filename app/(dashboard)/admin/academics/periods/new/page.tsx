@@ -16,6 +16,8 @@ export default function NewPeriodPage() {
     name: "",
     order: 1,
     schoolYear: "2025-2026",
+    examWeight: 0.6,
+    dailyWeight: 0.4,
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +36,7 @@ export default function NewPeriodPage() {
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.type === "number" ? parseInt(e.target.value) : e.target.value
+    const value = e.target.type === "number" ? parseFloat(e.target.value) : e.target.value
     setFormData({ ...formData, [e.target.name]: value })
   }
 
@@ -101,6 +103,46 @@ export default function NewPeriodPage() {
               className="w-full border rounded px-3 py-2"
               placeholder="Ex: 2025-2026"
             />
+          </div>
+
+          <div>
+            <label htmlFor="examWeight" className="block text-sm font-medium text-gray-700 mb-1">
+              Poids examen *
+            </label>
+            <input
+              type="number"
+              id="examWeight"
+              name="examWeight"
+              value={formData.examWeight}
+              onChange={handleChange}
+              required
+              min="0"
+              max="1"
+              step="0.01"
+              className="w-full border rounded px-3 py-2"
+              placeholder="Ex: 0.6"
+            />
+            <p className="text-xs text-gray-500 mt-1">Entre 0 et 1 (ex: 0.6 pour 60%)</p>
+          </div>
+
+          <div>
+            <label htmlFor="dailyWeight" className="block text-sm font-medium text-gray-700 mb-1">
+              Poids journalier *
+            </label>
+            <input
+              type="number"
+              id="dailyWeight"
+              name="dailyWeight"
+              value={formData.dailyWeight}
+              onChange={handleChange}
+              required
+              min="0"
+              max="1"
+              step="0.01"
+              className="w-full border rounded px-3 py-2"
+              placeholder="Ex: 0.4"
+            />
+            <p className="text-xs text-gray-500 mt-1">Entre 0 et 1 (ex: 0.4 pour 40%)</p>
           </div>
 
           <div className="flex gap-2 pt-4">

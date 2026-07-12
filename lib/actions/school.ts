@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { schoolSchema, schoolWeightingSchema, type SchoolInput, type SchoolWeightingInput } from "@/lib/validations/school"
+import { schoolSchema, type SchoolInput } from "@/lib/validations/school"
 import type { ActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
@@ -169,41 +169,5 @@ export async function getSchoolStats(schoolId: string): Promise<ActionResult<Sch
   } catch (error: any) {
     console.error("Error getting school stats:", error)
     return { success: false, error: "Erreur lors de la récupération des statistiques de l'école" }
-  }
-}
-
-/**
- * Update school weighting configuration - SCHOOL_ADMIN/STAFF_ADMIN only
- */
-export async function updateSchoolWeighting(data: SchoolWeightingInput): Promise<ActionResult<void>> {
-  const session = await auth()
-
-  if (!session?.user) {
-    return { success: false, error: "Unauthorized" }
-  }
-
-  if (!can(session.user.role, "update", "school")) {
-    return { success: false, error: "Forbidden" }
-  }
-
-  const validation = schoolWeightingSchema.safeParse(data)
-
-  if (!validation.success) {
-    return { success: false, error: validation.error.issues[0].message }
-  }
-
-  try {
-    await prisma.school.update({
-      where: { id: session.user.schoolId! },
-      data: {
-        examWeight: validation.data.examWeight,
-        dailyWeight: validation.data.dailyWeight,
-      },
-    })
-
-    return { success: true, data: undefined }
-  } catch (error: any) {
-    console.error("Error updating school weighting:", error)
-    return { success: false, error: "Erreur lors de la mise à jour de la pondération" }
   }
 }

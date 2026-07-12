@@ -87,7 +87,7 @@ async function main() {
       prisma.period.findFirst({ where: { schoolId: school.id, name, schoolYear: "2025-2026" } }).then(async (existing: any) => {
         if (!existing) {
           await prisma.period.create({
-            data: { name, order: index + 1, schoolYear: "2025-2026", schoolId: school.id },
+            data: { name, order: index + 1, schoolYear: "2025-2026", schoolId: school.id, examWeight: 0.6, dailyWeight: 0.4 },
           })
         }
       })

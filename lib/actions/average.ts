@@ -25,7 +25,7 @@ export type ClassRank = {
 
 /**
  * Calculate subject average for a student in a period
- * Weighted average based on School.examWeight/dailyWeight
+ * Weighted average based on Period.examWeight/dailyWeight
  */
 export async function calculateSubjectAverage(
   studentId: string,
@@ -51,14 +51,14 @@ export async function calculateSubjectAverage(
   }
 
   try {
-    // Get school weighting configuration
-    const school = await prisma.school.findUnique({
-      where: { id: session.user.schoolId },
+    // Get period weighting configuration
+    const period = await prisma.period.findUnique({
+      where: { id: periodId },
       select: { examWeight: true, dailyWeight: true },
     })
 
-    if (!school) {
-      return { success: false, error: "School not found" }
+    if (!period) {
+      return { success: false, error: "Period not found" }
     }
 
     // Get all grades for this student, subject, and period
@@ -96,12 +96,12 @@ export async function calculateSubjectAverage(
     const dailyAvg = dailyCount > 0 ? dailySum / dailyCount : 0
 
     // Weighted average
-    const average = examAvg * school.examWeight + dailyAvg * school.dailyWeight
+    const average = examAvg * period.examWeight + dailyAvg * period.dailyWeight
 
     return { success: true, data: average }
   } catch (error) {
     console.error("Error calculating subject average:", error)
-    return { success: false, error: "Failed to calculate subject average" }
+    return { success: false, error: "Erreur lors du calcul de la moyenne matière" }
   }
 }
 
@@ -179,9 +179,9 @@ export async function calculateGeneralAverage(
     const average = totalCoefficient > 0 ? weightedSum / totalCoefficient : 0
 
     return { success: true, data: average }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calculating general average:", error)
-    return { success: false, error: "Failed to calculate general average" }
+    return { success: false, error: "Erreur lors du calcul de la moyenne générale" }
   }
 }
 
@@ -249,7 +249,7 @@ export async function calculateClassRank(
     }
   } catch (error) {
     console.error("Error calculating class rank:", error)
-    return { success: false, error: "Failed to calculate class rank" }
+    return { success: false, error: "Erreur lors du calcul du classement" }
   }
 }
 
@@ -317,8 +317,8 @@ export async function getStudentSubjectAverages(
     }
 
     return { success: true, data: subjectAverages }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting student subject averages:", error)
-    return { success: false, error: "Failed to get student subject averages" }
+    return { success: false, error: "Erreur lors de la récupération des moyennes matière" }
   }
 }

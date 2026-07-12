@@ -48,12 +48,10 @@ enum Weekday {
 // ============================================================
 
 model School {
-  id          String   @id @default(cuid())
-  name        String
-  address     String?
-  examWeight Float    @default(0.6) // weight for EXAM grades in average calculation
-  dailyWeight Float   @default(0.4) // weight for DAILY grades in average calculation
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
 
   users           User[]
   schoolGrades    SchoolGrade[]
@@ -298,6 +296,8 @@ model Period {
   name       String   // "Trimestre 1", "Bimestre 2", etc.
   order      Int      // for sorting periods chronologically
   schoolYear String   // "2025-2026"
+  examWeight Float    @default(0.6) // weight for EXAM grades in average calculation
+  dailyWeight Float   @default(0.4) // weight for DAILY grades in average calculation
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])

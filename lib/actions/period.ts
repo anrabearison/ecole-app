@@ -12,6 +12,8 @@ export type PeriodWithRelations = {
   order: number
   schoolYear: string
   schoolId: string
+  examWeight: number
+  dailyWeight: number
 }
 
 export async function listPeriods(): Promise<ActionResult<PeriodWithRelations[]>> {
@@ -61,6 +63,8 @@ export async function createPeriod(data: PeriodInput): Promise<ActionResult<Peri
         name: validation.data.name,
         order: validation.data.order,
         schoolYear: validation.data.schoolYear,
+        examWeight: validation.data.examWeight,
+        dailyWeight: validation.data.dailyWeight,
         schoolId: session.user.schoolId!,
       },
     })

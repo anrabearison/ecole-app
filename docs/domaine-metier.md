@@ -43,8 +43,22 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 
 - Deux types : `EXAM` (examen) et `DAILY` (note journalière).
 - Un enseignant ne voit et ne modifie **que les notes qu'il a lui-même saisies** — pas celles saisies par un collègue, même dans une classe qu'il partage.
-- Une note est toujours rattachée à : élève, matière, classe, enseignant (celui qui l'a saisie), école.
+- Une note est toujours rattachée à : élève, matière, classe, enseignant (celui qui l'a saisie), école, période.
 - Avant toute création de note par un enseignant, vérifier qu'il est bien assigné à cette matière **et** cette classe (voir `TeacherSubject` ci-dessous) — sinon refuser.
+
+## Périodes scolaires (Periods)
+
+- Une période (ex: Trimestre 1, Bimestre 2) regroupe les notes pour un bulletin.
+- Chaque période a sa propre pondération examen/journalier (`examWeight`/`dailyWeight`).
+- La pondération peut varier d'une période à l'autre (ex: le dernier trimestre avant les examens officiels peut accorder plus de poids aux examens).
+- La somme des deux poids doit être égale à 1.0 (100%).
+- Le calcul de moyenne utilise la pondération de la période de la note, pas une pondération globale à l'école.
+
+## Calcul des moyennes
+
+- **Moyenne matière** : moyenne pondérée des notes d'un élève dans une matière pour une période, en utilisant la pondération examen/journalier de cette période.
+- **Moyenne générale** : moyenne pondérée des moyennes matière, en utilisant les coefficients de chaque matière.
+- **Classement** : calculé en comparant les moyennes générales des élèves d'une même classe pour une période donnée.
 
 ## Enseignants et matières
 
@@ -98,4 +112,3 @@ Plusieurs conflits peuvent être détectés simultanément (ex: conflit classe +
 ## Points volontairement non traités pour l'instant
 
 - Cycle Université (structure différente : semestres, UE, filières) — à concevoir plus tard, sans réutiliser tel quel le modèle `Grade`/`Track` actuel.
-- Calcul des moyennes / bulletins — à définir dans une prochaine itération.

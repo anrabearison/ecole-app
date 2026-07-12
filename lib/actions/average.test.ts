@@ -38,7 +38,7 @@ describe("average actions", () => {
     it("should calculate weighted average with exam and daily grades", async () => {
       mockSession("STUDENT", mockStudentId)
       
-      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+      vi.mocked(prisma.period.findUnique as any).mockResolvedValue({
         examWeight: 0.6,
         dailyWeight: 0.4,
       })
@@ -64,7 +64,7 @@ describe("average actions", () => {
     it("should return 0 when no grades exist", async () => {
       mockSession("STUDENT", mockStudentId)
       
-      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+      vi.mocked(prisma.period.findUnique as any).mockResolvedValue({
         examWeight: 0.6,
         dailyWeight: 0.4,
       })
@@ -82,7 +82,7 @@ describe("average actions", () => {
     it("should handle only exam grades", async () => {
       mockSession("STUDENT", mockStudentId)
       
-      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+      vi.mocked(prisma.period.findUnique as any).mockResolvedValue({
         examWeight: 0.6,
         dailyWeight: 0.4,
       })
