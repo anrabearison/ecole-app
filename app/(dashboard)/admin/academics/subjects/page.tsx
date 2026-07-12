@@ -3,6 +3,8 @@ import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
+export const dynamic = "force-dynamic"
+
 export default async function SubjectsPage() {
   const result = await listSubjects()
 

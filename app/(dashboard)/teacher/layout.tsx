@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { DashboardNav } from "@/components/dashboard-nav"
+import { Sidebar } from "@/components/Sidebar"
 
 export default async function TeacherLayout({
   children,
@@ -19,8 +19,12 @@ export default async function TeacherLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNav />
-      {children}
+      <div className="lg:flex">
+        <Sidebar />
+        <main className="flex-1 p-6 lg:min-h-screen">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
