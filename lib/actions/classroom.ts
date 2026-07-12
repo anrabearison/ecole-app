@@ -152,7 +152,7 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
   }
 }
 
-export async function listClassrooms(): Promise<ActionResult<ClassroomWithRelations[]>> {
+export async function listClassrooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<ClassroomWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -168,10 +168,21 @@ export async function listClassrooms(): Promise<ActionResult<ClassroomWithRelati
   }
 
   try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    if (search) {
+      where.OR = [
+        { section: { contains: search, mode: "insensitive" } },
+        { schoolYear: { contains: search, mode: "insensitive" } },
+      ]
+    }
+
     const classrooms = await prisma.classroom.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
+      where,
       include: {
         schoolGrade: {
           select: {
@@ -196,6 +207,8 @@ export async function listClassrooms(): Promise<ActionResult<ClassroomWithRelati
         { schoolGrade: { order: "asc" } },
         { section: "asc" },
       ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     })
 
     return { success: true, data: classrooms }

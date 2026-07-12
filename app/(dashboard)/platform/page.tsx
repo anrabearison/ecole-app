@@ -2,8 +2,10 @@ import { listSchools } from "@/lib/actions/school"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function PlatformPage() {
-  const result = await listSchools()
+export default async function PlatformPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
+  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined
+  const page = parseInt(searchParams?.page || '1', 10) || 1
+  const result = await listSchools({ search, page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -19,10 +21,20 @@ export default async function PlatformPage() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Écoles</h1>
-        <Link href="/platform/schools/new">
-          <Button>Nouvelle école</Button>
-        </Link>
+        <div>
+          <h1 className="text-2xl font-bold">Écoles</h1>
+          <p className="text-gray-600">Gestion des écoles (plateforme)</p>
+        </div>
+        <div className="flex gap-4">
+          <form method="get" className="flex items-center" action="/platform">
+            <input name="search" placeholder="Rechercher une école" className="border rounded px-3 py-2 mr-2" />
+            <input type="hidden" name="page" value="1" />
+            <Button type="submit">Rechercher</Button>
+          </form>
+          <Link href="/platform/schools/new">
+            <Button>Nouvelle école</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow overflow-hidden">

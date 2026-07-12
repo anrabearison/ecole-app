@@ -57,7 +57,16 @@ export default async function RoomsPage() {
                       "use server"
                       await deleteRoom(room.id)
                     }}>
-                      <Button variant="destructive" size="sm" type="submit">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        type="submit"
+                        onClick={(e) => {
+                          if (!confirm(`Êtes-vous sûr de vouloir supprimer ${room.name} ? Cette action est irréversible.`)) {
+                            e.preventDefault()
+                          }
+                        }}
+                      >
                         Supprimer
                       </Button>
                     </form>

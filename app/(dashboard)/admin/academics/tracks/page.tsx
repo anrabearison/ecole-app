@@ -1,4 +1,4 @@
-import { listTracks } from "@/lib/actions/track"
+import { listTracks, deleteTrack } from "@/lib/actions/track"
 import { listSchoolGrades } from "@/lib/actions/school-grade"
 import Link from "next/link"
 
@@ -60,6 +60,9 @@ export default async function TracksPage() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Classes
                     </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
@@ -70,6 +73,24 @@ export default async function TracksPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
                         {track.classrooms.length}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <form action={async () => {
+                          "use server"
+                          await deleteTrack(track.id)
+                        }}>
+                          <button
+                            type="submit"
+                            className="text-red-600 hover:text-red-800"
+                            onClick={(e) => {
+                              if (!confirm(`Êtes-vous sûr de vouloir supprimer la série ${track.name} ? Cette action est irréversible.`)) {
+                                e.preventDefault()
+                              }
+                            }}
+                          >
+                            Supprimer
+                          </button>
+                        </form>
                       </td>
                     </tr>
                   ))}

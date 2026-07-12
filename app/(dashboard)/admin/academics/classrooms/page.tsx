@@ -2,8 +2,10 @@ import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function ClassroomsPage() {
-  const result = await listClassrooms()
+export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
+  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined
+  const page = parseInt(searchParams?.page || '1', 10) || 1
+  const result = await listClassrooms({ search, page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -38,10 +40,20 @@ export default async function ClassroomsPage() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Classes</h1>
-        <Link href="/admin/academics/classrooms/new">
-          <Button>Nouvelle classe</Button>
-        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Classes</h1>
+          <p className="text-gray-600">Vue arborescente des classes</p>
+        </div>
+        <div className="flex gap-4">
+          <form method="get" className="flex items-center" action="/admin/academics/classrooms">
+            <input name="search" placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
+            <input type="hidden" name="page" value="1" />
+            <Button type="submit">Rechercher</Button>
+          </form>
+          <Link href="/admin/academics/classrooms/new">
+            <Button>Nouvelle classe</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="space-y-6">

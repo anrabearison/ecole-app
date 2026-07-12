@@ -58,7 +58,16 @@ export default async function PeriodsPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <form action={deletePeriod as any}>
                     <input type="hidden" name="id" value={period.id} />
-                    <Button type="submit" variant="destructive" size="sm">
+                    <Button
+                      type="submit"
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        if (!confirm(`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`)) {
+                          e.preventDefault()
+                        }
+                      }}
+                    >
                       Supprimer
                     </Button>
                   </form>

@@ -79,7 +79,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 }
 
-export async function listTeachers(): Promise<ActionResult<TeacherWithRelations[]>> {
+export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -95,10 +95,22 @@ export async function listTeachers(): Promise<ActionResult<TeacherWithRelations[
   }
 
   try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+      ]
+    }
+
     const teachers = await prisma.teacher.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
+      where,
       include: {
         user: {
           select: {
@@ -117,6 +129,8 @@ export async function listTeachers(): Promise<ActionResult<TeacherWithRelations[
         { lastName: "asc" },
         { firstName: "asc" },
       ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     })
 
     return { success: true, data: teachers }

@@ -194,7 +194,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(): Promise<ActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -210,10 +210,22 @@ export async function listStudents(): Promise<ActionResult<StudentWithRelations[
   }
 
   try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+      ]
+    }
+
     const students = await prisma.student.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
+      where,
       include: {
         user: {
           select: {
@@ -238,6 +250,8 @@ export async function listStudents(): Promise<ActionResult<StudentWithRelations[
         { lastName: "asc" },
         { firstName: "asc" },
       ],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     })
 
     return { success: true, data: students }

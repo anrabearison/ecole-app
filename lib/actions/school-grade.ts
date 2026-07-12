@@ -217,9 +217,31 @@ export async function deleteSchoolGrade(id: string): Promise<ActionResult<void>>
   }
 
   try {
-    await prisma.schoolGrade.delete({
-      where: { id },
+    // Ensure school grade exists and belongs to the user's school
+    const existing = await prisma.schoolGrade.findUnique({ where: { id } })
+
+    if (!existing || existing.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Niveau scolaire non trouvé" }
+    }
+
+    // Prevent deletion when tracks or classrooms depend on this school grade
+    const tracksCount = await prisma.track.count({
+      where: { schoolGradeId: id, schoolId: session.user.schoolId },
     })
+
+    if (tracksCount > 0) {
+      return { success: false, error: "Impossible de supprimer ce niveau : des filières y sont rattachées." }
+    }
+
+    const classroomsCount = await prisma.classroom.count({
+      where: { schoolGradeId: id, schoolId: session.user.schoolId },
+    })
+
+    if (classroomsCount > 0) {
+      return { success: false, error: "Impossible de supprimer ce niveau : des classes y sont rattachées." }
+    }
+
+    await prisma.schoolGrade.delete({ where: { id } })
 
     return { success: true, data: undefined }
   } catch (error: any) {

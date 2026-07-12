@@ -142,14 +142,30 @@ describe("Track Server Actions", () => {
   })
 
   describe("deleteTrack", () => {
-    it("should allow admin to delete track", async () => {
+    it("should allow admin to delete track when no classrooms depend on it", async () => {
       mockSession("SCHOOL_ADMIN", mockSchoolId)
-      
+
+      vi.mocked(prisma.track.findUnique as any).mockResolvedValue({ id: "t1", schoolId: mockSchoolId } as any)
+      vi.mocked(prisma.classroom.count as any).mockResolvedValue(0)
       vi.mocked(prisma.track.delete as any).mockResolvedValue({ id: "t1" } as any)
-      
+
       const result = await deleteTrack("t1")
-      
+
       expect(result.success).toBe(true)
+    })
+
+    it("should refuse deletion when classrooms depend on the track", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+
+      vi.mocked(prisma.track.findUnique as any).mockResolvedValue({ id: "t2", schoolId: mockSchoolId } as any)
+      vi.mocked(prisma.classroom.count as any).mockResolvedValue(2)
+
+      const result = await deleteTrack("t2")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe("Impossible de supprimer cette filière : des classes y sont rattachées.")
+      }
     })
   })
 })

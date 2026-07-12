@@ -31,12 +31,12 @@ export default function LoginPage() {
       })
 
       if (result?.error) {
-        setError("Invalid email or password")
+        setError("Email ou mot de passe invalide")
       } else if (result?.ok) {
         window.location.href = "/"
       }
     } catch (err) {
-      setError("An error occurred. Please try again.")
+      setError("Une erreur est survenue. Veuillez réessayer.")
     } finally {
       setIsLoading(false)
     }
@@ -47,10 +47,10 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
         <div>
           <h2 className="text-3xl font-bold text-center text-gray-900">
-            Sign in to your account
+            Connexion
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Ecole App - School Management System
+            Ecole App - Système de gestion scolaire
           </p>
         </div>
 
@@ -64,14 +64,14 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
+                Adresse e-mail
               </label>
               <input
                 {...register("email")}
                 type="email"
                 autoComplete="email"
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="you@example.com"
+                placeholder="vous@exemple.com"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -80,7 +80,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+                Mot de passe
               </label>
               <input
                 {...register("password")}
@@ -100,7 +100,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full"
           >
-            {isLoading ? "Signing in..." : "Sign in"}
+            {isLoading ? "Connexion..." : "Se connecter"}
           </Button>
         </form>
       </div>

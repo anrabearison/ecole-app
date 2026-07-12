@@ -4,14 +4,16 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function StudentsPage() {
+export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const session = await auth()
+  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined
+  const page = parseInt(searchParams?.page || '1', 10) || 1
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listStudents()
+  const result = await listStudents({ search, page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -26,10 +28,20 @@ export default async function StudentsPage() {
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Élèves</h1>
-        <Link href="/admin/users/students/new">
-          <Button>Nouvel élève</Button>
-        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Élèves</h1>
+          <p className="text-gray-600">Liste des élèves de l'établissement</p>
+        </div>
+        <div className="flex gap-4">
+          <form method="get" className="flex items-center" action="/admin/users/students">
+            <input name="search" placeholder="Rechercher nom, prénom, email" className="border rounded px-3 py-2 mr-2" />
+            <input type="hidden" name="page" value="1" />
+            <Button type="submit">Rechercher</Button>
+          </form>
+          <Link href="/admin/users/students/new">
+            <Button>Nouvel élève</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

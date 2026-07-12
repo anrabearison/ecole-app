@@ -57,7 +57,16 @@ export default async function SubjectsPage() {
                       "use server"
                       await deleteSubject(subject.id)
                     }}>
-                      <Button variant="destructive" size="sm" type="submit">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        type="submit"
+                        onClick={(e) => {
+                          if (!confirm(`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`)) {
+                            e.preventDefault()
+                          }
+                        }}
+                      >
                         Supprimer
                       </Button>
                     </form>

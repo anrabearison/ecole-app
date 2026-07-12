@@ -235,9 +235,23 @@ export async function deleteTrack(id: string): Promise<ActionResult<void>> {
   }
 
   try {
-    await prisma.track.delete({
-      where: { id },
+    // Ensure track exists and belongs to the user's school
+    const existing = await prisma.track.findUnique({ where: { id } })
+
+    if (!existing || existing.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Filière non trouvée" }
+    }
+
+    // Prevent deletion when classrooms depend on this track
+    const classroomsCount = await prisma.classroom.count({
+      where: { trackId: id, schoolId: session.user.schoolId },
     })
+
+    if (classroomsCount > 0) {
+      return { success: false, error: "Impossible de supprimer cette filière : des classes y sont rattachées." }
+    }
+
+    await prisma.track.delete({ where: { id } })
 
     return { success: true, data: undefined }
   } catch (error: any) {

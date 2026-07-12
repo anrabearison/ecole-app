@@ -27,7 +27,7 @@ export type SchoolStats = {
  * List all schools - PLATFORM_SUPER_ADMIN only
  * NOTE: No schoolId filter here - PLATFORM_SUPER_ADMIN sees all schools by design
  */
-export async function listSchools(): Promise<ActionResult<SchoolWithStats[]>> {
+export async function listSchools(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<SchoolWithStats[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -39,7 +39,17 @@ export async function listSchools(): Promise<ActionResult<SchoolWithStats[]>> {
   }
 
   try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = {}
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" }
+    }
+
     const schools = await prisma.school.findMany({
+      where,
       include: {
         _count: {
           select: {
@@ -50,6 +60,8 @@ export async function listSchools(): Promise<ActionResult<SchoolWithStats[]>> {
         },
       },
       orderBy: { name: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     })
 
     const schoolsWithStats: SchoolWithStats[] = schools.map((school: any) => ({

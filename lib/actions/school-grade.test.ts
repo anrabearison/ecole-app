@@ -104,14 +104,46 @@ describe("SchoolGrade Server Actions", () => {
   })
 
   describe("deleteSchoolGrade", () => {
-    it("should allow admin to delete school grade", async () => {
+    it("should allow admin to delete school grade when no dependencies exist", async () => {
       mockSession("SCHOOL_ADMIN", mockSchoolId)
-      
+
+      vi.mocked(prisma.schoolGrade.findUnique as any).mockResolvedValue({ id: "sg1", schoolId: mockSchoolId } as any)
+      vi.mocked(prisma.track.count as any).mockResolvedValue(0)
+      vi.mocked(prisma.classroom.count as any).mockResolvedValue(0)
       vi.mocked(prisma.schoolGrade.delete as any).mockResolvedValue({ id: "sg1" } as any)
-      
+
       const result = await deleteSchoolGrade("sg1")
-      
+
       expect(result.success).toBe(true)
+    })
+
+    it("should refuse deletion when tracks depend on the school grade", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+
+      vi.mocked(prisma.schoolGrade.findUnique as any).mockResolvedValue({ id: "sg2", schoolId: mockSchoolId } as any)
+      vi.mocked(prisma.track.count as any).mockResolvedValue(1)
+
+      const result = await deleteSchoolGrade("sg2")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe("Impossible de supprimer ce niveau : des filières y sont rattachées.")
+      }
+    })
+
+    it("should refuse deletion when classrooms depend on the school grade", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+
+      vi.mocked(prisma.schoolGrade.findUnique as any).mockResolvedValue({ id: "sg3", schoolId: mockSchoolId } as any)
+      vi.mocked(prisma.track.count as any).mockResolvedValue(0)
+      vi.mocked(prisma.classroom.count as any).mockResolvedValue(2)
+
+      const result = await deleteSchoolGrade("sg3")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe("Impossible de supprimer ce niveau : des classes y sont rattachées.")
+      }
     })
   })
 })

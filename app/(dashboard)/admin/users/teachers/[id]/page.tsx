@@ -68,7 +68,16 @@ export default async function TeacherDetailPage({
             <Button variant="outline">Modifier</Button>
           </Link>
           <form action={handleDelete}>
-            <Button variant="destructive">Désactiver</Button>
+            <Button
+              variant="destructive"
+              onClick={(e) => {
+                if (!confirm(`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`)) {
+                  e.preventDefault()
+                }
+              }}
+            >
+              Désactiver
+            </Button>
           </form>
         </div>
       </div>
