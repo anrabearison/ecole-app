@@ -1,9 +1,13 @@
 import { z } from "zod"
 
+const optionalStringSchema = z.string().optional()
+
 export const teacherSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   email: z.string().email("Invalid email address"),
+  phone: optionalStringSchema,
+  contractType: optionalStringSchema,
 })
 
 export type TeacherInput = z.infer<typeof teacherSchema>

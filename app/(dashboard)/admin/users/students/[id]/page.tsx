@@ -58,7 +58,9 @@ export default async function StudentDetailPage({
           <Link href="/admin/users/students">
             <Button variant="outline">Retour</Button>
           </Link>
-          <Button variant="outline">Modifier</Button>
+          <Link href={`/admin/users/students/${id}/edit`}>
+            <Button variant="outline">Modifier</Button>
+          </Link>
           <form action={handleDelete}>
             <Button variant="destructive">Désactiver</Button>
           </form>
@@ -99,6 +101,21 @@ export default async function StudentDetailPage({
           <div>
             <p className="text-sm text-gray-500">Email</p>
             <p className="text-lg font-medium">{student.user.email}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Date de naissance</p>
+            <p className="text-lg font-medium">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("fr-FR") : "—"}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Nom du responsable</p>
+            <p className="text-lg font-medium">{student.guardianName || "—"}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Téléphone du responsable</p>
+            <p className="text-lg font-medium">{student.guardianPhone || "—"}</p>
           </div>
 
           <div>

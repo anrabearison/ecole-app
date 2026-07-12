@@ -162,6 +162,9 @@ model Student {
 
   firstName String
   lastName  String
+  dateOfBirth DateTime?
+  guardianName String?
+  guardianPhone String?
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
@@ -205,6 +208,8 @@ model Teacher {
 
   firstName String
   lastName  String
+  phone String?
+  contractType String?
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])

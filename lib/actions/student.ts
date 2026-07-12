@@ -11,6 +11,9 @@ type StudentWithRelations = {
   id: string
   firstName: string
   lastName: string
+  dateOfBirth: Date | null
+  guardianName: string | null
+  guardianPhone: string | null
   user: {
     id: string
     email: string
@@ -249,6 +252,9 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           userId: user.id,
           firstName: data.firstName,
           lastName: data.lastName,
+          dateOfBirth: data.dateOfBirth,
+          guardianName: data.guardianName,
+          guardianPhone: data.guardianPhone,
           schoolId: session.user.schoolId,
           classroomId: data.classroomId,
         },
@@ -371,6 +377,9 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
         data: {
           firstName: data.firstName,
           lastName: data.lastName,
+          dateOfBirth: data.dateOfBirth,
+          guardianName: data.guardianName,
+          guardianPhone: data.guardianPhone,
           classroomId: data.classroomId,
         },
         include: {

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createStudent, getClassrooms } from "@/lib/actions/student"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { studentSchema, type StudentInput } from "@/lib/validations/student"
+import { studentFormSchema, type StudentFormInput, type StudentInput } from "@/lib/validations/student"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -24,8 +24,8 @@ export default function NewStudentPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-  } = useForm<StudentInput>({
-    resolver: zodResolver(studentSchema),
+  } = useForm<StudentFormInput>({
+    resolver: zodResolver(studentFormSchema),
   })
 
   useEffect(() => {
@@ -39,9 +39,16 @@ export default function NewStudentPage() {
     fetchClassrooms()
   }, [])
 
-  async function onSubmit(data: StudentInput) {
+  async function onSubmit(data: StudentFormInput) {
     setError(null)
-    const result = await createStudent(data)
+    const payload: StudentInput = {
+      ...data,
+      classroomId: data.classroomId || undefined,
+      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
+      guardianName: data.guardianName || undefined,
+      guardianPhone: data.guardianPhone || undefined,
+    }
+    const result = await createStudent(payload)
 
     if (result.success) {
       setTemporaryPassword(result.data.temporaryPassword)
@@ -106,6 +113,45 @@ export default function NewStudentPage() {
             />
             {errors.email && (
               <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="dateOfBirth">Date de naissance</Label>
+              <Input
+                id="dateOfBirth"
+                type="date"
+                {...register("dateOfBirth")}
+                className="mt-1"
+              />
+              {errors.dateOfBirth && (
+                <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="guardianName">Nom du responsable</Label>
+              <Input
+                id="guardianName"
+                {...register("guardianName")}
+                className="mt-1"
+              />
+              {errors.guardianName && (
+                <p className="text-sm text-red-600 mt-1">{errors.guardianName.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="guardianPhone">Téléphone du responsable</Label>
+            <Input
+              id="guardianPhone"
+              {...register("guardianPhone")}
+              className="mt-1"
+            />
+            {errors.guardianPhone && (
+              <p className="text-sm text-red-600 mt-1">{errors.guardianPhone.message}</p>
             )}
           </div>
 

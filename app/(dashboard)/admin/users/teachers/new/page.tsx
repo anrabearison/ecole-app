@@ -96,6 +96,32 @@ export default function NewTeacherPage() {
             )}
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="phone">Téléphone</Label>
+              <Input
+                id="phone"
+                {...register("phone")}
+                className="mt-1"
+              />
+              {errors.phone && (
+                <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="contractType">Type de contrat</Label>
+              <Input
+                id="contractType"
+                {...register("contractType")}
+                className="mt-1"
+              />
+              {errors.contractType && (
+                <p className="text-sm text-red-600 mt-1">{errors.contractType.message}</p>
+              )}
+            </div>
+          </div>
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}

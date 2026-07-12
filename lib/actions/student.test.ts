@@ -61,7 +61,10 @@ describe("Student Server Actions", () => {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "jean@test.com",
-        classroomId: "classroom-1"
+        classroomId: "classroom-1",
+        dateOfBirth: new Date("2008-05-10"),
+        guardianName: "Aline Rakoto",
+        guardianPhone: "+261341000000"
       }
       
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
@@ -189,7 +192,7 @@ describe("Student Server Actions", () => {
         return callback(tx)
       })
       
-      const result = await updateStudent("s1", { firstName: "Jean" })
+      const result = await updateStudent("s1", { firstName: "Jean", guardianName: "Aline Rakoto" })
       
       expect(result.success).toBe(true)
     })

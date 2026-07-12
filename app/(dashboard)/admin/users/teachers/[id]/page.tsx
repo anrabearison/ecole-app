@@ -80,7 +80,9 @@ export default async function TeacherDetailPage({
           <Link href="/admin/users/teachers">
             <Button variant="outline">Retour</Button>
           </Link>
-          <Button variant="outline">Modifier</Button>
+          <Link href={`/admin/users/teachers/${id}/edit`}>
+            <Button variant="outline">Modifier</Button>
+          </Link>
           <form action={handleDelete}>
             <Button variant="destructive">Désactiver</Button>
           </form>
@@ -121,6 +123,16 @@ export default async function TeacherDetailPage({
           <div>
             <p className="text-sm text-gray-500">Email</p>
             <p className="text-lg font-medium">{teacher.user.email}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Téléphone</p>
+            <p className="text-lg font-medium">{teacher.phone || "—"}</p>
+          </div>
+
+          <div>
+            <p className="text-sm text-gray-500">Type de contrat</p>
+            <p className="text-lg font-medium">{teacher.contractType || "—"}</p>
           </div>
 
           <div>

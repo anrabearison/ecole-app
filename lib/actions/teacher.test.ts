@@ -61,6 +61,8 @@ describe("Teacher Server Actions", () => {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "jean@test.com",
+        phone: "+261341000000",
+        contractType: "CDI"
       }
       
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
@@ -174,7 +176,7 @@ describe("Teacher Server Actions", () => {
         return callback(tx)
       })
       
-      const result = await updateTeacher("t1", { firstName: "Jean" })
+      const result = await updateTeacher("t1", { firstName: "Jean", phone: "+261341111111" })
       
       expect(result.success).toBe(true)
     })
