@@ -52,7 +52,8 @@ describe("Classroom Server Actions", () => {
       const input = {
         section: "A",
         schoolYear: "2025-2026",
-        schoolGradeId: "grade-1"
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
       }
       
       vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
@@ -94,7 +95,8 @@ describe("Classroom Server Actions", () => {
       const input = {
         section: "A",
         schoolYear: "2025-2026",
-        schoolGradeId: "grade-1"
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
       }
       
       const result = await createClassroom(input)

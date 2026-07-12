@@ -5,6 +5,7 @@ import { getStudentById } from "@/lib/actions/student"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { DownloadPdfButton } from "./download-pdf-button"
+import { DownloadAnnualReportButton } from "./download-annual-report-button"
 
 export default async function StudentGradesPage({
   searchParams,
@@ -99,12 +100,19 @@ export default async function StudentGradesPage({
               <p className="text-2xl font-bold text-blue-900">{generalAverage.toFixed(2)}/20</p>
             </div>
             {session.user.studentId && (
-              <DownloadPdfButton
-                studentId={session.user.studentId}
-                periodId={selectedPeriod.id}
-                studentName={studentName}
-                periodName={selectedPeriod.name}
-              />
+              <div className="flex flex-wrap gap-3">
+                <DownloadPdfButton
+                  studentId={session.user.studentId}
+                  periodId={selectedPeriod.id}
+                  studentName={studentName}
+                  periodName={selectedPeriod.name}
+                />
+                <DownloadAnnualReportButton
+                  studentId={session.user.studentId}
+                  schoolYear={selectedPeriod.schoolYear}
+                  studentName={studentName}
+                />
+              </div>
             )}
           </div>
         </div>

@@ -1,7 +1,7 @@
 type Role = "PLATFORM_SUPER_ADMIN" | "SCHOOL_ADMIN" | "STAFF_ADMIN" | "TEACHER" | "STUDENT"
 
 type Action = "create" | "update" | "delete" | "view"
-type Resource = "student" | "grade" | "classroom" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track" | "room" | "school" | "period"
+type Resource = "student" | "grade" | "classroom" | "deliberation" | "user" | "schedule" | "teacher" | "subject" | "school-grade" | "track" | "room" | "school" | "period"
 
 interface PermissionContext {
   ownerId?: string
@@ -51,7 +51,9 @@ export function can(
       case "school-grade":
       case "track":
       case "room":
-        // Full access to school resources
+      case "deliberation":
+        // Can view deliberations and school resources, but cannot create/update/delete deliberations
+        if (resource === "deliberation" && action !== "view") return false
         return true
       case "period":
         // Full access to periods
@@ -109,6 +111,9 @@ export function can(
         // Can view students in their classrooms
         if (action === "view") return true
         return false
+      case "deliberation":
+        if (action === "view") return true
+        return false
       default:
         return false
     }
@@ -132,6 +137,11 @@ export function can(
       case "schedule":
         // Can view their classroom's schedule
         if (action === "view" && context?.classroomId) {
+          return true
+        }
+        return false
+      case "deliberation":
+        if (action === "view" && context?.studentId && context?.ownerId === context.studentId) {
           return true
         }
         return false

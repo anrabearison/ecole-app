@@ -43,6 +43,11 @@ enum Weekday {
   SATURDAY
 }
 
+enum DeliberationDecision {
+  PROMOTED
+  REPEATED
+}
+
 // ============================================================
 // Multi-tenant root
 // ============================================================
@@ -67,6 +72,7 @@ model School {
   rooms           Room[]
   periods         Period[]
   reportCardComments ReportCardComment[]
+  deliberations   Deliberation[]
 }
 
 // ============================================================
@@ -132,6 +138,7 @@ model Classroom {
   id       String @id @default(cuid())
   section  String // parallel class label: "A", "B", "1", "2"...
   schoolYear String // "2025-2026" — a classroom is scoped to one school year
+  passingThreshold Float @default(10) // moyenne de délibération / seuil de passage
 
   schoolGradeId String
   schoolGrade   SchoolGrade @relation(fields: [schoolGradeId], references: [id])
@@ -177,6 +184,7 @@ model Student {
   enrollments   Enrollment[]
   grades        Grade[]
   reportCardComments ReportCardComment[]
+  deliberations Deliberation[]
   createdAt     DateTime @default(now())
 }
 
@@ -336,7 +344,24 @@ model ReportCardComment {
 
   @@unique([studentId, periodId])
 }
+model Deliberation {
+  id             String               @id @default(cuid())
+  schoolYear     String
+  studentAverage Float
+  decision       DeliberationDecision
+  observations   String?
 
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studentId, schoolYear])
+}
 // ============================================================
 // Schedule (emploi du temps)
 // ============================================================

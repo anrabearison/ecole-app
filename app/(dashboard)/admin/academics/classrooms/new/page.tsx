@@ -22,10 +22,11 @@ export default function NewClassroomPage() {
     watch,
     setValue,
     formState: { errors }
-  } = useForm<ClassroomInput>({
+  } = useForm({
     resolver: zodResolver(classroomSchema),
     defaultValues: {
       schoolYear: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+      passingThreshold: 10,
     }
   })
 
@@ -58,12 +59,12 @@ export default function NewClassroomPage() {
     }
   }, [schoolGradeId, selectedSchoolGrade, schoolGrades, setValue])
 
-  const onSubmit = async (data: ClassroomInput) => {
+  const onSubmit = async (data: any) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const result = await createClassroom(data)
+      const result = await createClassroom(data as ClassroomInput)
 
       if (result.success) {
         router.push("/admin/academics/classrooms")
@@ -183,6 +184,26 @@ export default function NewClassroomPage() {
             </select>
             {errors.schoolYear && (
               <p className="mt-1 text-sm text-red-600">{errors.schoolYear.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="passingThreshold" className="block text-sm font-medium text-gray-700 mb-2">
+              Seuil de passage
+            </label>
+            <input
+              {...register("passingThreshold", { valueAsNumber: true })}
+              type="number"
+              step="0.1"
+              min={0}
+              max={20}
+              id="passingThreshold"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              placeholder="10"
+              defaultValue={10}
+            />
+            {errors.passingThreshold && (
+              <p className="mt-1 text-sm text-red-600">{errors.passingThreshold.message}</p>
             )}
           </div>
 

@@ -85,6 +85,7 @@ type ClassroomWithRelations = {
   id: string
   section: string
   schoolYear: string
+  passingThreshold: number
   schoolGradeId: string
   trackId: string | null
   schoolGrade: {
@@ -282,6 +283,7 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
         trackId: data.trackId,
         section: data.section,
         schoolYear: data.schoolYear,
+        passingThreshold: data.passingThreshold,
         schoolId: session.user.schoolId,
       },
       include: {

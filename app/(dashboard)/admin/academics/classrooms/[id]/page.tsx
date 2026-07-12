@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ClassroomDeliberationSection } from "./deliberation-section"
 
 export default async function ClassroomDetailPage({
   params,
@@ -102,10 +103,17 @@ export default async function ClassroomDetailPage({
         </div>
 
         <div>
+          <p className="text-sm text-gray-500">Seuil de passage</p>
+          <p className="text-lg font-medium">{classroom.passingThreshold.toFixed(1)}/20</p>
+        </div>
+
+        <div>
           <p className="text-sm text-gray-500">Nombre d'élèves</p>
           <p className="text-lg font-medium">{classroom._count.students}</p>
         </div>
       </div>
+
+      <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
 
       <div className="mt-8">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Élèves</h2>
