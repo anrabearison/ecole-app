@@ -52,8 +52,8 @@ export default async function StudentDetailPage({
     }
   }
 
-  if (student?.classroomId) {
-    const scheduleResult = await listScheduleSlotsByClassroom(student.classroomId)
+  if (student?.classroom?.id) {
+    const scheduleResult = await listScheduleSlotsByClassroom(student.classroom.id)
     if (scheduleResult.success) {
       scheduleSlots = scheduleResult.data
     }
