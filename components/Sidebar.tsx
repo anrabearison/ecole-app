@@ -30,26 +30,41 @@ export function Sidebar() {
   const pathname = usePathname()
   const { data: session } = useSession()
   const role = session?.user?.role as keyof typeof navByRole | undefined
-  const items = role ? navByRole[role] : []
+  const items = useMemo(() => (role ? navByRole[role] : []), [role])
 
-  const initialOpenState = useMemo(() => {
-    const openState: Record<string, boolean> = {}
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
 
     items.forEach((item) => {
       if (item.type === "group") {
-        const active = item.items.some((child) => isLinkActive(child.href, pathname))
-        openState[item.label] = active
+        initial[item.label] = item.items.some((child) => isLinkActive(child.href, pathname))
       }
     })
 
-    return openState
-  }, [items, pathname])
-
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+    return initial
+  })
 
   useEffect(() => {
-    setOpenGroups(initialOpenState)
-  }, [initialOpenState])
+    const nextState: Record<string, boolean> = {}
+
+    items.forEach((item) => {
+      if (item.type === "group") {
+        nextState[item.label] = item.items.some((child) => isLinkActive(child.href, pathname))
+      }
+    })
+
+    setOpenGroups((prev) => {
+      const shouldUpdate = Object.keys(nextState).some(
+        (key) => nextState[key] !== prev[key]
+      )
+
+      if (!shouldUpdate) {
+        return prev
+      }
+
+      return { ...prev, ...nextState }
+    })
+  }, [items, pathname])
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))

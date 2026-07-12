@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 
 export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const session = await auth()
-  const search = typeof searchParams?.search === 'string' ? searchParams.search : undefined
-  const page = parseInt(searchParams?.page || '1', 10) || 1
+  const params = await searchParams
+  const search = typeof params?.search === 'string' ? params.search : undefined
+  const page = parseInt(params?.page || '1', 10) || 1
 
   if (!session?.user) {
     redirect("/login")
