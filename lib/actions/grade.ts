@@ -44,6 +44,8 @@ export async function listGradesForTeacher(filters?: {
   classroomId?: string
   subjectId?: string
   type?: "EXAM" | "DAILY"
+  studentId?: string
+  periodId?: string
 }): Promise<ActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
@@ -71,6 +73,8 @@ export async function listGradesForTeacher(filters?: {
         ...(filters?.classroomId && { classroomId: filters.classroomId }),
         ...(filters?.subjectId && { subjectId: filters.subjectId }),
         ...(filters?.type && { type: filters.type }),
+        ...(filters?.studentId && { studentId: filters.studentId }),
+        ...(filters?.periodId && { periodId: filters.periodId }),
       },
       include: {
         student: {
@@ -119,7 +123,9 @@ export async function listGradesForTeacher(filters?: {
   }
 }
 
-export async function listGradesForStudent(): Promise<ActionResult<GradeWithRelations[]>> {
+export async function listGradesForStudent(filters?: {
+  periodId?: string
+}): Promise<ActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -143,6 +149,7 @@ export async function listGradesForStudent(): Promise<ActionResult<GradeWithRela
       where: {
         schoolId: session.user.schoolId,
         studentId: session.user.studentId, // CRITICAL: Only this student's grades
+        ...(filters?.periodId && { periodId: filters.periodId }),
       },
       include: {
         student: {
@@ -194,6 +201,8 @@ export async function listGradesForAdmin(filters?: {
   classroomId?: string
   subjectId?: string
   teacherId?: string
+  studentId?: string
+  periodId?: string
   type?: "EXAM" | "DAILY"
   startDate?: string
   endDate?: string
@@ -213,16 +222,30 @@ export async function listGradesForAdmin(filters?: {
   }
 
   try {
+    const dateFilter: Record<string, Date> = {}
+    if (filters?.startDate) {
+      dateFilter.gte = new Date(filters.startDate)
+    }
+    if (filters?.endDate) {
+      dateFilter.lte = new Date(filters.endDate)
+    }
+
+    const where: Record<string, unknown> = {
+      schoolId: session.user.schoolId,
+      ...(filters?.classroomId && { classroomId: filters.classroomId }),
+      ...(filters?.subjectId && { subjectId: filters.subjectId }),
+      ...(filters?.teacherId && { teacherId: filters.teacherId }),
+      ...(filters?.studentId && { studentId: filters.studentId }),
+      ...(filters?.periodId && { periodId: filters.periodId }),
+      ...(filters?.type && { type: filters.type }),
+    }
+
+    if (Object.keys(dateFilter).length > 0) {
+      where.date = dateFilter
+    }
+
     const grades = await prisma.grade.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        ...(filters?.classroomId && { classroomId: filters.classroomId }),
-        ...(filters?.subjectId && { subjectId: filters.subjectId }),
-        ...(filters?.teacherId && { teacherId: filters.teacherId }),
-        ...(filters?.type && { type: filters.type }),
-        ...(filters?.startDate && { date: { gte: new Date(filters.startDate) } }),
-        ...(filters?.endDate && { date: { lte: new Date(filters.endDate) } }),
-      },
+      where,
       include: {
         student: {
           select: {

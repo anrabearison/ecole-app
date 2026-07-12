@@ -1,20 +1,25 @@
 import { listGradesForTeacher } from "@/lib/actions/grade"
 import { listTeacherSubjects } from "@/lib/actions/teacher-subject"
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
+import { listPeriods } from "@/lib/actions/period"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { GradeFilters } from "@/components/grade-filters"
 
-export default async function TeacherGradesPage() {
-  const session = await auth()
-
-  if (!session?.user) {
-    redirect("/login")
-  }
-
-  const [gradesResult, teacherSubjectsResult] = await Promise.all([
-    listGradesForTeacher(),
-    listTeacherSubjects(session.user.teacherId || ""),
+export default async function TeacherGradesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string }>
+}) {
+  const params = await searchParams
+  const [gradesResult, teacherSubjectsResult, periodsResult] = await Promise.all([
+    listGradesForTeacher({
+      classroomId: params.classroomId || undefined,
+      subjectId: params.subjectId || undefined,
+      type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
+      periodId: params.periodId || undefined,
+    }),
+    listTeacherSubjects(""),
+    listPeriods(),
   ])
 
   if (!gradesResult.success) {
@@ -27,6 +32,7 @@ export default async function TeacherGradesPage() {
 
   const grades = gradesResult.data
   const teacherSubjects = teacherSubjectsResult.success ? teacherSubjectsResult.data : []
+  const periods = periodsResult.success ? periodsResult.data : []
 
   return (
     <div className="p-8">
@@ -37,32 +43,19 @@ export default async function TeacherGradesPage() {
         </Link>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-4">
-          <select className="border rounded px-3 py-2">
-            <option value="">Toutes les classes</option>
-            {teacherSubjects.map((ts) => (
-              <option key={ts.classroom.id} value={ts.classroom.id}>
-                {ts.classroom.schoolGrade.name} {ts.classroom.section} ({ts.classroom.schoolYear})
-              </option>
-            ))}
-          </select>
-          <select className="border rounded px-3 py-2">
-            <option value="">Toutes les matières</option>
-            {teacherSubjects.map((ts) => (
-              <option key={ts.subject.id} value={ts.subject.id}>
-                {ts.subject.name}
-              </option>
-            ))}
-          </select>
-          <select className="border rounded px-3 py-2">
-            <option value="">Tous les types</option>
-            <option value="EXAM">Examen</option>
-            <option value="DAILY">Journalière</option>
-          </select>
-        </div>
-      </div>
+      <GradeFilters
+        values={{
+          classroomId: params.classroomId || undefined,
+          subjectId: params.subjectId || undefined,
+          periodId: params.periodId || undefined,
+          type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
+        }}
+        classrooms={teacherSubjects.map((ts) => ({ id: ts.classroom.id, name: `${ts.classroom.schoolGrade.name} ${ts.classroom.section}`, schoolYear: ts.classroom.schoolYear }))}
+        subjects={teacherSubjects.map((ts) => ({ id: ts.subject.id, name: ts.subject.name }))}
+        teachers={[]}
+        periods={periods}
+        mode="teacher"
+      />
 
       {/* Grades List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

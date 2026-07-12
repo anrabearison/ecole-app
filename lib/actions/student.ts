@@ -38,6 +38,21 @@ type StudentCreateResult = {
   temporaryPassword: string
 }
 
+type EnrollmentWithRelations = {
+  id: string
+  schoolYear: string
+  classroom: {
+    id: string
+    section: string
+    schoolYear: string
+    schoolGrade: {
+      id: string
+      name: string
+      cycle: string
+    }
+  }
+}
+
 export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; name: string; schoolYear: string }>>> {
   const session = await auth()
 
@@ -132,6 +147,50 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
   } catch (error: any) {
     console.error("Error getting student by id:", error)
     return { success: false, error: "Erreur lors de la récupération de l'élève" }
+  }
+}
+
+export async function getStudentEnrollments(studentId: string): Promise<ActionResult<EnrollmentWithRelations[]>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "student", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const enrollments = await prisma.enrollment.findMany({
+      where: {
+        studentId,
+        schoolId: session.user.schoolId,
+      },
+      include: {
+        classroom: {
+          include: {
+            schoolGrade: {
+              select: {
+                id: true,
+                name: true,
+                cycle: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [{ schoolYear: "desc" }],
+    })
+
+    return { success: true, data: enrollments as EnrollmentWithRelations[] }
+  } catch (error: any) {
+    console.error("Error getting student enrollments:", error)
+    return { success: false, error: "Erreur lors du chargement de l'historique" }
   }
 }
 

@@ -1,65 +1,73 @@
 import { listGradesForAdmin } from "@/lib/actions/grade"
-import { auth } from "@/lib/auth"
-import { redirect } from "next/navigation"
+import { listPeriods } from "@/lib/actions/period"
+import { listTeachers } from "@/lib/actions/teacher"
+import { listSubjects } from "@/lib/actions/subject"
+import { listClassrooms } from "@/lib/actions/classroom"
+import { GradeFilters } from "@/components/grade-filters"
 
-export default async function AdminGradesPage() {
-  const session = await auth()
+export default async function AdminGradesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; teacherId?: string; periodId?: string; type?: string; startDate?: string; endDate?: string }>
+}) {
+  const params = await searchParams
+  const [gradesResult, classroomsResult, subjectsResult, teachersResult, periodsResult] = await Promise.all([
+    listGradesForAdmin({
+      classroomId: params.classroomId || undefined,
+      subjectId: params.subjectId || undefined,
+      teacherId: params.teacherId || undefined,
+      periodId: params.periodId || undefined,
+      type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
+      startDate: params.startDate || undefined,
+      endDate: params.endDate || undefined,
+    }),
+    listClassrooms(),
+    listSubjects(),
+    listTeachers(),
+    listPeriods(),
+  ])
 
-  if (!session?.user) {
-    redirect("/login")
-  }
-
-  const result = await listGradesForAdmin()
-
-  if (!result.success) {
+  if (!gradesResult.success) {
     return (
       <div className="p-8">
-        <p className="text-red-600">Erreur : {result.error}</p>
+        <p className="text-red-600">Erreur : {gradesResult.error}</p>
       </div>
     )
   }
 
-  const grades = result.data
+  const grades = gradesResult.data
+  const classrooms = classroomsResult.success ? classroomsResult.data : []
+  const subjects = subjectsResult.success ? subjectsResult.data : []
+  const teachers = teachersResult.success ? teachersResult.data : []
+  const periods = periodsResult.success ? periodsResult.data : []
 
   return (
     <div className="p-8">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Notes</h1>
-        <p className="text-gray-600 mt-2">Vue globale de toutes les notes de l'école</p>
+        <p className="text-gray-600 mt-2">Vue globale de toutes les notes de l&apos;école</p>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-4">
-          <select className="border rounded px-3 py-2">
-            <option value="">Toutes les classes</option>
-            {/* TODO: Populate with actual classrooms */}
-          </select>
-          <select className="border rounded px-3 py-2">
-            <option value="">Toutes les matières</option>
-            {/* TODO: Populate with actual subjects */}
-          </select>
-          <select className="border rounded px-3 py-2">
-            <option value="">Tous les enseignants</option>
-            {/* TODO: Populate with actual teachers */}
-          </select>
-          <select className="border rounded px-3 py-2">
-            <option value="">Tous les types</option>
-            <option value="EXAM">Examen</option>
-            <option value="DAILY">Journalière</option>
-          </select>
-          <input
-            type="date"
-            className="border rounded px-3 py-2"
-            placeholder="Date début"
-          />
-          <input
-            type="date"
-            className="border rounded px-3 py-2"
-            placeholder="Date fin"
-          />
-        </div>
-      </div>
+      <GradeFilters
+        values={{
+          classroomId: params.classroomId || undefined,
+          subjectId: params.subjectId || undefined,
+          teacherId: params.teacherId || undefined,
+          periodId: params.periodId || undefined,
+          type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
+          startDate: params.startDate || undefined,
+          endDate: params.endDate || undefined,
+        }}
+        classrooms={classrooms.map((classroom) => ({
+          id: classroom.id,
+          name: `${classroom.schoolGrade.name} ${classroom.section}`,
+          schoolYear: classroom.schoolYear,
+        }))}
+        subjects={subjects}
+        teachers={teachers}
+        periods={periods}
+        mode="admin"
+      />
 
       {/* Grades List */}
       <div className="bg-white rounded-lg shadow-md overflow-hidden">

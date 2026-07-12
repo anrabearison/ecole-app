@@ -94,6 +94,41 @@ describe("Grade Server Actions", () => {
   })
 
   describe("listGradesForAdmin", () => {
+    it("should pass additional filters to Prisma", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([] as any)
+
+      await listGradesForAdmin({
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        studentId: mockStudentId1,
+        periodId: mockPeriodId,
+        type: "EXAM",
+        startDate: "2026-01-01",
+        endDate: "2026-12-31",
+      } as any)
+
+      expect(vi.mocked(prisma.grade.findMany as any)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            schoolId: mockSchoolId,
+            classroomId: mockClassroomId,
+            subjectId: mockSubjectId,
+            teacherId: mockTeacherId1,
+            studentId: mockStudentId1,
+            periodId: mockPeriodId,
+            type: "EXAM",
+            date: {
+              gte: new Date("2026-01-01"),
+              lte: new Date("2026-12-31"),
+            },
+          }),
+        })
+      )
+    })
+
     it("should return all grades for SCHOOL_ADMIN", async () => {
       mockSession("SCHOOL_ADMIN")
       

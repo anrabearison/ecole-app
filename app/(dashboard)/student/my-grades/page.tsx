@@ -4,16 +4,20 @@ import { getStudentSubjectAverages, calculateGeneralAverage } from "@/lib/action
 import { getStudentById } from "@/lib/actions/student"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import { Button } from "@/components/ui/button"
 import { DownloadPdfButton } from "./download-pdf-button"
 
-export default async function StudentGradesPage() {
+export default async function StudentGradesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ periodId?: string }>
+}) {
   const session = await auth()
 
   if (!session?.user) {
     redirect("/login")
   }
 
+  const { periodId } = await searchParams
   const [gradesResult, periodsResult] = await Promise.all([
     listGradesForStudent(),
     listPeriods(),
@@ -29,32 +33,19 @@ export default async function StudentGradesPage() {
 
   const grades = gradesResult.data
   const periods = periodsResult.success ? periodsResult.data : []
+  const selectedPeriodId = periodId || periods[0]?.id || ""
+  const selectedPeriod = periods.find((period) => period.id === selectedPeriodId) || null
 
-  // Get student data for name
   let studentName = ""
+  let subjectAverages: Array<{ subjectId: string; subjectName: string; coefficient: number; average: number }> = []
+  let generalAverage = 0
+
   if (session.user.studentId) {
     const studentResult = await getStudentById(session.user.studentId)
     if (studentResult.success && studentResult.data) {
       studentName = `${studentResult.data.firstName} ${studentResult.data.lastName}`
     }
   }
-
-  // Get the first period for averages (in a real app, this would be user-selectable)
-  const selectedPeriod = periods.length > 0 ? periods[0] : null
-
-  // Group grades by subject
-  const gradesBySubject = grades.reduce((acc, grade) => {
-    const subjectName = grade.subject.name
-    if (!acc[subjectName]) {
-      acc[subjectName] = []
-    }
-    acc[subjectName].push(grade)
-    return acc
-  }, {} as Record<string, typeof grades>)
-
-  // Get subject averages if a period is selected
-  let subjectAverages: Array<{ subjectId: string; subjectName: string; coefficient: number; average: number }> = []
-  let generalAverage = 0
 
   if (selectedPeriod && session.user.studentId) {
     const [subjectAvgResult, generalAvgResult] = await Promise.all([
@@ -65,11 +56,19 @@ export default async function StudentGradesPage() {
     if (subjectAvgResult.success) {
       subjectAverages = subjectAvgResult.data
     }
-
     if (generalAvgResult.success) {
       generalAverage = generalAvgResult.data
     }
   }
+
+  const gradesBySubject = grades.reduce((acc, grade) => {
+    const subjectName = grade.subject.name
+    if (!acc[subjectName]) {
+      acc[subjectName] = []
+    }
+    acc[subjectName].push(grade)
+    return acc
+  }, {} as Record<string, typeof grades>)
 
   return (
     <div className="p-8">
@@ -77,6 +76,20 @@ export default async function StudentGradesPage() {
         <h1 className="text-3xl font-bold text-gray-900">Mes notes</h1>
         <p className="text-gray-600 mt-2">Historique de mes notes par matière</p>
       </div>
+
+      {periods.length > 0 && (
+        <form method="get" className="mb-6 flex flex-wrap items-center gap-4">
+          <label className="text-sm font-medium text-gray-700" htmlFor="period-select">Période</label>
+          <select id="period-select" name="periodId" defaultValue={selectedPeriodId} className="border rounded px-3 py-2">
+            {periods.map((period) => (
+              <option key={period.id} value={period.id}>
+                {period.name} ({period.schoolYear})
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white">Afficher</button>
+        </form>
+      )}
 
       {selectedPeriod && (
         <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -118,19 +131,19 @@ export default async function StudentGradesPage() {
                   )}
                 </div>
                 <div className="space-y-3">
-                  {subjectGrades.map((grade) => (
+                  {(subjectGrades as any[]).map((grade) => (
                     <div
                       key={grade.id}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                     >
                       <div className="flex items-center gap-4">
                         <div className="text-sm text-gray-600">
-                          {new Date(grade.date).toLocaleDateString('fr-FR')}
+                          {new Date(grade.date).toLocaleDateString("fr-FR")}
                         </div>
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          grade.type === 'EXAM' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                          grade.type === "EXAM" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
                         }`}>
-                          {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
+                          {grade.type === "EXAM" ? "Examen" : "Journalière"}
                         </span>
                         {grade.comment && (
                           <div className="text-sm text-gray-500 italic">{grade.comment}</div>
