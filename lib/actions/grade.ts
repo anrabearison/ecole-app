@@ -113,9 +113,9 @@ export async function listGradesForTeacher(filters?: {
     })
 
     return { success: true, data: grades }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing grades for teacher:", error)
-    return { success: false, error: "Failed to list grades" }
+    return { success: false, error: "Erreur lors du chargement des notes" }
   }
 }
 
@@ -184,9 +184,9 @@ export async function listGradesForStudent(): Promise<ActionResult<GradeWithRela
     })
 
     return { success: true, data: grades }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing grades for student:", error)
-    return { success: false, error: "Failed to list grades" }
+    return { success: false, error: "Erreur lors du chargement des notes" }
   }
 }
 
@@ -264,9 +264,9 @@ export async function listGradesForAdmin(filters?: {
     })
 
     return { success: true, data: grades }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing grades for admin:", error)
-    return { success: false, error: "Failed to list grades" }
+    return { success: false, error: "Erreur lors du chargement des notes" }
   }
 }
 
@@ -327,6 +327,7 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
               value: entry.value,
               date,
               schoolId: session.user.schoolId,
+              periodId: data.periodId,
             },
             include: {
               student: {
@@ -368,9 +369,9 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
     })
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating grades:", error)
-    return { success: false, error: "Failed to create grades" }
+    return { success: false, error: "Erreur lors de la création des notes" }
   }
 }
 
@@ -459,9 +460,9 @@ export async function updateGrade(id: string, data: GradeUpdateInput): Promise<A
     })
 
     return { success: true, data: grade }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating grade:", error)
-    return { success: false, error: "Failed to update grade" }
+    return { success: false, error: "Erreur lors de la mise à jour de la note" }
   }
 }
 
@@ -503,9 +504,9 @@ export async function deleteGrade(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting grade:", error)
-    return { success: false, error: "Failed to delete grade" }
+    return { success: false, error: "Erreur lors de la suppression de la note" }
   }
 }
 
@@ -538,8 +539,8 @@ export async function getClassroomStudents(classroomId: string): Promise<ActionR
     })
 
     return { success: true, data: students }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching classroom students:", error)
-    return { success: false, error: "Failed to fetch classroom students" }
+    return { success: false, error: "Erreur lors du chargement des élèves de la classe" }
   }
 }

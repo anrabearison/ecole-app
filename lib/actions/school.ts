@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { schoolSchema, type SchoolInput } from "@/lib/validations/school"
+import { schoolSchema, schoolWeightingSchema, type SchoolInput, type SchoolWeightingInput } from "@/lib/validations/school"
 import type { ActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
@@ -63,9 +63,9 @@ export async function listSchools(): Promise<ActionResult<SchoolWithStats[]>> {
     }))
 
     return { success: true, data: schoolsWithStats }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing schools:", error)
-    return { success: false, error: "Failed to list schools" }
+    return { success: false, error: "Erreur lors du chargement des écoles" }
   }
 }
 
@@ -117,9 +117,12 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
     })
 
     return { success: true, data: { schoolId: result.schoolId, tempPassword } }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating school:", error)
-    return { success: false, error: "Failed to create school" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une école avec ce nom existe déjà" }
+    }
+    return { success: false, error: "Erreur lors de la création de l'école" }
   }
 }
 
@@ -163,8 +166,44 @@ export async function getSchoolStats(schoolId: string): Promise<ActionResult<Sch
         classroomCount: stats._count.classrooms,
       },
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting school stats:", error)
-    return { success: false, error: "Failed to get school stats" }
+    return { success: false, error: "Erreur lors de la récupération des statistiques de l'école" }
+  }
+}
+
+/**
+ * Update school weighting configuration - SCHOOL_ADMIN/STAFF_ADMIN only
+ */
+export async function updateSchoolWeighting(data: SchoolWeightingInput): Promise<ActionResult<void>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "update", "school")) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  const validation = schoolWeightingSchema.safeParse(data)
+
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+
+  try {
+    await prisma.school.update({
+      where: { id: session.user.schoolId! },
+      data: {
+        examWeight: validation.data.examWeight,
+        dailyWeight: validation.data.dailyWeight,
+      },
+    })
+
+    return { success: true, data: undefined }
+  } catch (error: any) {
+    console.error("Error updating school weighting:", error)
+    return { success: false, error: "Erreur lors de la mise à jour de la pondération" }
   }
 }

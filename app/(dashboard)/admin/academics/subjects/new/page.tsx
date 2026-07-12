@@ -67,6 +67,22 @@ export default function NewSubjectPage() {
             )}
           </div>
 
+          <div>
+            <Label htmlFor="coefficient">Coefficient</Label>
+            <Input
+              {...register("coefficient", { valueAsNumber: true })}
+              id="coefficient"
+              type="number"
+              step="0.1"
+              min="0.1"
+              value={1.0}
+              className="mt-1"
+            />
+            {errors.coefficient && (
+              <p className="mt-1 text-sm text-red-600">{errors.coefficient.message}</p>
+            )}
+          </div>
+
           <div className="flex gap-4">
             <Button type="submit" disabled={isLoading} className="flex-1">
               {isLoading ? "Création..." : "Créer la matière"}

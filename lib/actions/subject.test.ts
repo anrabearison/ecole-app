@@ -59,7 +59,7 @@ describe("Subject Actions", () => {
         schoolId: "school-1",
       } as any)
 
-      const result = await createSubject({ name: "Histoire" })
+      const result = await createSubject({ name: "Histoire", coefficient: 1.0 })
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -68,6 +68,7 @@ describe("Subject Actions", () => {
       expect(prisma.subject.create).toHaveBeenCalledWith({
         data: {
           name: "Histoire",
+          coefficient: 1.0,
           schoolId: "school-1",
         },
       })
@@ -80,7 +81,7 @@ describe("Subject Actions", () => {
         schoolId: "school-1",
       } as any)
 
-      const result = await createSubject({ name: "Histoire" })
+      const result = await createSubject({ name: "Histoire", coefficient: 1.0 })
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -104,7 +105,7 @@ describe("Subject Actions", () => {
         schoolId: "school-1",
       } as any)
 
-      const result = await updateSubject("subject-1", { name: "Mathématiques Avancées" })
+      const result = await updateSubject("subject-1", { name: "Mathématiques Avancées", coefficient: 1.0 })
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -112,7 +113,7 @@ describe("Subject Actions", () => {
       }
       expect(prisma.subject.update).toHaveBeenCalledWith({
         where: { id: "subject-1" },
-        data: { name: "Mathématiques Avancées" },
+        data: { name: "Mathématiques Avancées", coefficient: 1.0 },
       })
     })
 
@@ -128,7 +129,7 @@ describe("Subject Actions", () => {
         schoolId: "school-1",
       } as any)
 
-      const result = await updateSubject("subject-1", { name: "Histoire" })
+      const result = await updateSubject("subject-1", { name: "Histoire", coefficient: 1.0 })
 
       expect(result.success).toBe(false)
       expect(prisma.subject.update).not.toHaveBeenCalled()

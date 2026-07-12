@@ -9,3 +9,12 @@ export const schoolSchema = z.object({
 })
 
 export type SchoolInput = z.infer<typeof schoolSchema>
+
+export const schoolWeightingSchema = z.object({
+  examWeight: z.number().min(0).max(1, "Le poids examen doit être entre 0 et 1"),
+  dailyWeight: z.number().min(0).max(1, "Le poids journalier doit être entre 0 et 1"),
+}).refine((data) => Math.abs(data.examWeight + data.dailyWeight - 1.0) < 0.01, {
+  message: "La somme des poids doit être égale à 1.0",
+})
+
+export type SchoolWeightingInput = z.infer<typeof schoolWeightingSchema>

@@ -67,9 +67,9 @@ export async function listTracks(): Promise<ActionResult<TrackWithRelations[]>> 
     })
 
     return { success: true, data: tracks as TrackWithRelations[] }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing tracks:", error)
-    return { success: false, error: "Failed to list tracks" }
+    return { success: false, error: "Erreur lors du chargement des filières" }
   }
 }
 
@@ -143,9 +143,12 @@ export async function createTrack(data: TrackInput): Promise<ActionResult<TrackW
     })
 
     return { success: true, data: track as TrackWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating track:", error)
-    return { success: false, error: "Failed to create track" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une filière avec ce nom existe déjà pour ce niveau" }
+    }
+    return { success: false, error: "Erreur lors de la création de la filière" }
   }
 }
 
@@ -207,9 +210,12 @@ export async function updateTrack(id: string, data: TrackUpdateInput): Promise<A
     })
 
     return { success: true, data: track as TrackWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating track:", error)
-    return { success: false, error: "Failed to update track" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une filière avec ce nom existe déjà pour ce niveau" }
+    }
+    return { success: false, error: "Erreur lors de la mise à jour de la filière" }
   }
 }
 
@@ -234,8 +240,8 @@ export async function deleteTrack(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting track:", error)
-    return { success: false, error: "Failed to delete track" }
+    return { success: false, error: "Erreur lors de la suppression de la filière" }
   }
 }

@@ -11,6 +11,7 @@ describe("Grade Server Actions", () => {
   const mockStudentId2 = "student-2"
   const mockClassroomId = "classroom-1"
   const mockSubjectId = "subject-1"
+  const mockPeriodId = "period-1"
 
   const mockSession = (role: any = "SCHOOL_ADMIN", schoolId: string | null = mockSchoolId, teacherId: string | null = null, studentId: string | null = null) => {
     vi.mocked(auth).mockResolvedValue({
@@ -193,6 +194,7 @@ describe("Grade Server Actions", () => {
       const result = await createGrades({
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
+        periodId: mockPeriodId,
         type: "DAILY",
         date: new Date().toISOString(),
         entries: [{ studentId: mockStudentId1, value: 14 }],
@@ -221,6 +223,7 @@ describe("Grade Server Actions", () => {
       const result = await createGrades({
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
+        periodId: mockPeriodId,
         type: "DAILY",
         date: new Date().toISOString(),
         entries: [{ studentId: mockStudentId1, value: 14 }],

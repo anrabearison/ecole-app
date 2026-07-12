@@ -42,9 +42,9 @@ export async function getSchoolGrades(): Promise<ActionResult<Array<{ id: string
     }))
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching school grades:", error)
-    return { success: false, error: "Failed to fetch school grades" }
+    return { success: false, error: "Erreur lors du chargement des niveaux scolaires" }
   }
 }
 
@@ -75,9 +75,9 @@ export async function getTracks(schoolGradeId: string): Promise<ActionResult<Arr
     })
 
     return { success: true, data: tracks }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching tracks:", error)
-    return { success: false, error: "Failed to fetch tracks" }
+    return { success: false, error: "Erreur lors du chargement des filières" }
   }
 }
 
@@ -146,9 +146,9 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
     }
 
     return { success: true, data: classroom }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting classroom by id:", error)
-    return { success: false, error: "Failed to get classroom" }
+    return { success: false, error: "Erreur lors de la récupération de la classe" }
   }
 }
 
@@ -199,9 +199,9 @@ export async function listClassrooms(): Promise<ActionResult<ClassroomWithRelati
     })
 
     return { success: true, data: classrooms }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing classrooms:", error)
-    return { success: false, error: "Failed to list classrooms" }
+    return { success: false, error: "Erreur lors du chargement des classes" }
   }
 }
 
@@ -294,9 +294,12 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     })
 
     return { success: true, data: classroom }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating classroom:", error)
-    return { success: false, error: "Failed to create classroom" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une classe avec cette section existe déjà pour ce niveau" }
+    }
+    return { success: false, error: "Erreur lors de la création de la classe" }
   }
 }
 
@@ -389,9 +392,12 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
     })
 
     return { success: true, data: classroom }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating classroom:", error)
-    return { success: false, error: "Failed to update classroom" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une classe avec cette section existe déjà pour ce niveau" }
+    }
+    return { success: false, error: "Erreur lors de la mise à jour de la classe" }
   }
 }
 
@@ -425,8 +431,8 @@ export async function deleteClassroom(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting classroom:", error)
-    return { success: false, error: "Failed to delete classroom" }
+    return { success: false, error: "Erreur lors de la suppression de la classe" }
   }
 }

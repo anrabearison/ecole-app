@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { createGrades, getClassroomStudents } from "@/lib/actions/grade"
 import { listTeacherSubjects } from "@/lib/actions/teacher-subject"
+import { listPeriods } from "@/lib/actions/period"
 import { getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,9 +18,11 @@ export default function NewGradesPage() {
 
   const [teacherSubjects, setTeacherSubjects] = useState<any[]>([])
   const [students, setStudents] = useState<Array<{ id: string; firstName: string; lastName: string }>>([])
+  const [periods, setPeriods] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
 
   const [classroomId, setClassroomId] = useState("")
   const [subjectId, setSubjectId] = useState("")
+  const [periodId, setPeriodId] = useState("")
   const [type, setType] = useState<"EXAM" | "DAILY">("DAILY")
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [entries, setEntries] = useState<Record<string, number>>({})
@@ -33,9 +36,21 @@ export default function NewGradesPage() {
           return
         }
 
-        const subjectsResult = await listTeacherSubjects(session.user.teacherId)
+        const [subjectsResult, periodsResult] = await Promise.all([
+          listTeacherSubjects(session.user.teacherId),
+          listPeriods(),
+        ])
+
         if (subjectsResult.success) {
           setTeacherSubjects(subjectsResult.data)
+        }
+
+        if (periodsResult.success) {
+          setPeriods(periodsResult.data)
+          // Select the first period by default
+          if (periodsResult.data.length > 0) {
+            setPeriodId(periodsResult.data[0].id)
+          }
         }
       } catch (err) {
         setError("Failed to load data")
@@ -68,8 +83,8 @@ export default function NewGradesPage() {
     setSubmitting(true)
     setError(null)
 
-    if (!classroomId || !subjectId) {
-      setError("Veuillez sélectionner une classe et une matière")
+    if (!classroomId || !subjectId || !periodId) {
+      setError("Veuillez sélectionner une classe, une matière et une période")
       setSubmitting(false)
       return
     }
@@ -88,6 +103,7 @@ export default function NewGradesPage() {
     const result = await createGrades({
       classroomId,
       subjectId,
+      periodId,
       type,
       date,
       entries: entriesArray,
@@ -115,7 +131,7 @@ export default function NewGradesPage() {
 
       <div className="bg-white rounded-lg shadow-md p-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div>
               <Label htmlFor="classroomId">Classe</Label>
               <select
@@ -153,6 +169,23 @@ export default function NewGradesPage() {
                       {ts.subject.name}
                     </option>
                   ))}
+              </select>
+            </div>
+
+            <div>
+              <Label htmlFor="periodId">Période</Label>
+              <select
+                id="periodId"
+                value={periodId}
+                onChange={(e) => setPeriodId(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              >
+                <option value="">Sélectionner une période</option>
+                {periods.map((period) => (
+                  <option key={period.id} value={period.id}>
+                    {period.name} ({period.schoolYear})
+                  </option>
+                ))}
               </select>
             </div>
 

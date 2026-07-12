@@ -68,6 +68,7 @@ export async function createSubject(data: SubjectInput): Promise<ActionResult<{ 
     const subject = await prisma.subject.create({
       data: {
         name: parsed.data.name,
+        coefficient: parsed.data.coefficient,
         schoolId: session.user.schoolId,
       },
     })
@@ -121,6 +122,7 @@ export async function updateSubject(id: string, data: SubjectInput): Promise<Act
       where: { id },
       data: {
         name: parsed.data.name,
+        coefficient: parsed.data.coefficient,
       },
     })
 

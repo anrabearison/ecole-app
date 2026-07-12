@@ -48,10 +48,12 @@ enum Weekday {
 // ============================================================
 
 model School {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  examWeight Float    @default(0.6) // weight for EXAM grades in average calculation
+  dailyWeight Float   @default(0.4) // weight for DAILY grades in average calculation
+  createdAt   DateTime @default(now())
 
   users           User[]
   schoolGrades    SchoolGrade[]
@@ -65,6 +67,7 @@ model School {
   grades          Grade[]
   scheduleSlots   ScheduleSlot[]
   rooms           Room[]
+  periods         Period[]
 }
 
 // ============================================================
@@ -217,8 +220,9 @@ model Teacher {
 // ============================================================
 
 model Subject {
-  id   String @id @default(cuid())
-  name String // "Mathématiques", "Français"
+  id         String  @id @default(cuid())
+  name       String  // "Mathématiques", "Français"
+  coefficient Float @default(1.0) // coefficient for general average calculation
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
@@ -255,11 +259,12 @@ model TeacherSubject {
 // ============================================================
 
 model Grade {
-  id      String    @id @default(cuid())
-  value   Float
-  type    GradeType
-  date    DateTime
-  comment String?
+  id        String    @id @default(cuid())
+  value     Float
+  type      GradeType
+  date      DateTime
+  comment   String?
+  periodId  String    // required period for grade grouping
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])
@@ -279,7 +284,27 @@ model Grade {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
+  period   Period @relation(fields: [periodId], references: [id])
+
   createdAt DateTime @default(now())
+}
+
+// ============================================================
+// Periods (périodes scolaires)
+// ============================================================
+
+model Period {
+  id         String   @id @default(cuid())
+  name       String   // "Trimestre 1", "Bimestre 2", etc.
+  order      Int      // for sorting periods chronologically
+  schoolYear String   // "2025-2026"
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  grades   Grade[]
+
+  @@unique([name, schoolYear, schoolId])
 }
 
 // ============================================================

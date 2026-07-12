@@ -71,9 +71,9 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
     }))
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching classrooms:", error)
-    return { success: false, error: "Failed to fetch classrooms" }
+    return { success: false, error: "Erreur lors du chargement des classes" }
   }
 }
 
@@ -126,9 +126,9 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
     }
 
     return { success: true, data: student }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error getting student by id:", error)
-    return { success: false, error: "Failed to get student" }
+    return { success: false, error: "Erreur lors de la récupération de l'élève" }
   }
 }
 
@@ -179,9 +179,9 @@ export async function listStudents(): Promise<ActionResult<StudentWithRelations[
     })
 
     return { success: true, data: students }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing students:", error)
-    return { success: false, error: "Failed to list students" }
+    return { success: false, error: "Erreur lors du chargement des élèves" }
   }
 }
 
@@ -292,9 +292,9 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     // Return the temporary password once in the response for display to the admin
     // The password is never stored in clear text or logged
     return { success: true, data: { student: result, temporaryPassword: tempPassword } }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating student:", error)
-    return { success: false, error: "Failed to create student" }
+    return { success: false, error: "Erreur lors de la création de l'élève" }
   }
 }
 
@@ -424,9 +424,9 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
     })
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating student:", error)
-    return { success: false, error: "Failed to update student" }
+    return { success: false, error: "Erreur lors de la mise à jour de l'élève" }
   }
 }
 
@@ -465,8 +465,8 @@ export async function deleteStudent(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting student:", error)
-    return { success: false, error: "Failed to delete student" }
+    return { success: false, error: "Erreur lors de la suppression de l'élève" }
   }
 }

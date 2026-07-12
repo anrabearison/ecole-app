@@ -71,13 +71,26 @@ async function main() {
   await Promise.all(
     ["Salle 1", "Salle 2", "Labo Sciences", "Gymnase"].map(
       (name) =>
-        prisma.room.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
+        prisma.room.findFirst({ where: { schoolId: school.id, name } }).then(async (existing: any) => {
           if (!existing) {
             await prisma.room.create({
               data: { name, schoolId: school.id },
             })
           }
         })
+    )
+  )
+
+  // Periods — skip duplicates
+  await Promise.all(
+    ["Trimestre 1", "Trimestre 2", "Trimestre 3"].map((name, index) =>
+      prisma.period.findFirst({ where: { schoolId: school.id, name, schoolYear: "2025-2026" } }).then(async (existing: any) => {
+        if (!existing) {
+          await prisma.period.create({
+            data: { name, order: index + 1, schoolYear: "2025-2026", schoolId: school.id },
+          })
+        }
+      })
     )
   )
 

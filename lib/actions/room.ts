@@ -38,9 +38,9 @@ export async function listRooms(): Promise<ActionResult<RoomWithRelations[]>> {
     })
 
     return { success: true, data: rooms }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing rooms:", error)
-    return { success: false, error: "Failed to list rooms" }
+    return { success: false, error: "Erreur lors du chargement des salles" }
   }
 }
 
@@ -88,9 +88,12 @@ export async function createRoom(data: RoomInput): Promise<ActionResult<RoomWith
     })
 
     return { success: true, data: room }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating room:", error)
-    return { success: false, error: "Failed to create room" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une salle avec ce nom existe déjà" }
+    }
+    return { success: false, error: "Erreur lors de la création de la salle" }
   }
 }
 
@@ -127,8 +130,8 @@ export async function deleteRoom(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting room:", error)
-    return { success: false, error: "Failed to delete room" }
+    return { success: false, error: "Erreur lors de la suppression de la salle" }
   }
 }

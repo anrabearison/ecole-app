@@ -118,9 +118,9 @@ export async function listTeachers(): Promise<ActionResult<TeacherWithRelations[
     })
 
     return { success: true, data: teachers }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing teachers:", error)
-    return { success: false, error: "Failed to list teachers" }
+    return { success: false, error: "Erreur lors du chargement des enseignants" }
   }
 }
 
@@ -200,9 +200,9 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     // Return the temporary password once in the response for display to the admin
     // The password is never stored in clear text or logged
     return { success: true, data: { teacher: result, temporaryPassword: tempPassword } }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating teacher:", error)
-    return { success: false, error: "Failed to create teacher" }
+    return { success: false, error: "Erreur lors de la création de l'enseignant" }
   }
 }
 
@@ -285,9 +285,9 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
     })
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating teacher:", error)
-    return { success: false, error: "Failed to update teacher" }
+    return { success: false, error: "Erreur lors de la mise à jour de l'enseignant" }
   }
 }
 
@@ -326,8 +326,8 @@ export async function deleteTeacher(id: string): Promise<ActionResult<void>> {
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting teacher:", error)
-    return { success: false, error: "Failed to delete teacher" }
+    return { success: false, error: "Erreur lors de la suppression de l'enseignant" }
   }
 }

@@ -172,9 +172,9 @@ export async function listScheduleSlotsForTeacher(): Promise<ActionResult<Schedu
     })
 
     return { success: true, data: slots as ScheduleSlotWithRelations[] }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing schedule slots for teacher:", error)
-    return { success: false, error: "Failed to list schedule slots" }
+    return { success: false, error: "Erreur lors du chargement de l'emploi du temps" }
   }
 }
 
@@ -252,9 +252,9 @@ export async function listScheduleSlotsForStudent(): Promise<ActionResult<Schedu
     })
 
     return { success: true, data: slots as ScheduleSlotWithRelations[] }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing schedule slots for student:", error)
-    return { success: false, error: "Failed to list schedule slots" }
+    return { success: false, error: "Erreur lors du chargement de l'emploi du temps" }
   }
 }
 
@@ -324,9 +324,9 @@ export async function listScheduleSlotsForAdmin(filters?: {
     })
 
     return { success: true, data: slots as ScheduleSlotWithRelations[] }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing schedule slots for admin:", error)
-    return { success: false, error: "Failed to list schedule slots" }
+    return { success: false, error: "Erreur lors du chargement de l'emploi du temps" }
   }
 }
 
@@ -440,9 +440,9 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
     }
 
     return { success: true, data: slot as ScheduleSlotWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating schedule slot:", error)
-    return { success: false, error: "Failed to create schedule slot" }
+    return { success: false, error: "Erreur lors de la création du créneau horaire" }
   }
 }
 
@@ -560,9 +560,9 @@ export async function updateScheduleSlot(id: string, data: ScheduleSlotUpdateInp
     }
 
     return { success: true, data: slot as ScheduleSlotWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating schedule slot:", error)
-    return { success: false, error: "Failed to update schedule slot" }
+    return { success: false, error: "Erreur lors de la mise à jour du créneau horaire" }
   }
 }
 
@@ -587,8 +587,8 @@ export async function deleteScheduleSlot(id: string): Promise<ActionResult<void>
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting schedule slot:", error)
-    return { success: false, error: "Failed to delete schedule slot" }
+    return { success: false, error: "Erreur lors de la suppression du créneau horaire" }
   }
 }

@@ -68,9 +68,9 @@ export async function listSchoolGrades(): Promise<ActionResult<SchoolGradeWithRe
     })
 
     return { success: true, data: grades as SchoolGradeWithRelations[] }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing school grades:", error)
-    return { success: false, error: "Failed to list school grades" }
+    return { success: false, error: "Erreur lors du chargement des niveaux scolaires" }
   }
 }
 
@@ -136,9 +136,12 @@ export async function createSchoolGrade(data: SchoolGradeInput): Promise<ActionR
     })
 
     return { success: true, data: grade as SchoolGradeWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating school grade:", error)
-    return { success: false, error: "Failed to create school grade" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Un niveau scolaire avec ce nom existe déjà" }
+    }
+    return { success: false, error: "Erreur lors de la création du niveau scolaire" }
   }
 }
 
@@ -189,9 +192,12 @@ export async function updateSchoolGrade(id: string, data: SchoolGradeUpdateInput
     })
 
     return { success: true, data: grade as SchoolGradeWithRelations }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating school grade:", error)
-    return { success: false, error: "Failed to update school grade" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Un niveau scolaire avec ce nom existe déjà" }
+    }
+    return { success: false, error: "Erreur lors de la mise à jour du niveau scolaire" }
   }
 }
 
@@ -216,8 +222,8 @@ export async function deleteSchoolGrade(id: string): Promise<ActionResult<void>>
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error deleting school grade:", error)
-    return { success: false, error: "Failed to delete school grade" }
+    return { success: false, error: "Erreur lors de la suppression du niveau scolaire" }
   }
 }

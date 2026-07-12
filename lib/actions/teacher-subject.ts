@@ -84,9 +84,9 @@ export async function listTeacherSubjects(teacherId: string): Promise<ActionResu
     })
 
     return { success: true, data: teacherSubjects }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing teacher subjects:", error)
-    return { success: false, error: "Failed to list teacher subjects" }
+    return { success: false, error: "Erreur lors du chargement des affectations matière" }
   }
 }
 
@@ -190,9 +190,12 @@ export async function assignTeacherSubject(data: TeacherSubjectInput & { teacher
     })
 
     return { success: true, data: teacherSubject }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error assigning teacher subject:", error)
-    return { success: false, error: "Failed to assign teacher subject" }
+    if (error.code === 'P2002') {
+      return { success: false, error: "Cette affectation matière existe déjà" }
+    }
+    return { success: false, error: "Erreur lors de l'affectation matière" }
   }
 }
 
@@ -226,9 +229,9 @@ export async function removeTeacherSubject(id: string): Promise<ActionResult<voi
     })
 
     return { success: true, data: undefined }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error removing teacher subject:", error)
-    return { success: false, error: "Failed to remove teacher subject" }
+    return { success: false, error: "Erreur lors de la suppression de l'affectation matière" }
   }
 }
 
@@ -258,9 +261,9 @@ export async function getSubjects(): Promise<ActionResult<Array<{ id: string; na
     })
 
     return { success: true, data: subjects }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching subjects:", error)
-    return { success: false, error: "Failed to fetch subjects" }
+    return { success: false, error: "Erreur lors du chargement des matières" }
   }
 }
 
@@ -300,9 +303,9 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
     }))
 
     return { success: true, data: result }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching classrooms:", error)
-    return { success: false, error: "Failed to fetch classrooms" }
+    return { success: false, error: "Erreur lors du chargement des classes" }
   }
 }
 
@@ -360,8 +363,8 @@ export async function listTeacherSubjectsByClassroom(classroomId: string): Promi
     })
 
     return { success: true, data: teacherSubjects }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error listing teacher subjects by classroom:", error)
-    return { success: false, error: "Failed to list teacher subjects" }
+    return { success: false, error: "Erreur lors du chargement des affectations matière" }
   }
 }
