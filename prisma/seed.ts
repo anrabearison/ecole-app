@@ -94,13 +94,29 @@ async function main() {
     )
   )
 
+  // Classrooms
+  let cpA = await prisma.classroom.findFirst({ where: { section: "A", schoolYear: "2025-2026", schoolGradeId: primaryGrade.id } })
+  if (!cpA) {
+    cpA = await prisma.classroom.create({ data: { section: "A", schoolYear: "2025-2026", schoolGradeId: primaryGrade.id, schoolId: school.id } })
+  }
+
+  let sixieme1 = await prisma.classroom.findFirst({ where: { section: "1", schoolYear: "2025-2026", schoolGradeId: middleSchoolGrade.id } })
+  if (!sixieme1) {
+    sixieme1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: middleSchoolGrade.id, schoolId: school.id } })
+  }
+
+  let seconde1 = await prisma.classroom.findFirst({ where: { section: "1", schoolYear: "2025-2026", schoolGradeId: premiereGrade.id } })
+  if (!seconde1) {
+    seconde1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: premiereGrade.id, schoolId: school.id } })
+  }
+
   // Seed admin and platform admin users from shared dev account list
   const { devSeedAccounts } = await import("../lib/dev-seed-accounts")
 
   await Promise.all(
     devSeedAccounts.map(async (account) => {
       const passwordHash = await bcrypt.hash(account.password, 10)
-      await prisma.user.upsert({
+      const user = await prisma.user.upsert({
         where: { email: account.email },
         update: {},
         create: {
@@ -110,8 +126,62 @@ async function main() {
           schoolId: account.role === "PLATFORM_SUPER_ADMIN" ? null : school.id,
         },
       })
+
+      if (account.role === "TEACHER") {
+        await prisma.teacher.upsert({
+          where: { userId: user.id },
+          update: {},
+          create: {
+            userId: user.id,
+            firstName: "Jean",
+            lastName: "Professeur",
+            schoolId: school.id,
+          }
+        })
+      }
+
+      if (account.role === "STUDENT") {
+        const student = await prisma.student.upsert({
+          where: { userId: user.id },
+          update: {},
+          create: {
+            userId: user.id,
+            firstName: "Paul",
+            lastName: "Eleve",
+            schoolId: school.id,
+            classroomId: sixieme1.id,
+          }
+        })
+
+        await prisma.enrollment.upsert({
+          where: { studentId_schoolYear: { studentId: student.id, schoolYear: "2025-2026" } },
+          update: {},
+          create: {
+            studentId: student.id,
+            classroomId: sixieme1.id,
+            schoolYear: "2025-2026",
+            schoolId: school.id,
+          }
+        })
+      }
     })
   )
+
+  const teacherUser = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
+  const mathSubject = await prisma.subject.findFirst({ where: { name: "Mathématiques", schoolId: school.id } })
+
+  if (teacherUser?.teacher && mathSubject) {
+    await prisma.teacherSubject.upsert({
+      where: { teacherId_subjectId_classroomId: { teacherId: teacherUser.teacher.id, subjectId: mathSubject.id, classroomId: sixieme1.id } },
+      update: {},
+      create: {
+        teacherId: teacherUser.teacher.id,
+        subjectId: mathSubject.id,
+        classroomId: sixieme1.id,
+        schoolId: school.id,
+      }
+    })
+  }
 
   console.log("✓ Seed terminé — school:", school.id)
   console.log("  Niveaux :", primaryGrade.name, middleSchoolGrade.name, "Seconde", premiereGrade.name)
