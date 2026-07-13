@@ -3,11 +3,13 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { signIn } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
 import { Button } from "@/components/ui/button"
 
 export default function LoginForm() {
+  const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -33,9 +35,9 @@ export default function LoginForm() {
       if (result?.error) {
         setError("Email ou mot de passe invalide")
       } else if (result?.ok) {
-        window.location.href = "/"
+        router.push("/")
       }
-    } catch (err) {
+    } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")
     } finally {
       setIsLoading(false)

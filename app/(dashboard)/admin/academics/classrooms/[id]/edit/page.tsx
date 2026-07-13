@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter, useParams } from "next/navigation"
 import { updateClassroom, getSchoolGrades, getTracks, getClassroomById } from "@/lib/actions/classroom"
@@ -16,24 +16,19 @@ export default function EditClassroomPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [schoolGrades, setSchoolGrades] = useState<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>([])
   const [tracks, setTracks] = useState<Array<{ id: string; name: string }>>([])
-  const [selectedSchoolGrade, setSelectedSchoolGrade] = useState<string | null>(null)
   const [loadingData, setLoadingData] = useState(true)
-
-  if (!id) {
-    return <div className="p-8">ID non valide</div>
-  }
 
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setValue,
     formState: { errors }
   } = useForm<ClassroomUpdateInput>({
     resolver: zodResolver(classroomUpdateSchema),
   })
 
-  const schoolGradeId = watch("schoolGradeId")
+  const schoolGradeId = useWatch({ control, name: "schoolGradeId" })
 
   // Fetch classroom data and school grades on mount
   useEffect(() => {
@@ -56,32 +51,50 @@ export default function EditClassroomPage() {
         if (gradesResult.success) {
           setSchoolGrades(gradesResult.data)
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load data")
       } finally {
         setLoadingData(false)
       }
     }
     loadData()
-  }, [params.id, setValue])
+  }, [id, setValue])
 
   // Fetch tracks when school grade changes
   useEffect(() => {
-    if (schoolGradeId && schoolGradeId !== selectedSchoolGrade) {
-      setSelectedSchoolGrade(schoolGradeId)
+    const abort = { canceled: false }
+
+    void Promise.resolve().then(async () => {
+      if (!schoolGradeId) {
+        if (!abort.canceled) {
+          setTracks([])
+          setValue("trackId", undefined)
+        }
+        return
+      }
+
       const selectedGrade = schoolGrades.find((sg) => sg.id === schoolGradeId)
       if (selectedGrade?.hasTracks) {
-        getTracks(schoolGradeId).then((result) => {
-          if (result.success) {
-            setTracks(result.data)
-          }
-        })
+        const result = await getTracks(schoolGradeId)
+        if (!abort.canceled && result.success) {
+          setTracks(result.data)
+        }
       } else {
-        setTracks([])
-        setValue("trackId", undefined)
+        if (!abort.canceled) {
+          setTracks([])
+          setValue("trackId", undefined)
+        }
       }
+    })
+
+    return () => {
+      abort.canceled = true
     }
-  }, [schoolGradeId, selectedSchoolGrade, schoolGrades, setValue])
+  }, [schoolGradeId, schoolGrades, setValue])
+
+  if (!id) {
+    return <div className="p-8">ID non valide</div>
+  }
 
   const onSubmit = async (data: ClassroomUpdateInput) => {
     setIsLoading(true)
@@ -95,7 +108,7 @@ export default function EditClassroomPage() {
       } else {
         setError(result.error || "Failed to update classroom")
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)

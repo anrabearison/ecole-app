@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { runDeliberationForClassroom, listDeliberationsForClassroom } from "@/lib/actions/deliberation"
 import { Button } from "@/components/ui/button"
 import type { DeliberationDecision } from "@prisma/client"
@@ -26,7 +26,7 @@ export function ClassroomDeliberationSection({ classroomId, schoolYear }: Classr
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
 
-  const loadDeliberations = async () => {
+  const loadDeliberations = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     const result = await listDeliberationsForClassroom(classroomId, schoolYear)
@@ -38,11 +38,21 @@ export function ClassroomDeliberationSection({ classroomId, schoolYear }: Classr
     }
 
     setIsLoading(false)
-  }
+  }, [classroomId, schoolYear])
 
   useEffect(() => {
-    loadDeliberations()
-  }, [classroomId, schoolYear])
+    const abort = { canceled: false }
+
+    void Promise.resolve().then(async () => {
+      if (!abort.canceled) {
+        await loadDeliberations()
+      }
+    })
+
+    return () => {
+      abort.canceled = true
+    }
+  }, [loadDeliberations])
 
   const handleRunDeliberation = async () => {
     setIsRunning(true)

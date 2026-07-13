@@ -10,14 +10,32 @@ import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
 
 type FilterMode = "classroom" | "teacher" | "room"
 
+type ClassroomOption = {
+  id: string
+  schoolGrade: { name: string }
+  section: string
+  schoolYear: string
+}
+
+type TeacherOption = {
+  id: string
+  firstName: string
+  lastName: string
+}
+
+type RoomOption = {
+  id: string
+  name: string
+}
+
 export default function AdminSchedulePage() {
   const [mode, setMode] = useState<FilterMode>("classroom")
   const [selectedId, setSelectedId] = useState<string>("")
   const [slots, setSlots] = useState<ScheduleSlotWithRelations[]>([])
   const [loading, setLoading] = useState(false)
-  const [classrooms, setClassrooms] = useState<any[]>([])
-  const [teachers, setTeachers] = useState<any[]>([])
-  const [rooms, setRooms] = useState<any[]>([])
+  const [classrooms, setClassrooms] = useState<ClassroomOption[]>([])
+  const [teachers, setTeachers] = useState<TeacherOption[]>([])
+  const [rooms, setRooms] = useState<RoomOption[]>([])
 
   useEffect(() => {
     async function loadData() {
@@ -36,14 +54,15 @@ export default function AdminSchedulePage() {
 
   useEffect(() => {
     if (!selectedId) {
-      setSlots([])
       return
     }
+
+    let isActive = true
 
     async function loadSlots() {
       setLoading(true)
       let result
-      
+
       switch (mode) {
         case "classroom":
           result = await listScheduleSlotsByClassroom(selectedId)
@@ -56,12 +75,21 @@ export default function AdminSchedulePage() {
           break
       }
 
+      if (!isActive) {
+        return
+      }
+
       if (result?.success) {
         setSlots(result.data)
       }
       setLoading(false)
     }
-    loadSlots()
+
+    void loadSlots()
+
+    return () => {
+      isActive = false
+    }
   }, [mode, selectedId])
 
   const handleModeChange = (newMode: FilterMode) => {
@@ -70,14 +98,20 @@ export default function AdminSchedulePage() {
     setSlots([])
   }
 
-  const getDisplayName = (item: any) => {
+  const getDisplayName = (item: ClassroomOption | TeacherOption | RoomOption) => {
     switch (mode) {
-      case "classroom":
-        return `${item.schoolGrade.name} ${item.section} (${item.schoolYear})`
-      case "teacher":
-        return `${item.firstName} ${item.lastName}`
-      case "room":
-        return item.name
+      case "classroom": {
+        const classroom = item as ClassroomOption
+        return `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
+      }
+      case "teacher": {
+        const teacher = item as TeacherOption
+        return `${teacher.firstName} ${teacher.lastName}`
+      }
+      case "room": {
+        const room = item as RoomOption
+        return room.name
+      }
     }
   }
 

@@ -3,9 +3,9 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { ChevronDown, ChevronRight, LogOut, Menu, X } from "lucide-react"
-import { navByRole, type NavGroup } from "@/lib/navigation"
+import { navByRole, type NavGroup, type NavItem } from "@/lib/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -25,6 +25,18 @@ function isLinkActive(href: string, pathname: string) {
   return href !== "/" && pathname.startsWith(href + "/")
 }
 
+function getInitialGroupState(items: Array<NavItem>, pathname: string) {
+  const initial: Record<string, boolean> = {}
+
+  items.forEach((item) => {
+    if (item.type === "group") {
+      initial[item.label] = item.items.some((child) => isLinkActive(child.href, pathname))
+    }
+  })
+
+  return initial
+}
+
 type SidebarProps = {
   schoolName?: string
 }
@@ -35,42 +47,17 @@ export function Sidebar({ schoolName }: SidebarProps) {
   const role = session?.user?.role as keyof typeof navByRole | undefined
   const items = useMemo(() => (role ? navByRole[role] : []), [role])
 
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {}
-
-    items.forEach((item) => {
-      if (item.type === "group") {
-        initial[item.label] = item.items.some((child) => isLinkActive(child.href, pathname))
-      }
-    })
-
-    return initial
-  })
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => getInitialGroupState(items, pathname))
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 
-  useEffect(() => {
-    const nextState: Record<string, boolean> = {}
+  const resolvedOpenGroups = useMemo(() => {
+    const nextState = getInitialGroupState(items, pathname)
 
-    items.forEach((item) => {
-      if (item.type === "group") {
-        nextState[item.label] = item.items.some((child) => isLinkActive(child.href, pathname))
-      }
-    })
-
-    setOpenGroups((prev) => {
-      const shouldUpdate = Object.keys(nextState).some((key) => nextState[key] !== prev[key])
-
-      if (!shouldUpdate) {
-        return prev
-      }
-
-      return { ...prev, ...nextState }
-    })
-  }, [items, pathname])
-
-  useEffect(() => {
-    setIsMobileOpen(false)
-  }, [pathname])
+    return Object.entries(openGroups).reduce<Record<string, boolean>>((acc, [label, value]) => {
+      acc[label] = value || nextState[label] || false
+      return acc
+    }, nextState)
+  }, [items, openGroups, pathname])
 
   const toggleGroup = (label: string) => {
     setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
@@ -165,7 +152,7 @@ export function Sidebar({ schoolName }: SidebarProps) {
               }
 
               const group = item as NavGroup
-              const isOpen = openGroups[group.label] ?? false
+              const isOpen = resolvedOpenGroups[group.label] ?? false
               const groupActive = group.items.some((child) => isLinkActive(child.href, pathname))
               const GroupIcon = group.icon
 
