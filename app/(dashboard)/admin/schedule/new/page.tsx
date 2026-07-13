@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createScheduleSlot } from "@/lib/actions/schedule-slot"
 import { listClassrooms } from "@/lib/actions/classroom"
@@ -14,24 +14,24 @@ export default function NewScheduleSlotPage() {
   const [warnings, setWarnings] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [classrooms, setClassrooms] = useState<any[]>([])
-  const [rooms, setRooms] = useState<any[]>([])
-  const [teacherSubjects, setTeacherSubjects] = useState<any[]>([])
+  const [classrooms, setClassrooms] = useState<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>([])
+  const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
+  const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string; lastName: string }; subject: { id: string; name: string } }>>([])
   const [noAssignmentsMessage, setNoAssignmentsMessage] = useState<string | null>(null)
 
   const {
+    control,
     register,
     handleSubmit,
     formState: { errors },
-    watch,
     setValue,
     reset,
   } = useForm<ScheduleSlotInput>({
     resolver: zodResolver(scheduleSlotSchema),
   })
 
-  const watchedClassroomId = watch("classroomId")
-  const watchedSubjectId = watch("subjectId")
+  const watchedClassroomId = useWatch({ control, name: "classroomId" })
+  const watchedSubjectId = useWatch({ control, name: "subjectId" })
 
   useEffect(() => {
     async function loadData() {
@@ -120,7 +120,7 @@ export default function NewScheduleSlotPage() {
     setIsSubmitting(false)
   }
 
-  const getDisplayName = (classroom: any) => {
+  const getDisplayName = (classroom: { schoolGrade: { name: string }; section: string; schoolYear: string }) => {
     return `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
   }
 
@@ -138,7 +138,7 @@ export default function NewScheduleSlotPage() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Créer un créneau d'emploi du temps</h1>
+      <h1 className="text-2xl font-bold mb-6">Créer un créneau d&apos;emploi du temps</h1>
 
       {success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">

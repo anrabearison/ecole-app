@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useForm } from "react-hook-form"
+import { useForm, useWatch, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { createClassroom, getSchoolGrades, getTracks } from "@/lib/actions/classroom"
@@ -14,12 +14,11 @@ export default function NewClassroomPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [schoolGrades, setSchoolGrades] = useState<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>([])
   const [tracks, setTracks] = useState<Array<{ id: string; name: string }>>([])
-  const [selectedSchoolGrade, setSelectedSchoolGrade] = useState<string | null>(null)
 
   const {
+    control,
     register,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors }
   } = useForm({
@@ -30,7 +29,7 @@ export default function NewClassroomPage() {
     }
   })
 
-  const schoolGradeId = watch("schoolGradeId")
+  const schoolGradeId = useWatch({ control, name: "schoolGradeId" })
 
   // Fetch school grades on mount
   useEffect(() => {
@@ -43,23 +42,45 @@ export default function NewClassroomPage() {
 
   // Fetch tracks when school grade changes
   useEffect(() => {
-    if (schoolGradeId && schoolGradeId !== selectedSchoolGrade) {
-      setSelectedSchoolGrade(schoolGradeId)
+    let isActive = true
+
+    async function updateTracks() {
+      if (!schoolGradeId) {
+        if (isActive) {
+          setTracks([])
+          setValue("trackId", undefined)
+        }
+        return
+      }
+
       const selectedGrade = schoolGrades.find((sg) => sg.id === schoolGradeId)
-      if (selectedGrade?.hasTracks) {
-        getTracks(schoolGradeId).then((result) => {
-          if (result.success) {
-            setTracks(result.data)
-          }
-        })
-      } else {
-        setTracks([])
-        setValue("trackId", undefined)
+
+      if (!selectedGrade?.hasTracks) {
+        if (isActive) {
+          setTracks([])
+          setValue("trackId", undefined)
+        }
+        return
+      }
+
+      const result = await getTracks(schoolGradeId)
+      if (!isActive) {
+        return
+      }
+
+      if (result.success) {
+        setTracks(result.data)
       }
     }
-  }, [schoolGradeId, selectedSchoolGrade, schoolGrades, setValue])
 
-  const onSubmit = async (data: any) => {
+    void updateTracks()
+
+    return () => {
+      isActive = false
+    }
+  }, [schoolGradeId, schoolGrades, setValue])
+
+  const onSubmit: SubmitHandler<ClassroomInput> = async (data) => {
     setIsLoading(true)
     setError(null)
 
@@ -71,7 +92,7 @@ export default function NewClassroomPage() {
       } else {
         setError(result.error || "Failed to create classroom")
       }
-    } catch (err) {
+    } catch {
       setError("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
