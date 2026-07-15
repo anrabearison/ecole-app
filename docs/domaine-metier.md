@@ -108,8 +108,8 @@ Plusieurs conflits peuvent être détectés simultanément (ex: conflit classe +
 - `SCHOOL_ADMIN` / `STAFF_ADMIN` → `view` : toutes les notes de leur école
 
 ### Emploi du temps (`schedule`)
-- `TEACHER` → `view` : uniquement ses propres créneaux
-- `STUDENT` → `view` : uniquement les créneaux de sa classe
+- `TEACHER` → `view` : uniquement ses propres créneaux (nécessite `teacherId` dans le contexte)
+- `STUDENT` → `view` : uniquement les créneaux de sa classe (nécessite `studentId` ou `classroomId` dans le contexte)
 
 ### Utilisateurs (`user`)
 - `SCHOOL_ADMIN` → tout, dans son école (y compris désactiver/changer un rôle)

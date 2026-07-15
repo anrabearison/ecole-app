@@ -136,7 +136,7 @@ export function can(
         return false
       case "schedule":
         // Can view their classroom's schedule
-        if (action === "view" && context?.classroomId) {
+        if (action === "view" && (context?.classroomId || context?.studentId)) {
           return true
         }
         return false
