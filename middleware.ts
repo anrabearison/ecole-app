@@ -13,7 +13,7 @@ export default auth((req) => {
 
   // Redirect authenticated users away from auth pages
   if (isAuthPage && session?.user) {
-    return redirectByRole(session.user.role)
+    return redirectByRole(session.user.role, req.url)
   }
 
   // Allow access to unauthorized page
@@ -60,19 +60,20 @@ export default auth((req) => {
   return NextResponse.next()
 })
 
-function redirectByRole(role: string): NextResponse {
+function redirectByRole(role: string, reqUrl: string): NextResponse {
+  const baseUrl = new URL(reqUrl).origin
   switch (role) {
     case "PLATFORM_SUPER_ADMIN":
-      return NextResponse.redirect(new URL("/platform", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+      return NextResponse.redirect(new URL("/platform", baseUrl))
     case "SCHOOL_ADMIN":
     case "STAFF_ADMIN":
-      return NextResponse.redirect(new URL("/admin", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+      return NextResponse.redirect(new URL("/admin", baseUrl))
     case "TEACHER":
-      return NextResponse.redirect(new URL("/teacher", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+      return NextResponse.redirect(new URL("/teacher", baseUrl))
     case "STUDENT":
-      return NextResponse.redirect(new URL("/student", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+      return NextResponse.redirect(new URL("/student", baseUrl))
     default:
-      return NextResponse.redirect(new URL("/unauthorized", process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"))
+      return NextResponse.redirect(new URL("/unauthorized", baseUrl))
   }
 }
 

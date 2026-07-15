@@ -1,5 +1,5 @@
 export type DevSeedAccount = {
-  role: "SCHOOL_ADMIN" | "PLATFORM_SUPER_ADMIN"
+  role: "SCHOOL_ADMIN" | "PLATFORM_SUPER_ADMIN" | "STAFF_ADMIN" | "TEACHER" | "STUDENT"
   label: string
   email: string
   password: string
