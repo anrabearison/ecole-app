@@ -257,6 +257,45 @@ async function main() {
     })
   )
 
+  // Create a struggling student with grades < 10 for all assessments
+  const strugglingStudentPassword = "student123"
+  const strugglingStudentPasswordHash = await bcrypt.hash(strugglingStudentPassword, 10)
+  const strugglingStudentEmail = "student-struggling@sekoly-test.mg"
+  
+  const strugglingUser = await prisma.user.upsert({
+    where: { email: strugglingStudentEmail },
+    update: {},
+    create: {
+      email: strugglingStudentEmail,
+      passwordHash: strugglingStudentPasswordHash,
+      role: "STUDENT",
+      schoolId: school.id,
+    },
+  })
+
+  const strugglingStudent = await prisma.student.upsert({
+    where: { userId: strugglingUser.id },
+    update: {},
+    create: {
+      userId: strugglingUser.id,
+      firstName: "Marc",
+      lastName: "Difficile",
+      schoolId: school.id,
+      classroomId: sixieme1.id,
+    },
+  })
+
+  await prisma.enrollment.upsert({
+    where: { studentId_schoolYear: { studentId: strugglingStudent.id, schoolYear: "2025-2026" } },
+    update: {},
+    create: {
+      studentId: strugglingStudent.id,
+      classroomId: sixieme1.id,
+      schoolYear: "2025-2026",
+      schoolId: school.id,
+    },
+  })
+
   // Get all subjects
   const subjects = await prisma.subject.findMany({ where: { schoolId: school.id } })
   const periods = await prisma.period.findMany({ where: { schoolId: school.id } })
@@ -286,9 +325,14 @@ async function main() {
   }
 
   // Create grades for all students, subjects, and periods
-  const allStudents = await prisma.student.findMany({ where: { classroomId: sixieme1.id } })
+  const allStudents = await prisma.student.findMany({ 
+    where: { classroomId: sixieme1.id },
+    include: { user: true }
+  })
 
   for (const student of allStudents) {
+    const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
+    
     for (const subject of subjects) {
       for (const period of periods) {
         // Find the teacher assigned to this subject in this classroom
@@ -303,7 +347,10 @@ async function main() {
 
         // Create 2-3 daily grades per period
         for (let i = 0; i < 3; i++) {
-          const dailyGrade = 10 + Math.floor(Math.random() * 10) // 10-20
+          const dailyGrade = isStrugglingStudent 
+            ? 4 + Math.floor(Math.random() * 5) // 4-9 for struggling student
+            : 10 + Math.floor(Math.random() * 10) // 10-20 for regular students
+          
           const gradeDate = new Date()
           if (period.name === "Trimestre 2") {
             gradeDate.setMonth(gradeDate.getMonth() + 3)
@@ -331,7 +378,10 @@ async function main() {
         }
 
         // Create 1 exam grade per period
-        const examGrade = 8 + Math.floor(Math.random() * 12) // 8-20
+        const examGrade = isStrugglingStudent
+          ? 3 + Math.floor(Math.random() * 6) // 3-9 for struggling student
+          : 8 + Math.floor(Math.random() * 12) // 8-20 for regular students
+        
         const examDate = new Date()
         if (period.name === "Trimestre 2") {
           examDate.setMonth(examDate.getMonth() + 3)
@@ -382,6 +432,7 @@ async function main() {
   console.log("  Classe de test : 6ème 1 avec", allStudents.length, "élèves")
   console.log("  Enseignants mock : 3 enseignants supplémentaires")
   console.log("  Notes créées : pour tous les élèves, matières et trimestres")
+  console.log("  Élève en difficulté : Marc Difficile (notes < 10)")
   devSeedAccounts.forEach((account) => {
     console.log(`  ${account.label} : ${account.email} / ${account.password}`)
   })
@@ -392,6 +443,7 @@ async function main() {
   mockStudents.forEach((student, i) => {
     console.log(`    Élève ${i + 2} : student${i + 2}@sekoly-test.mg / ${studentPasswords[i]}`)
   })
+  console.log(`    Élève en difficulté : ${strugglingStudentEmail} / ${strugglingStudentPassword}`)
 }
 
 
