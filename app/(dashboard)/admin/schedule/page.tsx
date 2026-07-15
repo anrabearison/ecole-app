@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { listTeachers } from "@/lib/actions/teacher"
 import { listRooms } from "@/lib/actions/room"
@@ -128,7 +129,15 @@ export default function AdminSchedulePage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Emploi du temps</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Emploi du temps</h1>
+        <Link
+          href="/admin/schedule/new"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        >
+          Nouveau créneau
+        </Link>
+      </div>
 
       <div className="mb-6 space-y-4">
         <div className="flex gap-2">
