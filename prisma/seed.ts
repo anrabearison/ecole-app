@@ -167,6 +167,199 @@ async function main() {
     })
   )
 
+  // Create additional mock teachers for testing
+  const teacherPasswords = ["teacher123", "teacher123", "teacher123"]
+  const teacherNames = [
+    { firstName: "Marie", lastName: "Martin" },
+    { firstName: "Pierre", lastName: "Dubois" },
+    { firstName: "Sophie", lastName: "Bernard" },
+  ]
+
+  const mockTeachers = await Promise.all(
+    teacherNames.map(async (name, index) => {
+      const passwordHash = await bcrypt.hash(teacherPasswords[index], 10)
+      const email = `teacher${index + 2}@sekoly-test.mg`
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          passwordHash,
+          role: "TEACHER",
+          schoolId: school.id,
+        },
+      })
+
+      const teacher = await prisma.teacher.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          firstName: name.firstName,
+          lastName: name.lastName,
+          schoolId: school.id,
+        },
+      })
+
+      return teacher
+    })
+  )
+
+  // Create additional mock students for testing
+  const studentPasswords = ["student123", "student123", "student123", "student123", "student123"]
+  const studentNames = [
+    { firstName: "Lucas", lastName: "Rakoto" },
+    { firstName: "Emma", lastName: "Rasoa" },
+    { firstName: "Thomas", lastName: "Andriamanitra" },
+    { firstName: "Chloé", lastName: "Ravelonarivo" },
+    { firstName: "Hugo", lastName: "Randrianasolo" },
+  ]
+
+  const mockStudents = await Promise.all(
+    studentNames.map(async (name, index) => {
+      const passwordHash = await bcrypt.hash(studentPasswords[index], 10)
+      const email = `student${index + 2}@sekoly-test.mg`
+      const user = await prisma.user.upsert({
+        where: { email },
+        update: {},
+        create: {
+          email,
+          passwordHash,
+          role: "STUDENT",
+          schoolId: school.id,
+        },
+      })
+
+      const student = await prisma.student.upsert({
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          firstName: name.firstName,
+          lastName: name.lastName,
+          schoolId: school.id,
+          classroomId: sixieme1.id,
+        },
+      })
+
+      await prisma.enrollment.upsert({
+        where: { studentId_schoolYear: { studentId: student.id, schoolYear: "2025-2026" } },
+        update: {},
+        create: {
+          studentId: student.id,
+          classroomId: sixieme1.id,
+          schoolYear: "2025-2026",
+          schoolId: school.id,
+        },
+      })
+
+      return student
+    })
+  )
+
+  // Get all subjects
+  const subjects = await prisma.subject.findMany({ where: { schoolId: school.id } })
+  const periods = await prisma.period.findMany({ where: { schoolId: school.id } })
+
+  // Assign teachers to subjects in the classroom
+  const originalTeacher = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
+  const allTeachers = [originalTeacher?.teacher, ...mockTeachers].filter((t): t is NonNullable<typeof t> => t !== undefined)
+
+  // Assign each teacher to different subjects
+  for (let i = 0; i < allTeachers.length && i < subjects.length; i++) {
+    await prisma.teacherSubject.upsert({
+      where: {
+        teacherId_subjectId_classroomId: {
+          teacherId: allTeachers[i].id,
+          subjectId: subjects[i].id,
+          classroomId: sixieme1.id,
+        },
+      },
+      update: {},
+      create: {
+        teacherId: allTeachers[i].id,
+        subjectId: subjects[i].id,
+        classroomId: sixieme1.id,
+        schoolId: school.id,
+      },
+    })
+  }
+
+  // Create grades for all students, subjects, and periods
+  const allStudents = await prisma.student.findMany({ where: { classroomId: sixieme1.id } })
+
+  for (const student of allStudents) {
+    for (const subject of subjects) {
+      for (const period of periods) {
+        // Find the teacher assigned to this subject in this classroom
+        const teacherSubject = await prisma.teacherSubject.findFirst({
+          where: {
+            subjectId: subject.id,
+            classroomId: sixieme1.id,
+          },
+        })
+
+        if (!teacherSubject) continue
+
+        // Create 2-3 daily grades per period
+        for (let i = 0; i < 3; i++) {
+          const dailyGrade = 10 + Math.floor(Math.random() * 10) // 10-20
+          const gradeDate = new Date()
+          if (period.name === "Trimestre 2") {
+            gradeDate.setMonth(gradeDate.getMonth() + 3)
+          } else if (period.name === "Trimestre 3") {
+            gradeDate.setMonth(gradeDate.getMonth() + 6)
+          }
+          gradeDate.setDate(gradeDate.getDate() + i * 7) // Different dates for each grade
+
+          await prisma.grade.upsert({
+            where: { id: `daily-${student.id}-${subject.id}-${period.id}-${i}` },
+            update: {},
+            create: {
+              id: `daily-${student.id}-${subject.id}-${period.id}-${i}`,
+              value: dailyGrade,
+              type: "DAILY",
+              date: gradeDate,
+              studentId: student.id,
+              subjectId: subject.id,
+              classroomId: sixieme1.id,
+              teacherId: teacherSubject.teacherId,
+              periodId: period.id,
+              schoolId: school.id,
+            },
+          })
+        }
+
+        // Create 1 exam grade per period
+        const examGrade = 8 + Math.floor(Math.random() * 12) // 8-20
+        const examDate = new Date()
+        if (period.name === "Trimestre 2") {
+          examDate.setMonth(examDate.getMonth() + 3)
+        } else if (period.name === "Trimestre 3") {
+          examDate.setMonth(examDate.getMonth() + 6)
+        }
+        examDate.setDate(examDate.getDate() + 21) // Exam at end of period
+
+        await prisma.grade.upsert({
+          where: { id: `exam-${student.id}-${subject.id}-${period.id}` },
+          update: {},
+          create: {
+            id: `exam-${student.id}-${subject.id}-${period.id}`,
+            value: examGrade,
+            type: "EXAM",
+            date: examDate,
+            studentId: student.id,
+            subjectId: subject.id,
+            classroomId: sixieme1.id,
+            teacherId: teacherSubject.teacherId,
+            periodId: period.id,
+            schoolId: school.id,
+          },
+        })
+      }
+    }
+  }
+
   const teacherUser = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
   const mathSubject = await prisma.subject.findFirst({ where: { name: "Mathématiques", schoolId: school.id } })
 
@@ -186,8 +379,18 @@ async function main() {
   console.log("✓ Seed terminé — school:", school.id)
   console.log("  Niveaux :", primaryGrade.name, middleSchoolGrade.name, "Seconde", premiereGrade.name)
   console.log("  Séries Première : A, C, D")
+  console.log("  Classe de test : 6ème 1 avec", allStudents.length, "élèves")
+  console.log("  Enseignants mock : 3 enseignants supplémentaires")
+  console.log("  Notes créées : pour tous les élèves, matières et trimestres")
   devSeedAccounts.forEach((account) => {
     console.log(`  ${account.label} : ${account.email} / ${account.password}`)
+  })
+  console.log("  Comptes mock supplémentaires :")
+  mockTeachers.forEach((teacher, i) => {
+    console.log(`    Enseignant ${i + 2} : teacher${i + 2}@sekoly-test.mg / ${teacherPasswords[i]}`)
+  })
+  mockStudents.forEach((student, i) => {
+    console.log(`    Élève ${i + 2} : student${i + 2}@sekoly-test.mg / ${studentPasswords[i]}`)
   })
 }
 
