@@ -2,7 +2,7 @@ import { z } from "zod"
 
 export const classroomSchema = z.object({
   schoolGradeId: z.string().min(1, "School grade is required"),
-  trackId: z.string().optional(),
+  trackId: z.string().optional().or(z.literal("")).or(z.literal("$undefined")),
   section: z.string().min(1, "Section is required"),
   schoolYear: z.string().regex(/^\d{4}-\d{4}$/, "School year must be in YYYY-YYYY format (e.g., 2025-2026)"),
   passingThreshold: z.number().min(0, "La moyenne de délibération doit être entre 0 et 20").max(20, "La moyenne de délibération doit être entre 0 et 20").default(10),

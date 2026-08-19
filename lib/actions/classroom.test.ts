@@ -91,18 +91,96 @@ describe("Classroom Server Actions", () => {
 
     it("should return Forbidden for unauthorized role (e.g. TEACHER)", async () => {
       mockSession("TEACHER")
-      
+
       const input = {
         section: "A",
         schoolYear: "2025-2026",
         schoolGradeId: "grade-1",
         passingThreshold: 10,
       }
-      
+
       const result = await createClassroom(input)
-      
+
       expect(result).toEqual({ success: false, error: "Forbidden" })
       expect(prisma.classroom.create).not.toHaveBeenCalled()
+    })
+
+    it("should create a classroom without track (levels without series like primary/middle school)", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        section: "A",
+        schoolYear: "2025-2026",
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
+        trackId: undefined, // No track for primary/middle school levels
+      }
+
+      vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
+        id: "grade-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.classroom.findFirst).mockResolvedValue(null) // No existing classroom
+
+      const createdClassroom = { id: "c1", ...input, schoolId: mockSchoolId, trackId: null }
+      vi.mocked(prisma.classroom.create).mockResolvedValue(createdClassroom as any)
+
+      const result = await createClassroom(input)
+
+      expect(prisma.classroom.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            schoolGradeId: "grade-1",
+            section: "A",
+            schoolYear: "2025-2026",
+            trackId: null,
+          })
+        })
+      )
+      expect(prisma.classroom.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            schoolId: mockSchoolId,
+            section: "A",
+            trackId: null,
+          })
+        })
+      )
+      expect(result).toEqual({ success: true, data: createdClassroom })
+    })
+
+    it("should handle empty string trackId by converting to null", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        section: "B",
+        schoolYear: "2025-2026",
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
+        trackId: "", // Empty string should be treated as null
+      }
+
+      vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
+        id: "grade-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.classroom.findFirst).mockResolvedValue(null)
+
+      const createdClassroom = { id: "c2", ...input, schoolId: mockSchoolId, trackId: null }
+      vi.mocked(prisma.classroom.create).mockResolvedValue(createdClassroom as any)
+
+      const result = await createClassroom(input)
+
+      expect(prisma.classroom.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            trackId: null, // Should be null, not empty string
+          })
+        })
+      )
+      expect(result).toEqual({ success: true, data: createdClassroom })
     })
   })
 

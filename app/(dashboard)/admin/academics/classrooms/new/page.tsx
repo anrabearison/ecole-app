@@ -85,7 +85,12 @@ export default function NewClassroomPage() {
     setError(null)
 
     try {
-      const result = await createClassroom(data as ClassroomInput)
+      // Convert empty string or "$undefined" trackId to undefined
+      const cleanedData = {
+        ...data,
+        trackId: (!data.trackId || data.trackId === "$undefined") ? undefined : data.trackId
+      }
+      const result = await createClassroom(cleanedData as ClassroomInput)
 
       if (result.success) {
         router.push("/admin/academics/classrooms")

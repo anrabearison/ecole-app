@@ -241,6 +241,9 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
   }
 
   try {
+    // Normalize trackId: convert empty string or "$undefined" to null
+    const normalizedTrackId = (!data.trackId || data.trackId === "" || data.trackId === "$undefined") ? null : data.trackId
+
     // Verify schoolGrade belongs to the school
     const schoolGrade = await prisma.schoolGrade.findUnique({
       where: { id: data.schoolGradeId },
@@ -251,9 +254,9 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     }
 
     // If trackId is provided, verify it belongs to the school and schoolGrade
-    if (data.trackId) {
+    if (normalizedTrackId) {
       const track = await prisma.track.findUnique({
-        where: { id: data.trackId },
+        where: { id: normalizedTrackId },
       })
 
       if (!track || track.schoolId !== session.user.schoolId || track.schoolGradeId !== data.schoolGradeId) {
@@ -262,16 +265,14 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     }
 
     // Check if classroom already exists (unique constraint)
-    const existing = await prisma.classroom.findUnique({
+    const existing = await prisma.classroom.findFirst({
       where: {
-        schoolGradeId_trackId_section_schoolYear: {
-          schoolGradeId: data.schoolGradeId,
-          trackId: data.trackId ?? null,
-          section: data.section,
-          schoolYear: data.schoolYear,
-        },
+        schoolGradeId: data.schoolGradeId,
+        section: data.section,
+        schoolYear: data.schoolYear,
+        trackId: normalizedTrackId,
       },
-    } as any)
+    })
 
     if (existing) {
       return { success: false, error: "A classroom with this configuration already exists" }
@@ -280,7 +281,7 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     const classroom = await prisma.classroom.create({
       data: {
         schoolGradeId: data.schoolGradeId,
-        trackId: data.trackId,
+        trackId: normalizedTrackId,
         section: data.section,
         schoolYear: data.schoolYear,
         passingThreshold: data.passingThreshold,
