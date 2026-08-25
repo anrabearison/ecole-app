@@ -38,6 +38,14 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - Une `Classroom` est toujours rattachée à une année scolaire (`schoolYear`) — les élèves d'une classe changent d'une année sur l'autre, ne pas mélanger les années.
 - Le nom d'affichage complet d'une classe (ex. "Première C 1") est **généré**, jamais stocké en dur.
 - L'affectation d'un élève à une classe est historisée par année scolaire via `Enrollment` (une ligne par élève × année scolaire) — `Student.classroomId` ne reflète que la classe courante ; l'historique complet passe toujours par `Enrollment`.
+- Une classe peut avoir un **professeur principal** (homeroom teacher) désigné, qui est un enseignant de l'école (champ optionnel `homeroomTeacherId`). Ce professeur n'est pas restreint aux enseignants déjà assignés à cette classe via `TeacherSubject` — n'importe quel enseignant de l'école peut être désigné comme professeur principal.
+
+### Professeur principal
+
+- Chaque classe peut avoir un professeur principal optionnel (`homeroomTeacherId`)
+- Choisi parmi tous les enseignants de l'école (pas restreint aux enseignants assignés à la classe via `TeacherSubject`)
+- Visible sur la fiche classe et sur la fiche élève (via sa classe actuelle)
+- Modifiable à tout moment par `SCHOOL_ADMIN` / `STAFF_ADMIN`
 
 ## Notes (Grades)
 

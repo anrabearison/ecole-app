@@ -185,6 +185,14 @@ export default async function StudentDetailPage({
                   : "Non assigné"}
               </p>
             </div>
+            {student.classroom?.homeroomTeacher && (
+              <div>
+                <p className="text-sm text-gray-500">Professeur principal</p>
+                <p className="text-lg font-medium">
+                  {student.classroom.homeroomTeacher.firstName} {student.classroom.homeroomTeacher.lastName}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-gray-500">Historique des inscriptions</p>
               {enrollments.length === 0 ? (

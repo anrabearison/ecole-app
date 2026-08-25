@@ -28,6 +28,11 @@ type StudentWithRelations = {
       name: string
       cycle: string
     }
+    homeroomTeacher: {
+      id: string
+      firstName: string
+      lastName: string
+    } | null
   } | null
   schoolId: string
   createdAt: Date
@@ -130,6 +135,13 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
                 cycle: true,
               },
             },
+            homeroomTeacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -179,6 +191,13 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
                 id: true,
                 name: true,
                 cycle: true,
+              },
+            },
+            homeroomTeacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },
@@ -241,6 +260,13 @@ export async function listStudents(opts?: { search?: string; page?: number; page
                 id: true,
                 name: true,
                 cycle: true,
+              },
+            },
+            homeroomTeacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
               },
             },
           },

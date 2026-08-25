@@ -146,15 +146,14 @@ Niveau : [Première ▾]
 Série : [C ▾]
 Classe parallèle : [1]
 Année scolaire : [2025-2026]
+Professeur principal (optionnel) : [Jean Dupont ▾] ou [Aucun]
 ```
 
-Le champ Série n'apparaît que si le niveau sélectionné en possède (logique déjà détaillée dans `docs/domaine-metier.md`).
+Le champ Série n'apparaît que si le niveau sélectionné en possède (logique déjà détaillée dans `docs/domaine-metier.md`). Le champ Professeur principal liste tous les enseignants de l'école (pas restreint aux enseignants assignés à la classe).
 
 ### Fiche classe (`[id]/page.tsx`)
 
-```
-[Élèves] [Emploi du temps] [Notes de la classe]
-```
+- **Informations** : détails de la classe (cycle, niveau, série, section, année scolaire, seuil de passage, nombre d'élèves) + professeur principal si renseigné.
 - **Élèves** : liste des élèves inscrits, actions d'ajout/retrait.
 - **Emploi du temps** : grille semaine de la classe (`<ScheduleView>`, voir section 6).
 - **Notes de la classe** : vue globale des notes par matière, filtrable — utile pour un admin qui prépare un conseil de classe.

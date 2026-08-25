@@ -88,6 +88,7 @@ type ClassroomWithRelations = {
   passingThreshold: number
   schoolGradeId: string
   trackId: string | null
+  homeroomTeacherId: string | null
   schoolGrade: {
     id: string
     name: string
@@ -96,6 +97,11 @@ type ClassroomWithRelations = {
   track: {
     id: string
     name: string
+  } | null
+  homeroomTeacher: {
+    id: string
+    firstName: string
+    lastName: string
   } | null
   _count: {
     students: number
@@ -128,6 +134,13 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
           select: {
             id: true,
             name: true,
+          },
+        },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
         _count: {
@@ -198,6 +211,13 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
             name: true,
           },
         },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
         _count: {
           select: {
             students: true,
@@ -264,6 +284,17 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
       }
     }
 
+    // If homeroomTeacherId is provided, verify it belongs to the same school
+    if (data.homeroomTeacherId) {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: data.homeroomTeacherId },
+      })
+
+      if (!teacher || teacher.schoolId !== session.user.schoolId) {
+        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+      }
+    }
+
     // Check if classroom already exists (unique constraint)
     const existing = await prisma.classroom.findFirst({
       where: {
@@ -285,6 +316,7 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
         section: data.section,
         schoolYear: data.schoolYear,
         passingThreshold: data.passingThreshold,
+        homeroomTeacherId: data.homeroomTeacherId,
         schoolId: session.user.schoolId,
       },
       include: {
@@ -299,6 +331,13 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
           select: {
             id: true,
             name: true,
+          },
+        },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
         _count: {
@@ -382,9 +421,23 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
       }
     }
 
+    // If homeroomTeacherId is being updated, verify it belongs to the same school
+    if (data.homeroomTeacherId) {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: data.homeroomTeacherId },
+      })
+
+      if (!teacher || teacher.schoolId !== session.user.schoolId) {
+        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+      }
+    }
+
     const classroom = await prisma.classroom.update({
       where: { id },
-      data: validation.data,
+      data: {
+        ...validation.data,
+        homeroomTeacherId: data.homeroomTeacherId,
+      },
       include: {
         schoolGrade: {
           select: {
@@ -397,6 +450,13 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
           select: {
             id: true,
             name: true,
+          },
+        },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
         _count: {

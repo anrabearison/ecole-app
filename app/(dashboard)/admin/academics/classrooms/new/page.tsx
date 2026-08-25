@@ -5,6 +5,7 @@ import { useForm, useWatch, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
 import { createClassroom, getSchoolGrades, getTracks } from "@/lib/actions/classroom"
+import { listTeachers } from "@/lib/actions/teacher"
 import { classroomSchema, type ClassroomInput } from "@/lib/validations/classroom"
 import { Button } from "@/components/ui/button"
 
@@ -14,6 +15,7 @@ export default function NewClassroomPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [schoolGrades, setSchoolGrades] = useState<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>([])
   const [tracks, setTracks] = useState<Array<{ id: string; name: string }>>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([])
 
   const {
     control,
@@ -36,6 +38,15 @@ export default function NewClassroomPage() {
     getSchoolGrades().then((result) => {
       if (result.success) {
         setSchoolGrades(result.data)
+      }
+    })
+  }, [])
+
+  // Fetch teachers on mount
+  useEffect(() => {
+    listTeachers().then((result) => {
+      if (result.success) {
+        setTeachers(result.data)
       }
     })
   }, [])
@@ -210,6 +221,27 @@ export default function NewClassroomPage() {
             </select>
             {errors.schoolYear && (
               <p className="mt-1 text-sm text-red-600">{errors.schoolYear.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="homeroomTeacherId" className="block text-sm font-medium text-gray-700 mb-2">
+              Professeur principal (optionnel)
+            </label>
+            <select
+              {...register("homeroomTeacherId")}
+              id="homeroomTeacherId"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Aucun</option>
+              {teachers.map((teacher) => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.firstName} {teacher.lastName}
+                </option>
+              ))}
+            </select>
+            {errors.homeroomTeacherId && (
+              <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherId.message}</p>
             )}
           </div>
 

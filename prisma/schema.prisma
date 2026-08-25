@@ -146,6 +146,9 @@ model Classroom {
   trackId String? // null if the level has no track (before Première)
   track   Track?  @relation(fields: [trackId], references: [id])
 
+  homeroomTeacherId String? // optional homeroom teacher (professeur principal)
+  homeroomTeacher   Teacher? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
@@ -222,10 +225,11 @@ model Teacher {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  subjects      TeacherSubject[]
-  grades        Grade[] // grades this teacher has personally entered
-  scheduleSlots ScheduleSlot[]
-  createdAt     DateTime @default(now())
+  subjects           TeacherSubject[]
+  grades             Grade[] // grades this teacher has personally entered
+  scheduleSlots      ScheduleSlot[]
+  homeroomClassrooms Classroom[] @relation("HomeroomTeacher")
+  createdAt          DateTime @default(now())
 }
 
 // ============================================================

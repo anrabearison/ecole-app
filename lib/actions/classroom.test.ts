@@ -182,6 +182,76 @@ describe("Classroom Server Actions", () => {
       )
       expect(result).toEqual({ success: true, data: createdClassroom })
     })
+
+    it("should create a classroom with homeroom teacher", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        section: "C",
+        schoolYear: "2025-2026",
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
+        homeroomTeacherId: "teacher-1",
+      }
+
+      vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
+        id: "grade-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
+        id: "teacher-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.classroom.findFirst).mockResolvedValue(null)
+
+      const createdClassroom = { id: "c3", ...input, schoolId: mockSchoolId }
+      vi.mocked(prisma.classroom.create).mockResolvedValue(createdClassroom as any)
+
+      const result = await createClassroom(input)
+
+      expect(prisma.teacher.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "teacher-1" }
+        })
+      )
+      expect(prisma.classroom.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            homeroomTeacherId: "teacher-1",
+          })
+        })
+      )
+      expect(result).toEqual({ success: true, data: createdClassroom })
+    })
+
+    it("should reject homeroom teacher from different school", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        section: "D",
+        schoolYear: "2025-2026",
+        schoolGradeId: "grade-1",
+        passingThreshold: 10,
+        homeroomTeacherId: "teacher-external",
+      }
+
+      vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
+        id: "grade-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
+        id: "teacher-external",
+        schoolId: "different-school-id" // Different school
+      } as any)
+
+      const result = await createClassroom(input)
+
+      expect(result).toEqual({ success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" })
+      expect(prisma.classroom.create).not.toHaveBeenCalled()
+    })
   })
 
   describe("updateClassroom", () => {
@@ -212,6 +282,46 @@ describe("Classroom Server Actions", () => {
       mockSession("TEACHER")
       const result = await updateClassroom("c1", { section: "B" })
       expect(result.success).toBe(false)
+      expect(prisma.classroom.update).not.toHaveBeenCalled()
+    })
+
+    it("should update homeroom teacher successfully", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.classroom.findUnique).mockResolvedValue({
+        id: "c1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
+        id: "teacher-1",
+        schoolId: mockSchoolId
+      } as any)
+
+      const mockUpdated = { id: "c1", section: "B", homeroomTeacherId: "teacher-1" }
+      vi.mocked(prisma.classroom.update).mockResolvedValue(mockUpdated as any)
+
+      const result = await updateClassroom("c1", { homeroomTeacherId: "teacher-1" })
+
+      expect(result).toEqual({ success: true, data: mockUpdated })
+    })
+
+    it("should reject homeroom teacher from different school on update", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.classroom.findUnique).mockResolvedValue({
+        id: "c1",
+        schoolId: mockSchoolId
+      } as any)
+
+      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
+        id: "teacher-external",
+        schoolId: "different-school-id"
+      } as any)
+
+      const result = await updateClassroom("c1", { homeroomTeacherId: "teacher-external" })
+
+      expect(result).toEqual({ success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" })
       expect(prisma.classroom.update).not.toHaveBeenCalled()
     })
   })
