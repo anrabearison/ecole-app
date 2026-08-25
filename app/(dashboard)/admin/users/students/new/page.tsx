@@ -116,43 +116,46 @@ export default function NewStudentPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="dateOfBirth">Date de naissance</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                {...register("dateOfBirth")}
-                className="mt-1"
-              />
-              {errors.dateOfBirth && (
-                <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth.message}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="guardianName">Nom du responsable</Label>
-              <Input
-                id="guardianName"
-                {...register("guardianName")}
-                className="mt-1"
-              />
-              {errors.guardianName && (
-                <p className="text-sm text-red-600 mt-1">{errors.guardianName.message}</p>
-              )}
-            </div>
-          </div>
-
           <div>
-            <Label htmlFor="guardianPhone">Téléphone du responsable</Label>
+            <Label htmlFor="dateOfBirth">Date de naissance</Label>
             <Input
-              id="guardianPhone"
-              {...register("guardianPhone")}
+              id="dateOfBirth"
+              type="date"
+              {...register("dateOfBirth")}
               className="mt-1"
             />
-            {errors.guardianPhone && (
-              <p className="text-sm text-red-600 mt-1">{errors.guardianPhone.message}</p>
+            {errors.dateOfBirth && (
+              <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth.message}</p>
             )}
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Tuteur / responsable légal</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="guardianName">Nom du tuteur</Label>
+                <Input
+                  id="guardianName"
+                  {...register("guardianName")}
+                  className="mt-1"
+                />
+                {errors.guardianName && (
+                  <p className="text-sm text-red-600 mt-1">{errors.guardianName.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="guardianPhone">Téléphone du tuteur</Label>
+                <Input
+                  id="guardianPhone"
+                  {...register("guardianPhone")}
+                  className="mt-1"
+                />
+                {errors.guardianPhone && (
+                  <p className="text-sm text-red-600 mt-1">{errors.guardianPhone.message}</p>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
