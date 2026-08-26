@@ -6,11 +6,19 @@ import { Button } from "@/components/ui/button"
 import { GradeFilters } from "@/components/grade-filters"
 import { PaginationClient } from "@/components/PaginationClient"
 
+import { auth } from "@/lib/auth"
+import { redirect } from "next/navigation"
+
 export default async function TeacherGradesPage({
   searchParams,
 }: {
   searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string; page?: string }>
 }) {
+  const session = await auth()
+  if (!session?.user) {
+    redirect("/login")
+  }
+
   const params = await searchParams
   const [gradesResult, teacherSubjectsResult, periodsResult] = await Promise.all([
     listGradesForTeacher({
@@ -21,7 +29,7 @@ export default async function TeacherGradesPage({
       page: parseInt(params.page || '1', 10) || 1,
       pageSize: 20,
     }),
-    listTeacherSubjects(""),
+    listTeacherSubjects(session.user.teacherId || undefined),
     listPeriods(),
   ])
 
@@ -37,6 +45,25 @@ export default async function TeacherGradesPage({
   const pagination = gradesResult.pagination
   const teacherSubjects = teacherSubjectsResult.success ? teacherSubjectsResult.data : []
   const periods = periodsResult.success ? periodsResult.data : []
+
+  const classroomMap = new Map<string, { id: string; name: string; schoolYear: string }>()
+  const subjectMap = new Map<string, { id: string; name: string }>()
+
+  teacherSubjects.forEach((ts) => {
+    if (!classroomMap.has(ts.classroom.id)) {
+      classroomMap.set(ts.classroom.id, {
+        id: ts.classroom.id,
+        name: `${ts.classroom.schoolGrade.name} ${ts.classroom.section}`,
+        schoolYear: ts.classroom.schoolYear,
+      })
+    }
+    if (!subjectMap.has(ts.subject.id)) {
+      subjectMap.set(ts.subject.id, {
+        id: ts.subject.id,
+        name: ts.subject.name,
+      })
+    }
+  })
 
   return (
     <div className="p-8">
@@ -54,8 +81,8 @@ export default async function TeacherGradesPage({
           periodId: params.periodId || undefined,
           type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
         }}
-        classrooms={teacherSubjects.map((ts) => ({ id: ts.classroom.id, name: `${ts.classroom.schoolGrade.name} ${ts.classroom.section}`, schoolYear: ts.classroom.schoolYear }))}
-        subjects={teacherSubjects.map((ts) => ({ id: ts.subject.id, name: ts.subject.name }))}
+        classrooms={Array.from(classroomMap.values())}
+        subjects={Array.from(subjectMap.values())}
         teachers={[]}
         periods={periods}
         mode="teacher"
