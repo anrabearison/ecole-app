@@ -1,0 +1,32 @@
+import { auth } from "@/lib/auth"
+import { getSchoolName } from "@/lib/getSchoolName"
+import { redirect } from "next/navigation"
+import { Sidebar } from "@/components/Sidebar"
+
+export default async function ProfileLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const session = await auth()
+
+  if (!session?.user) {
+    redirect("/login")
+  }
+
+  const schoolNameResult: Awaited<ReturnType<typeof getSchoolName>> = session.user.schoolId
+    ? await getSchoolName()
+    : { success: false, error: "No school associated with user" }
+  const schoolName = schoolNameResult.success ? schoolNameResult.data.name : undefined
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="lg:flex">
+        <Sidebar user={session.user} schoolName={schoolName} />
+        <main className="flex-1 p-3 sm:p-6 pt-16 lg:min-h-screen lg:pt-6">
+          {children}
+        </main>
+      </div>
+    </div>
+  )
+}
