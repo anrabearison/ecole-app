@@ -74,21 +74,22 @@ model School {
   address   String?
   createdAt DateTime @default(now())
 
-  users           User[]
-  schoolGrades    SchoolGrade[]
-  tracks          Track[]
-  classrooms      Classroom[]
-  subjects        Subject[]
-  students        Student[]
-  teachers        Teacher[]
-  teacherSubjects TeacherSubject[]
-  enrollments     Enrollment[]
-  grades          Grade[]
-  scheduleSlots   ScheduleSlot[]
-  rooms           Room[]
-  periods         Period[]
-  reportCardComments ReportCardComment[]
-  deliberations   Deliberation[]
+  users               User[]
+  schoolGrades        SchoolGrade[]
+  tracks              Track[]
+  classrooms          Classroom[]
+  subjects            Subject[]
+  students            Student[]
+  teachers            Teacher[]
+  teacherSubjects     TeacherSubject[]
+  enrollments         Enrollment[]
+  grades              Grade[]
+  scheduleSlots       ScheduleSlot[]
+  rooms               Room[]
+  periods             Period[]
+  reportCardComments  ReportCardComment[]
+  deliberations       Deliberation[]
+  subjectCoefficients SubjectCoefficient[]
 }
 
 // ============================================================
@@ -127,8 +128,9 @@ model SchoolGrade {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  tracks     Track[] // empty unless this level has tracks (from Première onward)
-  classrooms Classroom[] // direct classrooms when the level has no track
+  tracks              Track[] // empty unless this level has tracks (from Première onward)
+  classrooms          Classroom[] // direct classrooms when the level has no track
+  subjectCoefficients SubjectCoefficient[]
 
   @@unique([name, cycle, schoolId])
 }
@@ -144,7 +146,8 @@ model Track {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  classrooms Classroom[]
+  classrooms          Classroom[]
+  subjectCoefficients SubjectCoefficient[]
 
   @@unique([name, schoolGradeId])
 }
@@ -271,9 +274,10 @@ model Subject {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  teacherSubjects TeacherSubject[]
-  grades          Grade[]
-  scheduleSlots   ScheduleSlot[]
+  teacherSubjects     TeacherSubject[]
+  grades              Grade[]
+  scheduleSlots       ScheduleSlot[]
+  subjectCoefficients SubjectCoefficient[]
 
   @@unique([name, schoolId])
 }
@@ -428,4 +432,39 @@ model ScheduleSlot {
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
+}
+
+// ============================================================
+// Subject Coefficients (coefficients par niveau et/ou série)
+// ============================================================
+
+// Stores the coefficient of a subject for a specific school grade (and optional track).
+// Resolution order (fallback chain):
+//   1. (subject, schoolGrade, track)  — specific to a série (Première A, Terminale C…)
+//   2. (subject, schoolGrade, null)   — common to all classes of that level with no track
+//   3. Subject.coefficient            — global default
+model SubjectCoefficient {
+  id          String @id @default(cuid())
+  coefficient Float  @default(1.0)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  schoolGradeId String
+  schoolGrade   SchoolGrade @relation(fields: [schoolGradeId], references: [id], onDelete: Cascade)
+
+  // null  → applies to all classes of this level that have no track (6ème → Seconde)
+  // non-null → applies only to this specific track (Première A, Terminale C…)
+  trackId String?
+  track   Track?  @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Performance index — uniqueness enforced at application level to handle nullable trackId
+  @@index([subjectId, schoolGradeId, trackId, schoolId])
+  @@index([schoolGradeId, schoolId])
 }
