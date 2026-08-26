@@ -35,6 +35,7 @@ declare module "next-auth" {
 import type { NextAuthConfig } from "next-auth"
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "dev-secret-change-in-production",
   providers: [],
   callbacks: {
