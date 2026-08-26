@@ -29,13 +29,15 @@ export default function LoginForm() {
       const result = await signIn("credentials", {
         identifier: data.identifier,
         password: data.password,
-        redirect: true,
-        callbackUrl: "/",
+        redirect: false,
       })
 
       if (result?.error) {
         setError("Identifiant ou mot de passe invalide")
         setIsLoading(false)
+      } else {
+        router.push("/")
+        router.refresh()
       }
     } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")

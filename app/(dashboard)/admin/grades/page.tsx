@@ -4,11 +4,12 @@ import { listTeachers } from "@/lib/actions/teacher"
 import { listSubjects } from "@/lib/actions/subject"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { GradeFilters } from "@/components/grade-filters"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function AdminGradesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ classroomId?: string; subjectId?: string; teacherId?: string; periodId?: string; type?: string; startDate?: string; endDate?: string }>
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; teacherId?: string; periodId?: string; type?: string; startDate?: string; endDate?: string; page?: string }>
 }) {
   const params = await searchParams
   const [gradesResult, classroomsResult, subjectsResult, teachersResult, periodsResult] = await Promise.all([
@@ -20,11 +21,13 @@ export default async function AdminGradesPage({
       type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
       startDate: params.startDate || undefined,
       endDate: params.endDate || undefined,
+      page: parseInt(params.page || '1', 10) || 1,
+      pageSize: 20,
     }),
-    listClassrooms(),
-    listSubjects(),
-    listTeachers(),
-    listPeriods(),
+    listClassrooms({ page: 1, pageSize: 1000 }),
+    listSubjects({ page: 1, pageSize: 1000 }),
+    listTeachers({ page: 1, pageSize: 1000 }),
+    listPeriods({ page: 1, pageSize: 1000 }),
   ])
 
   if (!gradesResult.success) {
@@ -36,6 +39,7 @@ export default async function AdminGradesPage({
   }
 
   const grades = gradesResult.data
+  const pagination = gradesResult.pagination
   const classrooms = classroomsResult.success ? classroomsResult.data : []
   const subjects = subjectsResult.success ? subjectsResult.data : []
   const teachers = teachersResult.success ? teachersResult.data : []
@@ -145,6 +149,15 @@ export default async function AdminGradesPage({
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

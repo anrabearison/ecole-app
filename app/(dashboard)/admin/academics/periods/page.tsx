@@ -2,9 +2,12 @@ import { listPeriods, deletePeriod } from "@/lib/actions/period"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { PaginationClient } from "@/components/PaginationClient"
 
-export default async function PeriodsPage() {
-  const result = await listPeriods()
+export default async function PeriodsPage({ searchParams }: { searchParams?: { page?: string } }) {
+  const params = await searchParams
+  const page = parseInt(params?.page || '1', 10) || 1
+  const result = await listPeriods({ page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -16,6 +19,7 @@ export default async function PeriodsPage() {
   }
 
   const periods = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-6">
@@ -82,6 +86,15 @@ export default async function PeriodsPage() {
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

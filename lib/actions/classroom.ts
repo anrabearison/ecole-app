@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { classroomSchema, classroomUpdateSchema, type ClassroomInput, type ClassroomUpdateInput } from "@/lib/validations/classroom"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 export async function getSchoolGrades(): Promise<ActionResult<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>> {
   const session = await auth()
@@ -166,7 +166,7 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
   }
 }
 
-export async function listClassrooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<ClassroomWithRelations[]>> {
+export async function listClassrooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<ClassroomWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -195,44 +195,58 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
       ]
     }
 
-    const classrooms = await prisma.classroom.findMany({
-      where,
-      include: {
-        schoolGrade: {
-          select: {
-            id: true,
-            name: true,
-            cycle: true,
+    const [classrooms, total] = await Promise.all([
+      prisma.classroom.findMany({
+        where,
+        include: {
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
+            },
+          },
+          track: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          homeroomTeacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          _count: {
+            select: {
+              students: true,
+            },
           },
         },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        homeroomTeacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        _count: {
-          select: {
-            students: true,
-          },
-        },
-      },
-      orderBy: [
-        { schoolGrade: { order: "asc" } },
-        { section: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { schoolGrade: { order: "asc" } },
+          { section: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.classroom.count({ where })
+    ])
 
-    return { success: true, data: classrooms }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: classrooms,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing classrooms:", error)
     return { success: false, error: "Erreur lors du chargement des classes" }

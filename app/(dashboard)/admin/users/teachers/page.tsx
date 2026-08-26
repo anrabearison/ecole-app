@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const session = await auth()
@@ -25,6 +26,7 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
   }
 
   const teachers = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-8">
@@ -106,6 +108,15 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

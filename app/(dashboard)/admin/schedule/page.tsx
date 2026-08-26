@@ -41,9 +41,9 @@ export default function AdminSchedulePage() {
   useEffect(() => {
     async function loadData() {
       const [classroomsResult, teachersResult, roomsResult] = await Promise.all([
-        listClassrooms(),
-        listTeachers(),
-        listRooms(),
+        listClassrooms({ page: 1, pageSize: 1000 }),
+        listTeachers({ page: 1, pageSize: 1000 }),
+        listRooms({ page: 1, pageSize: 1000 }),
       ])
       
       if (classroomsResult.success) setClassrooms(classroomsResult.data)

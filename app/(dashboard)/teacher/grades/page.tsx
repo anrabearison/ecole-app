@@ -4,11 +4,12 @@ import { listPeriods } from "@/lib/actions/period"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GradeFilters } from "@/components/grade-filters"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function TeacherGradesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string }>
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string; page?: string }>
 }) {
   const params = await searchParams
   const [gradesResult, teacherSubjectsResult, periodsResult] = await Promise.all([
@@ -17,6 +18,8 @@ export default async function TeacherGradesPage({
       subjectId: params.subjectId || undefined,
       type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
       periodId: params.periodId || undefined,
+      page: parseInt(params.page || '1', 10) || 1,
+      pageSize: 20,
     }),
     listTeacherSubjects(""),
     listPeriods(),
@@ -31,6 +34,7 @@ export default async function TeacherGradesPage({
   }
 
   const grades = gradesResult.data
+  const pagination = gradesResult.pagination
   const teacherSubjects = teacherSubjectsResult.success ? teacherSubjectsResult.data : []
   const periods = periodsResult.success ? periodsResult.data : []
 
@@ -125,6 +129,15 @@ export default async function TeacherGradesPage({
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

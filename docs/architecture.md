@@ -18,6 +18,15 @@
 - **Tests E2E** : Playwright
 - **Déploiement** : Vercel (plan Hobby pour l'instant — usage interne gratuit, à réévaluer si usage commercial ou multi-utilisateurs de l'équipe dev)
 
+## Migrations Prisma
+
+⚠️ **IMPORTANT : Toujours utiliser `npx prisma migrate dev` pour les changements de schéma, JAMAIS `npx prisma db push`.**
+
+- `migrate dev` crée un fichier de migration versionné dans `prisma/migrations/` qui peut être appliqué de manière reproductible sur une base vierge ou en production.
+- `db push` modifie directement la base sans créer de fichier de migration, ce qui rend impossible de reproduire l'état du schéma sur une nouvelle base de données.
+- Avant toute mise en production, `npx prisma migrate status` doit indiquer que l'historique des migrations est synchronisé (aucun drift).
+- En cas de drift, utiliser `npx prisma migrate resolve` pour régulariser, en choisissant l'option qui ne perd aucune donnée existante.
+
 ## Patterns de data fetching / mutation
 
 | Cas d'usage | Outil |

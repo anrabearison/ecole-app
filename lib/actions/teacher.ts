@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { teacherSchema, teacherUpdateSchema, type TeacherInput, type TeacherUpdateInput } from "@/lib/validations/teacher"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
 type TeacherWithRelations = {
@@ -82,7 +82,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 }
 
-export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<TeacherWithRelations[]>> {
+export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -112,31 +112,45 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
       ]
     }
 
-    const teachers = await prisma.teacher.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            active: true,
+    const [teachers, total] = await Promise.all([
+      prisma.teacher.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
+          },
+          _count: {
+            select: {
+              subjects: true,
+            },
           },
         },
-        _count: {
-          select: {
-            subjects: true,
-          },
-        },
-      },
-      orderBy: [
-        { lastName: "asc" },
-        { firstName: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.teacher.count({ where })
+    ])
 
-    return { success: true, data: teachers }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: teachers,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing teachers:", error)
     return { success: false, error: "Erreur lors du chargement des enseignants" }

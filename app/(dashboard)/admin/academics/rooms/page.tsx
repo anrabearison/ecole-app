@@ -2,9 +2,12 @@ import Link from "next/link"
 import { listRooms, deleteRoom } from "@/lib/actions/room"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { PaginationClient } from "@/components/PaginationClient"
 
-export default async function RoomsPage() {
-  const result = await listRooms()
+export default async function RoomsPage({ searchParams }: { searchParams?: { page?: string } }) {
+  const params = await searchParams
+  const page = parseInt(params?.page || '1', 10) || 1
+  const result = await listRooms({ page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -17,6 +20,7 @@ export default async function RoomsPage() {
   }
 
   const rooms = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-8">
@@ -75,6 +79,15 @@ export default async function RoomsPage() {
           </table>
         )}
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

@@ -25,7 +25,7 @@ describe("Student Server Actions", () => {
   })
 
   describe("listStudents", () => {
-    it("should return students filtered by schoolId", async () => {
+    it("should return students filtered by schoolId with pagination metadata", async () => {
       mockSession()
       
       const mockData = [
@@ -41,6 +41,7 @@ describe("Student Server Actions", () => {
       ]
       
       vi.mocked(prisma.student.findMany).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.student.count).mockResolvedValue(1)
 
       const result = await listStudents()
 
@@ -49,7 +50,16 @@ describe("Student Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual({ success: true, data: mockData })
+      expect(result).toEqual({ 
+        success: true, 
+        data: mockData,
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 20,
+          totalPages: 1
+        }
+      })
     })
   })
 

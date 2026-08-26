@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { periodSchema, type PeriodInput } from "@/lib/validations/period"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 export type PeriodWithRelations = {
   id: string
@@ -16,7 +16,7 @@ export type PeriodWithRelations = {
   dailyWeight: number
 }
 
-export async function listPeriods(): Promise<ActionResult<PeriodWithRelations[]>> {
+export async function listPeriods(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<PeriodWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -28,12 +28,40 @@ export async function listPeriods(): Promise<ActionResult<PeriodWithRelations[]>
   }
 
   try {
-    const periods = await prisma.period.findMany({
-      where: { schoolId: session.user.schoolId! },
-      orderBy: [{ schoolYear: "desc" }, { order: "asc" }],
-    })
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
 
-    return { success: true, data: periods as PeriodWithRelations[] }
+    const where: any = { schoolId: session.user.schoolId! }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { schoolYear: { contains: search, mode: "insensitive" } },
+      ]
+    }
+
+    const [periods, total] = await Promise.all([
+      prisma.period.findMany({
+        where,
+        orderBy: [{ schoolYear: "desc" }, { order: "asc" }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.period.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: periods as PeriodWithRelations[],
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing periods:", error)
     return { success: false, error: "Erreur lors du chargement des périodes" }

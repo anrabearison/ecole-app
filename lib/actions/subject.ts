@@ -4,9 +4,9 @@ import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { subjectSchema, type SubjectInput } from "@/lib/validations/subject"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
-export async function listSubjects(): Promise<ActionResult<Array<{ id: string; name: string }>>> {
+export async function listSubjects(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; name: string }>>> {
   try {
     const session = await auth()
     if (!session?.user?.schoolId) {
@@ -17,20 +17,43 @@ export async function listSubjects(): Promise<ActionResult<Array<{ id: string; n
       return { success: false, error: "Non autorisé" }
     }
 
-    const subjects = await prisma.subject.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
-      orderBy: {
-        name: "asc",
-      },
-      select: {
-        id: true,
-        name: true,
-      },
-    })
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
 
-    return { success: true, data: subjects }
+    const where: any = { schoolId: session.user.schoolId }
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" }
+    }
+
+    const [subjects, total] = await Promise.all([
+      prisma.subject.findMany({
+        where,
+        orderBy: {
+          name: "asc",
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.subject.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: subjects,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error) {
     console.error("Error listing subjects:", error)
     return { success: false, error: "Erreur lors de la récupération des matières" }

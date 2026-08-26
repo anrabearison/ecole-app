@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { trackSchema, trackUpdateSchema, type TrackInput, type TrackUpdateInput } from "@/lib/validations/track"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 type TrackWithRelations = {
   id: string
@@ -23,7 +23,7 @@ type TrackWithRelations = {
   }[]
 }
 
-export async function listTracks(): Promise<ActionResult<TrackWithRelations[]>> {
+export async function listTracks(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<TrackWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -39,34 +39,57 @@ export async function listTracks(): Promise<ActionResult<TrackWithRelations[]>> 
   }
 
   try {
-    const tracks = await prisma.track.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
-      include: {
-        schoolGrade: {
-          select: {
-            id: true,
-            name: true,
-            cycle: true,
-          },
-        },
-        classrooms: {
-          select: {
-            id: true,
-            section: true,
-            schoolYear: true,
-          },
-        },
-      },
-      orderBy: {
-        schoolGrade: {
-          order: "asc",
-        },
-      },
-    })
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
 
-    return { success: true, data: tracks as TrackWithRelations[] }
+    const where: any = { schoolId: session.user.schoolId }
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" }
+    }
+
+    const [tracks, total] = await Promise.all([
+      prisma.track.findMany({
+        where,
+        include: {
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
+            },
+          },
+          classrooms: {
+            select: {
+              id: true,
+              section: true,
+              schoolYear: true,
+            },
+          },
+        },
+        orderBy: {
+          schoolGrade: {
+            order: "asc",
+          },
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.track.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: tracks as TrackWithRelations[],
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing tracks:", error)
     return { success: false, error: "Erreur lors du chargement des filières" }

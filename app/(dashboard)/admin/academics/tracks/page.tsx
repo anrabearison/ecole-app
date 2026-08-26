@@ -2,10 +2,13 @@ import { listTracks, deleteTrack } from "@/lib/actions/track"
 import { listSchoolGrades } from "@/lib/actions/school-grade"
 import Link from "next/link"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { PaginationClient } from "@/components/PaginationClient"
 
-export default async function TracksPage() {
+export default async function TracksPage({ searchParams }: { searchParams?: { page?: string } }) {
+  const params = await searchParams
+  const page = parseInt(params?.page || '1', 10) || 1
   const [tracksResult, gradesResult] = await Promise.all([
-    listTracks(),
+    listTracks({ page, pageSize: 20 }),
     listSchoolGrades(),
   ])
 
@@ -20,6 +23,7 @@ export default async function TracksPage() {
 
   const tracks = tracksResult.data
   const grades = gradesResult.success ? gradesResult.data : []
+  const pagination = tracksResult.pagination
 
   // Group tracks by school grade
   const byGrade = tracks.reduce((acc, track) => {
@@ -28,7 +32,7 @@ export default async function TracksPage() {
     }
     acc[track.schoolGradeId].push(track)
     return acc
-  }, {} as Record<string, typeof tracks>)
+  }, {} as Record<string, any[]>)
 
   return (
     <div className="p-6">
@@ -67,7 +71,7 @@ export default async function TracksPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {gradeTracks.map((track) => (
+                  {(gradeTracks as any[]).map((track) => (
                     <tr key={track.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                         Série {track.name}
@@ -103,6 +107,15 @@ export default async function TracksPage() {
         <div className="text-center py-12 text-gray-500">
           Aucune série créée. Les séries sont utilisées pour les niveaux de lycée (à partir de Première).
         </div>
+      )}
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
       )}
     </div>
   )

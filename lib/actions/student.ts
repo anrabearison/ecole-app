@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { studentSchema, studentUpdateSchema, type StudentInput, type StudentUpdateInput } from "@/lib/validations/student"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
 type StudentWithRelations = {
@@ -217,7 +217,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -247,44 +247,58 @@ export async function listStudents(opts?: { search?: string; page?: number; page
       ]
     }
 
-    const students = await prisma.student.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            active: true,
-          },
-        },
-        classroom: {
-          include: {
-            schoolGrade: {
-              select: {
-                id: true,
-                name: true,
-                cycle: true,
-              },
-            },
-            homeroomTeacher: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-              },
+    const [students, total] = await Promise.all([
+      prisma.student.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
             },
           },
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
+              },
+              homeroomTeacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
         },
-      },
-      orderBy: [
-        { lastName: "asc" },
-        { firstName: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.student.count({ where })
+    ])
 
-    return { success: true, data: students }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: students,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing students:", error)
     return { success: false, error: "Erreur lors du chargement des élèves" }
