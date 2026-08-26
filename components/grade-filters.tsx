@@ -36,8 +36,11 @@ export function GradeFilters({ values, classrooms, subjects, teachers, periods, 
       params.delete(name)
     }
 
+    // Reset page to 1 when filters change
+    params.delete('page')
+
     const query = params.toString()
-    router.replace(query ? `${pathname}?${query}` : pathname)
+    router.push(query ? `${pathname}?${query}` : pathname)
   }
 
   const handleSelectChange = (event: ChangeEvent<HTMLSelectElement>) => {
