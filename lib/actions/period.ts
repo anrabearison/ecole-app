@@ -23,7 +23,7 @@ export async function listPeriods(opts?: { search?: string; page?: number; pageS
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!can(session.user.role, "view", "period")) {
+  if (!can(session.user.role, "view", "period", { schoolId: session.user.schoolId || undefined })) {
     return { success: false, error: "Forbidden" }
   }
 

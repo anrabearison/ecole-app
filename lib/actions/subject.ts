@@ -13,7 +13,7 @@ export async function listSubjects(opts?: { search?: string; page?: number; page
       return { success: false, error: "Non autorisé" }
     }
 
-    if (!can(session.user.role, "view", "subject")) {
+    if (!can(session.user.role, "view", "subject", { schoolId: session.user.schoolId })) {
       return { success: false, error: "Non autorisé" }
     }
 
