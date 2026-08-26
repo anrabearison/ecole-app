@@ -3,6 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
+import { Plus } from "lucide-react"
 
 export default async function PeriodsPage({ searchParams }: { searchParams?: { page?: string } }) {
   const params = await searchParams
@@ -11,9 +12,11 @@ export default async function PeriodsPage({ searchParams }: { searchParams?: { p
 
   if (!result.success) {
     return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Périodes</h1>
-        <div className="text-red-600">Erreur : {result.error}</div>
+      <div className="space-y-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Périodes</h1>
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+          Erreur : {result.error}
+        </div>
       </div>
     )
   }
@@ -22,69 +25,80 @@ export default async function PeriodsPage({ searchParams }: { searchParams?: { p
   const pagination = result.pagination
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Périodes</h1>
-        <Link href="/admin/academics/periods/new">
-          <Button>Nouvelle période</Button>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Périodes</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            Gestion des trimestres / semestres de l'établissement
+          </p>
+        </div>
+        <Link href="/admin/academics/periods/new" className="self-start sm:self-auto">
+          <Button className="gap-2 shadow-xs">
+            <Plus className="w-4 h-4" />
+            <span>Nouvelle période</span>
+          </Button>
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Nom
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Année scolaire
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ordre
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {periods.map((period) => (
-              <tr key={period.id}>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{period.name}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-500">{period.schoolYear}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{period.order}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <form action={deletePeriod as any}>
-                    <input type="hidden" name="id" value={period.id} />
-                    <ConfirmActionButton
-                      message={`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`}
-                      confirmLabel="Supprimer"
-                      cancelLabel="Annuler"
-                      destructive
-                      size="sm"
-                    >
-                      Supprimer
-                    </ConfirmActionButton>
-                  </form>
-                </td>
-              </tr>
-            ))}
-            {periods.length === 0 && (
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50/50">
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
-                  Aucune période trouvée
-                </td>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Nom
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Année scolaire
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Ordre
+                </th>
+                <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Actions
+                </th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {periods.map((period) => (
+                <tr key={period.id} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-sm font-semibold text-gray-900">
+                    {period.name}
+                  </td>
+                  <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-sm text-gray-600">
+                    {period.schoolYear}
+                  </td>
+                  <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-sm text-gray-900">
+                    {period.order}
+                  </td>
+                  <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-right text-sm font-medium">
+                    <form action={deletePeriod as any}>
+                      <input type="hidden" name="id" value={period.id} />
+                      <ConfirmActionButton
+                        message={`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`}
+                        confirmLabel="Supprimer"
+                        cancelLabel="Annuler"
+                        destructive
+                        size="sm"
+                      >
+                        Supprimer
+                      </ConfirmActionButton>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+              {periods.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-6 py-12 text-center text-sm text-gray-500">
+                    Aucune période trouvée
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {pagination && (
