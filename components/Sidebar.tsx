@@ -39,12 +39,18 @@ function getInitialGroupState(items: Array<NavItem>, pathname: string) {
 
 type SidebarProps = {
   schoolName?: string
+  user?: {
+    id?: string
+    email?: string | null
+    role: string
+  }
 }
 
-export function Sidebar({ schoolName }: SidebarProps) {
+export function Sidebar({ schoolName, user: initialUser }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const role = session?.user?.role as keyof typeof navByRole | undefined
+  const currentUser = initialUser ?? session?.user
+  const role = currentUser?.role as keyof typeof navByRole | undefined
   const items = useMemo(() => (role ? navByRole[role] : []), [role])
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => getInitialGroupState(items, pathname))
@@ -71,11 +77,11 @@ export function Sidebar({ schoolName }: SidebarProps) {
     await signOut({ callbackUrl: "/login" })
   }
 
-  if (!session?.user) {
+  if (!currentUser) {
     return null
   }
 
-  const roleLabel = role ? roleLabels[role] ?? role : session.user.role
+  const roleLabel = role ? roleLabels[role] ?? role : currentUser.role
 
   return (
     <>
@@ -202,7 +208,7 @@ export function Sidebar({ schoolName }: SidebarProps) {
 
         <div className="mt-auto rounded-2xl border border-gray-200 bg-slate-50 p-4">
           <p className="text-xs uppercase tracking-wide text-gray-500">Connecté en tant que</p>
-          <p className="mt-2 text-sm font-semibold text-gray-900">{session.user.email}</p>
+          <p className="mt-2 text-sm font-semibold text-gray-900">{currentUser.email}</p>
           <p className="text-sm text-gray-500">{roleLabel}</p>
           <Button className="mt-4 w-full" variant="outline" size="sm" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" /> Déconnexion

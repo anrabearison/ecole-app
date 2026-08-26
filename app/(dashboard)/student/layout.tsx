@@ -26,7 +26,7 @@ export default async function StudentLayout({
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="lg:flex">
-        <Sidebar schoolName={schoolName} />
+        <Sidebar user={session.user} schoolName={schoolName} />
         <main className="flex-1 p-6 pt-16 lg:min-h-screen lg:pt-6">
           {children}
         </main>
