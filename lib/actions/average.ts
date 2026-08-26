@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
+import { getEffectiveCoefficient } from "@/lib/actions/subject-coefficient"
 
 export type SubjectAverage = {
   subjectId: string
@@ -131,6 +132,20 @@ export async function calculateGeneralAverage(
   }
 
   try {
+    // Get the student's current classroom to resolve schoolGradeId and trackId
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        classroomId: true,
+        classroom: {
+          select: { schoolGradeId: true, trackId: true },
+        },
+      },
+    })
+
+    const schoolGradeId = student?.classroom?.schoolGradeId ?? null
+    const trackId = student?.classroom?.trackId ?? null
+
     // Get all subjects with grades for this student in this period
     const grades = await prisma.grade.findMany({
       where: {
@@ -149,25 +164,49 @@ export async function calculateGeneralAverage(
       return { success: true, data: 0 }
     }
 
-    // Group by subject and calculate each subject average
+    // Group by subject
+    const uniqueSubjectIds = [...new Set(grades.map((g) => g.subject.id))]
+
+    // Resolve effective coefficient for each subject (with fallback chain)
+    const subjectCoefficients = new Map<string, number>()
+    if (schoolGradeId) {
+      await Promise.all(
+        uniqueSubjectIds.map(async (subjectId) => {
+          const coeff = await getEffectiveCoefficient(
+            subjectId,
+            schoolGradeId,
+            trackId,
+            session.user.schoolId!
+          )
+          subjectCoefficients.set(subjectId, coeff)
+        })
+      )
+    } else {
+      // Fallback: use Subject.coefficient when classroom/grade is not resolved
+      for (const grade of grades) {
+        if (!subjectCoefficients.has(grade.subject.id)) {
+          subjectCoefficients.set(grade.subject.id, grade.subject.coefficient)
+        }
+      }
+    }
+
+    // Calculate average per subject
     const subjectAverages = new Map<string, { average: number; coefficient: number }>()
-    
-    for (const grade of grades) {
-      const subjectId = grade.subject.id
-      if (!subjectAverages.has(subjectId)) {
-        subjectAverages.set(subjectId, { average: 0, coefficient: grade.subject.coefficient })
-      }
+    for (const subjectId of uniqueSubjectIds) {
+      subjectAverages.set(subjectId, {
+        average: 0,
+        coefficient: subjectCoefficients.get(subjectId) ?? 1.0,
+      })
     }
 
-    // Calculate each subject average
-    for (const [subjectId, data] of subjectAverages) {
-      const subjectAvgResult = await calculateSubjectAverage(studentId!, subjectId, periodId)
+    for (const [subjectId] of subjectAverages) {
+      const subjectAvgResult = await calculateSubjectAverage(studentId, subjectId, periodId)
       if (subjectAvgResult.success) {
-        data.average = subjectAvgResult.data
+        subjectAverages.get(subjectId)!.average = subjectAvgResult.data
       }
     }
 
-    // Calculate weighted general average
+    // Weighted general average
     let weightedSum = 0
     let totalCoefficient = 0
 
@@ -278,6 +317,17 @@ export async function getStudentSubjectAverages(
   }
 
   try {
+    // Get the student's classroom to resolve schoolGradeId and trackId
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      select: {
+        classroom: { select: { schoolGradeId: true, trackId: true } },
+      },
+    })
+
+    const schoolGradeId = student?.classroom?.schoolGradeId ?? null
+    const trackId = student?.classroom?.trackId ?? null
+
     // Get all subjects with grades for this student in this period
     const grades = await prisma.grade.findMany({
       where: {
@@ -301,16 +351,22 @@ export async function getStudentSubjectAverages(
       new Map(grades.map((g) => [g.subject.id, g.subject])).values()
     )
 
-    // Calculate average for each subject
+    // Calculate average and resolve effective coefficient for each subject
     const subjectAverages: SubjectAverage[] = []
 
     for (const subject of uniqueSubjects) {
-      const avgResult = await calculateSubjectAverage(studentId, subject.id, periodId)
+      const [avgResult, effectiveCoefficient] = await Promise.all([
+        calculateSubjectAverage(studentId, subject.id, periodId),
+        schoolGradeId
+          ? getEffectiveCoefficient(subject.id, schoolGradeId, trackId, session.user.schoolId!)
+          : Promise.resolve(subject.coefficient),
+      ])
+
       if (avgResult.success) {
         subjectAverages.push({
           subjectId: subject.id,
           subjectName: subject.name,
-          coefficient: subject.coefficient,
+          coefficient: effectiveCoefficient,
           average: avgResult.data,
         })
       }

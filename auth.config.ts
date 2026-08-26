@@ -44,7 +44,8 @@ export const authConfig: NextAuthConfig = {
       const isOnDashboard = nextUrl.pathname.startsWith("/admin") ||
                            nextUrl.pathname.startsWith("/platform") ||
                            nextUrl.pathname.startsWith("/teacher") ||
-                           nextUrl.pathname.startsWith("/student")
+                           nextUrl.pathname.startsWith("/student") ||
+                           nextUrl.pathname.startsWith("/profile")
       
       if (isOnDashboard) {
         if (isLoggedIn) return true

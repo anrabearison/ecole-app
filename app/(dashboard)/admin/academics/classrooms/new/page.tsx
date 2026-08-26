@@ -4,10 +4,14 @@ import { useState, useEffect } from "react"
 import { useForm, useWatch, type SubmitHandler } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { createClassroom, getSchoolGrades, getTracks } from "@/lib/actions/classroom"
 import { listTeachers } from "@/lib/actions/teacher"
 import { classroomSchema, type ClassroomInput } from "@/lib/validations/classroom"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ArrowLeft, School, UserCheck, AlertTriangle } from "lucide-react"
 
 export default function NewClassroomPage() {
   const router = useRouter()
@@ -75,9 +79,7 @@ export default function NewClassroomPage() {
       }
 
       const result = await getTracks(schoolGradeId)
-      if (!isActive) {
-        return
-      }
+      if (!isActive) return
 
       if (result.success) {
         setTracks(result.data)
@@ -96,7 +98,6 @@ export default function NewClassroomPage() {
     setError(null)
 
     try {
-      // Convert empty string or "$undefined" trackId to undefined
       const cleanedData = {
         ...data,
         trackId: (!data.trackId || data.trackId === "$undefined") ? undefined : data.trackId
@@ -106,10 +107,10 @@ export default function NewClassroomPage() {
       if (result.success) {
         router.push("/admin/academics/classrooms")
       } else {
-        setError(result.error || "Failed to create classroom")
+        setError(result.error || "Échec de la création de la classe")
       }
     } catch {
-      setError("An error occurred. Please try again.")
+      setError("Une erreur est survenue. Veuillez réessayer.")
     } finally {
       setIsLoading(false)
     }
@@ -124,7 +125,6 @@ export default function NewClassroomPage() {
     HIGH_SCHOOL: "Lycée",
   }
 
-  // Generate school year options (current year and next 2 years)
   const currentYear = new Date().getFullYear()
   const schoolYearOptions = [
     `${currentYear}-${currentYear + 1}`,
@@ -133,157 +133,190 @@ export default function NewClassroomPage() {
   ]
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Nouvelle classe</h1>
+    <div className="p-8 max-w-4xl mx-auto space-y-6">
+      {/* Navigation Breadcrumb */}
+      <div>
+        <Link
+          href="/admin/academics/classrooms"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-2 gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Retour à la liste des classes</span>
+        </Link>
+        <h1 className="text-3xl font-bold text-gray-900">Nouvelle classe</h1>
+        <p className="text-gray-600 mt-1">Créer une nouvelle classe d'enseignement pour l'école.</p>
+      </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Section 1: Niveau & Structure */}
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <School className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Niveau & Structure</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="schoolGradeId" className="font-medium text-gray-700">
+                  Niveau d'étude <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  {...register("schoolGradeId")}
+                  id="schoolGradeId"
+                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                >
+                  <option value="">Sélectionner un niveau</option>
+                  {schoolGrades.map((sg) => (
+                    <option key={sg.id} value={sg.id}>
+                      {cycleNames[sg.cycle] || sg.cycle} - {sg.name}
+                    </option>
+                  ))}
+                </select>
+                {errors.schoolGradeId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.schoolGradeId.message}</p>
+                )}
+              </div>
+
+              {showTrackField && (
+                <div>
+                  <Label htmlFor="trackId" className="font-medium text-gray-700">
+                    Série (Filière) <span className="text-red-500">*</span>
+                  </Label>
+                  <select
+                    {...register("trackId")}
+                    id="trackId"
+                    className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                  >
+                    <option value="">Sélectionner une série</option>
+                    {tracks.map((track) => (
+                      <option key={track.id} value={track.id}>
+                        Série {track.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.trackId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.trackId.message}</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="section" className="font-medium text-gray-700">
+                  Section / Numéro <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  {...register("section")}
+                  id="section"
+                  className="mt-1.5"
+                  placeholder="Ex: A, B, 1, 2..."
+                />
+                {errors.section && (
+                  <p className="mt-1 text-sm text-red-600">{errors.section.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="schoolYear" className="font-medium text-gray-700">
+                  Année scolaire <span className="text-red-500">*</span>
+                </Label>
+                <select
+                  {...register("schoolYear")}
+                  id="schoolYear"
+                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                >
+                  {schoolYearOptions.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+                {errors.schoolYear && (
+                  <p className="mt-1 text-sm text-red-600">{errors.schoolYear.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: Encadrement & Évaluation */}
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <UserCheck className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Encadrement & Évaluation</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="homeroomTeacherId" className="font-medium text-gray-700">
+                  Professeur principal <span className="text-gray-400 font-normal">(Optionnel)</span>
+                </Label>
+                <select
+                  {...register("homeroomTeacherId")}
+                  id="homeroomTeacherId"
+                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                >
+                  <option value="">Aucun professeur principal assigné</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher.id} value={teacher.id}>
+                      {teacher.firstName} {teacher.lastName}
+                    </option>
+                  ))}
+                </select>
+                {errors.homeroomTeacherId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherId.message}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="passingThreshold" className="font-medium text-gray-700">
+                  Seuil de passage (Moyenne minimale / 20)
+                </Label>
+                <Input
+                  {...register("passingThreshold", { valueAsNumber: true })}
+                  type="number"
+                  step="0.1"
+                  min={0}
+                  max={20}
+                  id="passingThreshold"
+                  className="mt-1.5 font-mono"
+                  placeholder="10"
+                  defaultValue={10}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Moyenne minimale requise pour délibérer le passage de l'élève.
+                </p>
+                {errors.passingThreshold && (
+                  <p className="mt-1 text-sm text-red-600">{errors.passingThreshold.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Error Banner */}
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div>
-            <label htmlFor="schoolGradeId" className="block text-sm font-medium text-gray-700 mb-2">
-              Niveau
-            </label>
-            <select
-              {...register("schoolGradeId")}
-              id="schoolGradeId"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Sélectionner un niveau</option>
-              {schoolGrades.map((sg) => (
-                <option key={sg.id} value={sg.id}>
-                  {cycleNames[sg.cycle] || sg.cycle} - {sg.name}
-                </option>
-              ))}
-            </select>
-            {errors.schoolGradeId && (
-              <p className="mt-1 text-sm text-red-600">{errors.schoolGradeId.message}</p>
-            )}
-          </div>
-
-          {showTrackField && (
-            <div>
-              <label htmlFor="trackId" className="block text-sm font-medium text-gray-700 mb-2">
-                Série
-              </label>
-              <select
-                {...register("trackId")}
-                id="trackId"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              >
-                <option value="">Sélectionner une série</option>
-                {tracks.map((track) => (
-                  <option key={track.id} value={track.id}>
-                    Série {track.name}
-                  </option>
-                ))}
-              </select>
-              {errors.trackId && (
-                <p className="mt-1 text-sm text-red-600">{errors.trackId.message}</p>
-              )}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="section" className="block text-sm font-medium text-gray-700 mb-2">
-              Section
-            </label>
-            <input
-              {...register("section")}
-              type="text"
-              id="section"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="A, B, 1, 2..."
-            />
-            {errors.section && (
-              <p className="mt-1 text-sm text-red-600">{errors.section.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="schoolYear" className="block text-sm font-medium text-gray-700 mb-2">
-              Année scolaire
-            </label>
-            <select
-              {...register("schoolYear")}
-              id="schoolYear"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              {schoolYearOptions.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-            {errors.schoolYear && (
-              <p className="mt-1 text-sm text-red-600">{errors.schoolYear.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="homeroomTeacherId" className="block text-sm font-medium text-gray-700 mb-2">
-              Professeur principal (optionnel)
-            </label>
-            <select
-              {...register("homeroomTeacherId")}
-              id="homeroomTeacherId"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Aucun</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.firstName} {teacher.lastName}
-                </option>
-              ))}
-            </select>
-            {errors.homeroomTeacherId && (
-              <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherId.message}</p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="passingThreshold" className="block text-sm font-medium text-gray-700 mb-2">
-              Seuil de passage
-            </label>
-            <input
-              {...register("passingThreshold", { valueAsNumber: true })}
-              type="number"
-              step="0.1"
-              min={0}
-              max={20}
-              id="passingThreshold"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-              placeholder="10"
-              defaultValue={10}
-            />
-            {errors.passingThreshold && (
-              <p className="mt-1 text-sm text-red-600">{errors.passingThreshold.message}</p>
-            )}
-          </div>
-
-          <div className="flex gap-4">
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="flex-1"
-            >
-              {isLoading ? "Création..." : "Créer la classe"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-          </div>
-        </form>
-      </div>
+        {/* Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isLoading} className="min-w-[140px]">
+            {isLoading ? "Création..." : "Créer la classe"}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

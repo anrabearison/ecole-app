@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { useMemo, useState } from "react"
-import { ChevronDown, ChevronRight, LogOut, Menu, X } from "lucide-react"
+import { ChevronDown, ChevronRight, LogOut, Menu, X, User } from "lucide-react"
 import { navByRole, type NavGroup, type NavItem } from "@/lib/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -39,12 +39,18 @@ function getInitialGroupState(items: Array<NavItem>, pathname: string) {
 
 type SidebarProps = {
   schoolName?: string
+  user?: {
+    id?: string
+    email?: string | null
+    role: string
+  }
 }
 
-export function Sidebar({ schoolName }: SidebarProps) {
+export function Sidebar({ schoolName, user: initialUser }: SidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
-  const role = session?.user?.role as keyof typeof navByRole | undefined
+  const currentUser = initialUser ?? session?.user
+  const role = currentUser?.role as keyof typeof navByRole | undefined
   const items = useMemo(() => (role ? navByRole[role] : []), [role])
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => getInitialGroupState(items, pathname))
@@ -71,11 +77,11 @@ export function Sidebar({ schoolName }: SidebarProps) {
     await signOut({ callbackUrl: "/login" })
   }
 
-  if (!session?.user) {
+  if (!currentUser) {
     return null
   }
 
-  const roleLabel = role ? roleLabels[role] ?? role : session.user.role
+  const roleLabel = role ? roleLabels[role] ?? role : currentUser.role
 
   return (
     <>
@@ -202,11 +208,18 @@ export function Sidebar({ schoolName }: SidebarProps) {
 
         <div className="mt-auto rounded-2xl border border-gray-200 bg-slate-50 p-4">
           <p className="text-xs uppercase tracking-wide text-gray-500">Connecté en tant que</p>
-          <p className="mt-2 text-sm font-semibold text-gray-900">{session.user.email}</p>
+          <p className="mt-2 text-sm font-semibold text-gray-900 truncate">{currentUser.email}</p>
           <p className="text-sm text-gray-500">{roleLabel}</p>
-          <Button className="mt-4 w-full" variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" /> Déconnexion
-          </Button>
+          <div className="mt-3 flex flex-col gap-2">
+            <Link href="/profile" onClick={closeSidebar}>
+              <Button className="w-full justify-start gap-2" variant="outline" size="sm">
+                <User className="h-4 w-4" /> Mon profil
+              </Button>
+            </Link>
+            <Button className="w-full justify-start gap-2 text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200" variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4" /> Déconnexion
+            </Button>
+          </div>
         </div>
       </aside>
     </>

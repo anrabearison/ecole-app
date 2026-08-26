@@ -6,6 +6,7 @@ import { listScheduleSlotsByClassroom } from "@/lib/actions/schedule-slot"
 import { Button } from "@/components/ui/button"
 import { ScheduleView } from "@/components/ScheduleView"
 import { getStudentSubjectAverages, calculateGeneralAverage } from "@/lib/actions/average"
+import { ArrowLeft, Pencil, CheckCircle2, AlertCircle } from "lucide-react"
 
 export default async function StudentDetailPage({
   params,
@@ -44,149 +45,139 @@ export default async function StudentDetailPage({
     if (gradesResult.success) {
       grades = gradesResult.data.filter((grade: any) => grade.student.id === student.id)
     }
-    if (averagesResult.success) {
-      subjectAverages = averagesResult.data
-    }
-    if (generalAverageResult.success) {
-      generalAverage = generalAverageResult.data
-    }
+    if (averagesResult.success) subjectAverages = averagesResult.data
+    if (generalAverageResult.success) generalAverage = generalAverageResult.data
   }
 
   if (student?.classroom?.id) {
     const scheduleResult = await listScheduleSlotsByClassroom(student.classroom.id)
-    if (scheduleResult.success) {
-      scheduleSlots = scheduleResult.data
-    }
+    if (scheduleResult.success) scheduleSlots = scheduleResult.data
   }
 
   const groupedGrades = grades.reduce((acc: Record<string, typeof grades>, grade: any) => {
     const subjectName = grade.subject.name
-    if (!acc[subjectName]) {
-      acc[subjectName] = []
-    }
+    if (!acc[subjectName]) acc[subjectName] = []
     acc[subjectName].push(grade)
     return acc
   }, {})
 
   if (!student) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-gray-600">Élève non trouvé</p>
-        <Link href="/admin/users/students">
-          <Button className="mt-4">Retour</Button>
-        </Link>
+        <Link href="/admin/users/students"><Button className="mt-4">Retour</Button></Link>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {student.firstName} {student.lastName}
-        </h1>
-        <div className="flex gap-2">
-          <Link href="/admin/users/students">
-            <Button variant="outline">Retour</Button>
-          </Link>
-          <Link href={`/admin/users/students/${id}/edit`}>
-            <Button variant="outline">Modifier</Button>
-          </Link>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      {/* Page Header */}
+      <div>
+        <Link
+          href="/admin/users/students"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-2 gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Retour à la liste</span>
+        </Link>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {student.firstName} {student.lastName}
+            </h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Matricule : {student.registrationNumber}
+            </p>
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Link href={`/admin/users/students/${id}/edit`}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" />
+                Modifier
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex overflow-x-auto gap-1 scrollbar-none" aria-label="Tabs">
           {[
             { key: "info", label: "Informations" },
-            { key: "schooling", label: "Classe & scolarité" },
+            { key: "schooling", label: "Scolarité" },
             { key: "grades", label: "Notes" },
             { key: "schedule", label: "Emploi du temps" },
-          ].map((tab) => (
+          ].map((tabItem) => (
             <Link
-              key={tab.key}
-              href={`/admin/users/students/${id}?tab=${tab.key}`}
-              className={`${activeTab === tab.key ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              key={tabItem.key}
+              href={`/admin/users/students/${id}?tab=${tabItem.key}`}
+              className={`whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm shrink-0 transition-colors ${
+                activeTab === tabItem.key
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
             >
-              {tab.label}
+              {tabItem.label}
             </Link>
           ))}
         </nav>
       </div>
 
+      {/* Tab: Informations */}
       {activeTab === "info" && (
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {[
+              { label: "Prénom", value: student.firstName },
+              { label: "Nom", value: student.lastName },
+              { label: "Email", value: student.user.email || "—" },
+              { label: "Numéro matricule", value: student.registrationNumber },
+              { label: "Sexe", value: student.sex === "MALE" ? "Masculin" : "Féminin" },
+              {
+                label: "Statut scolaire",
+                value: student.status === "PASSING" ? "Passant" : student.status === "REPEATING" ? "Redoublant" : "Triplant",
+              },
+              {
+                label: "Date de naissance",
+                value: student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("fr-FR") : "—",
+              },
+              { label: "Lieu de naissance", value: student.placeOfBirth || "—" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
+                <p className="text-base font-medium text-gray-900 mt-0.5">{value}</p>
+              </div>
+            ))}
             <div>
-              <p className="text-sm text-gray-500">Prénom</p>
-              <p className="text-lg font-medium">{student.firstName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Nom</p>
-              <p className="text-lg font-medium">{student.lastName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="text-lg font-medium">{student.user.email}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Numéro matricule</p>
-              <p className="text-lg font-medium">{student.registrationNumber}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Sexe</p>
-              <p className="text-lg font-medium">{student.sex === "MALE" ? "Masculin" : "Féminin"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Statut scolaire</p>
-              <p className="text-lg font-medium">
-                {student.status === "PASSING" ? "Passant" : student.status === "REPEATING" ? "Redoublant" : "Triplant"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Date de naissance</p>
-              <p className="text-lg font-medium">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("fr-FR") : "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Lieu de naissance</p>
-              <p className="text-lg font-medium">{student.placeOfBirth || "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Statut du compte</p>
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                student.user.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut du compte</p>
+              <span className={`inline-flex items-center gap-1 mt-0.5 px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                student.user.active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"
               }`}>
+                {student.user.active ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                 {student.user.active ? "Actif" : "Inactif"}
               </span>
             </div>
           </div>
 
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Tuteur / responsable légal</h3>
-            <div className="grid grid-cols-2 gap-4">
+          <div className="border-t border-gray-200 pt-5 space-y-4">
+            <h3 className="text-base font-semibold text-gray-900">Responsable légal / Tuteur</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-sm text-gray-500">Nom du tuteur</p>
-                <p className="text-lg font-medium">{student.guardianName || "—"}</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nom du tuteur</p>
+                <p className="text-base font-medium text-gray-900 mt-0.5">{student.guardianName || "—"}</p>
               </div>
-
               <div>
-                <p className="text-sm text-gray-500">Téléphone du tuteur</p>
-                <p className="text-lg font-medium">{student.guardianPhone || "—"}</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone du tuteur</p>
+                <p className="text-base font-medium text-gray-900 mt-0.5">{student.guardianPhone || "—"}</p>
               </div>
             </div>
           </div>
 
-          <div>
-            <p className="text-sm text-gray-500">Classe actuelle</p>
-            <p className="text-lg font-medium">
+          <div className="border-t border-gray-200 pt-5">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Classe actuelle</p>
+            <p className="text-base font-medium text-gray-900 mt-0.5">
               {student.classroom
                 ? `${student.classroom.schoolGrade.name} ${student.classroom.section} (${student.classroom.schoolYear})`
                 : "Non assigné"}
@@ -195,112 +186,138 @@ export default async function StudentDetailPage({
         </div>
       )}
 
+      {/* Tab: Scolarité */}
       {activeTab === "schooling" && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Classe & scolarité</h2>
-          <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 space-y-5">
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Classe actuelle</p>
+            <p className="text-base font-medium text-gray-900 mt-0.5">
+              {student.classroom
+                ? `${student.classroom.schoolGrade.name} ${student.classroom.section} (${student.classroom.schoolYear})`
+                : "Non assigné"}
+            </p>
+          </div>
+          {student.classroom?.homeroomTeacher && (
             <div>
-              <p className="text-sm text-gray-500">Classe actuelle</p>
-              <p className="text-lg font-medium">
-                {student.classroom
-                  ? `${student.classroom.schoolGrade.name} ${student.classroom.section} (${student.classroom.schoolYear})`
-                  : "Non assigné"}
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Professeur principal</p>
+              <p className="text-base font-medium text-gray-900 mt-0.5">
+                {student.classroom.homeroomTeacher.firstName} {student.classroom.homeroomTeacher.lastName}
               </p>
             </div>
-            {student.classroom?.homeroomTeacher && (
-              <div>
-                <p className="text-sm text-gray-500">Professeur principal</p>
-                <p className="text-lg font-medium">
-                  {student.classroom.homeroomTeacher.firstName} {student.classroom.homeroomTeacher.lastName}
-                </p>
-              </div>
-            )}
-            <div>
-              <p className="text-sm text-gray-500">Historique des inscriptions</p>
-              {enrollments.length === 0 ? (
-                <p className="text-gray-500">Aucune inscription enregistrée.</p>
-              ) : (
-                <ul className="mt-2 space-y-2">
-                  {enrollments.map((enrollment) => (
-                    <li key={enrollment.id} className="rounded border p-3 text-sm text-gray-700">
-                      <span className="font-medium">{enrollment.schoolYear}</span> — {enrollment.classroom.schoolGrade.name} {enrollment.classroom.section}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "grades" && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
-          <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-            <form method="get" className="flex flex-wrap items-center gap-4">
-              <input type="hidden" name="tab" value="grades" />
-              <label className="text-sm font-medium text-gray-700" htmlFor="period-select">Période</label>
-              <select id="period-select" name="periodId" defaultValue={selectedPeriodId} className="border rounded px-3 py-2">
-                {periods.map((period) => (
-                  <option key={period.id} value={period.id}>
-                    {period.name} ({period.schoolYear})
-                  </option>
+          )}
+          <div>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Historique des inscriptions</p>
+            {enrollments.length === 0 ? (
+              <p className="text-gray-500 text-sm">Aucune inscription enregistrée.</p>
+            ) : (
+              <div className="space-y-2">
+                {enrollments.map((enrollment) => (
+                  <div key={enrollment.id} className="rounded-lg border border-gray-200 p-3 text-sm text-gray-700 bg-gray-50">
+                    <span className="font-semibold">{enrollment.schoolYear}</span>
+                    {" — "}{enrollment.classroom.schoolGrade.name} {enrollment.classroom.section}
+                  </div>
                 ))}
-              </select>
-              <Button type="submit">Afficher</Button>
-            </form>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded border p-4">
-                <p className="text-sm text-gray-500">Moyenne générale</p>
-                <p className="text-2xl font-semibold text-gray-900">{generalAverage.toFixed(2)}/20</p>
-              </div>
-              <div className="rounded border p-4">
-                <p className="text-sm text-gray-500">Matières</p>
-                <p className="text-2xl font-semibold text-gray-900">{subjectAverages.length}</p>
-              </div>
-            </div>
-
-            {Object.entries(groupedGrades).length === 0 ? (
-              <p className="text-gray-500">Aucune note disponible pour cette période.</p>
-            ) : (
-              <div className="space-y-6">
-                {Object.entries(groupedGrades).map(([subjectName, subjectGrades]) => {
-                  const avg = subjectAverages.find((item) => item.subjectName === subjectName)
-                  return (
-                    <div key={subjectName} className="rounded border p-4">
-                      <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">{subjectName}</h3>
-                        {avg && <p className="text-sm font-medium text-gray-700">Moyenne : {avg.average.toFixed(2)}/20</p>}
-                      </div>
-                      <div className="space-y-2">
-                        {(subjectGrades as any[]).map((grade: any) => (
-                          <div key={grade.id} className="flex items-center justify-between rounded bg-gray-50 p-3 text-sm">
-                            <span>{new Date(grade.date).toLocaleDateString("fr-FR")}</span>
-                            <span>{grade.type === "EXAM" ? "Examen" : "Journalière"}</span>
-                            <span className="font-semibold">{grade.value}/20</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                })}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {activeTab === "schedule" && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Emploi du temps</h2>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            {scheduleSlots.length > 0 ? (
-              <ScheduleView slots={scheduleSlots} />
-            ) : (
-              <p className="text-gray-500">Aucun créneau disponible pour cette classe.</p>
-            )}
+      {/* Tab: Notes */}
+      {activeTab === "grades" && (
+        <div className="space-y-5">
+          <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+            <form method="get" className="flex flex-wrap items-end gap-3">
+              <input type="hidden" name="tab" value="grades" />
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1" htmlFor="period-select">
+                  Période
+                </label>
+                <select
+                  id="period-select"
+                  name="periodId"
+                  defaultValue={selectedPeriodId}
+                  className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+                >
+                  {periods.map((period) => (
+                    <option key={period.id} value={period.id}>
+                      {period.name} ({period.schoolYear})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" size="sm">Afficher</Button>
+            </form>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Moyenne générale</p>
+              <p className={`text-3xl font-bold mt-1 ${generalAverage >= 10 ? "text-emerald-600" : "text-rose-600"}`}>
+                {generalAverage.toFixed(2)}<span className="text-base font-normal text-gray-400">/20</span>
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Matières évaluées</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{subjectAverages.length}</p>
+            </div>
+          </div>
+
+          {Object.entries(groupedGrades).length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+              Aucune note disponible pour cette période.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(groupedGrades).map(([subjectName, subjectGrades]) => {
+                const avg = subjectAverages.find((item) => item.subjectName === subjectName)
+                return (
+                  <div key={subjectName} className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
+                    <div className="bg-gray-50/50 px-5 py-3.5 border-b border-gray-200 flex items-center justify-between flex-wrap gap-2">
+                      <h3 className="text-base font-semibold text-gray-900">{subjectName}</h3>
+                      {avg && (
+                        <span className={`text-sm font-bold px-3 py-1 rounded-full ${
+                          avg.average >= 10 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                        }`}>
+                          Moy. {avg.average.toFixed(2)}/20
+                        </span>
+                      )}
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {(subjectGrades as any[]).map((grade: any) => (
+                        <div key={grade.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                          <span className="text-gray-600">{new Date(grade.date).toLocaleDateString("fr-FR")}</span>
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                            grade.type === "EXAM"
+                              ? "bg-purple-50 text-purple-700 border-purple-200"
+                              : "bg-blue-50 text-blue-700 border-blue-200"
+                          }`}>
+                            {grade.type === "EXAM" ? "Examen" : "Journalière"}
+                          </span>
+                          <span className={`font-bold ${grade.value >= 10 ? "text-emerald-700" : "text-rose-700"}`}>
+                            {grade.value}/20
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Tab: Emploi du temps */}
+      {activeTab === "schedule" && (
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+          {scheduleSlots.length > 0 ? (
+            <div className="overflow-x-auto">
+              <ScheduleView slots={scheduleSlots} />
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">Aucun créneau disponible pour cette classe.</p>
+          )}
         </div>
       )}
     </div>

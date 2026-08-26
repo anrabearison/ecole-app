@@ -2,6 +2,7 @@ import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
+import { Plus, Search, Users } from "lucide-react"
 
 export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
@@ -11,7 +12,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
 
   if (!result.success) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-red-600">Erreur : {result.error}</p>
       </div>
     )
@@ -20,16 +21,11 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
   const classrooms = result.data
   const pagination = result.pagination
 
-  // Group by cycle, then schoolGrade, then track
   const groupedByCycle = classrooms.reduce((acc, classroom) => {
     const cycle = classroom.schoolGrade.cycle
-    if (!acc[cycle]) {
-      acc[cycle] = {}
-    }
+    if (!acc[cycle]) acc[cycle] = {}
     const schoolGrade = classroom.schoolGrade.name
-    if (!acc[cycle][schoolGrade]) {
-      acc[cycle][schoolGrade] = []
-    }
+    if (!acc[cycle][schoolGrade]) acc[cycle][schoolGrade] = []
     acc[cycle][schoolGrade].push(classroom)
     return acc
   }, {} as Record<string, Record<string, any[]>>)
@@ -41,58 +37,74 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Classes</h1>
-          <p className="text-gray-600">Vue arborescente des classes</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Classes</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            {pagination ? `${pagination.total} classe(s)` : "Vue arborescente des classes"}
+          </p>
         </div>
-        <div className="flex gap-4">
-          <form method="get" className="flex items-center" action="/admin/academics/classrooms">
-            <input name="search" defaultValue={search || ""} placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
-            <input type="hidden" name="page" value="1" />
-            <Button type="submit">Rechercher</Button>
-          </form>
-          <Link href="/admin/academics/classrooms/new">
-            <Button>Nouvelle classe</Button>
-          </Link>
-        </div>
+        <Link href="/admin/academics/classrooms/new" className="self-start sm:self-auto">
+          <Button className="gap-2 shadow-xs">
+            <Plus className="w-4 h-4" />
+            <span>Nouvelle classe</span>
+          </Button>
+        </Link>
       </div>
 
+      {/* Search Bar */}
+      <form method="get" action="/admin/academics/classrooms">
+        <div className="flex gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              name="search"
+              defaultValue={search || ""}
+              placeholder="Rechercher une classe..."
+              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <input type="hidden" name="page" value="1" />
+          <Button type="submit" variant="outline">Rechercher</Button>
+        </div>
+      </form>
+
+      {/* Tree View */}
       <div className="space-y-6">
         {Object.entries(groupedByCycle).map(([cycle, grades]) => (
-          <div key={cycle}>
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
-              {cycleNames[cycle] || cycle}
-            </h2>
-            <div className="space-y-4 ml-4">
+          <div key={cycle} className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+            <div className="bg-gray-50/50 px-4 py-3.5 sm:px-6 border-b border-gray-200">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                {cycleNames[cycle] || cycle}
+              </h2>
+            </div>
+            <div className="p-4 sm:p-6 space-y-5">
               {Object.entries(grades as Record<string, any[]>).map(([gradeName, classroomsInGrade]) => (
                 <div key={gradeName}>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">
+                  <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">
                     {gradeName}
                   </h3>
-                  <div className="space-y-2 ml-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {classroomsInGrade.map((classroom: any) => (
-                      <div
+                      <Link
                         key={classroom.id}
-                        className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border"
+                        href={`/admin/academics/classrooms/${classroom.id}`}
+                        className="flex items-center justify-between bg-gray-50 hover:bg-indigo-50 border border-gray-200 hover:border-indigo-300 rounded-lg p-3.5 transition-colors group"
                       >
                         <div>
-                          <Link
-                            href={`/admin/academics/classrooms/${classroom.id}`}
-                            className="text-blue-600 hover:text-blue-800 font-medium"
-                          >
+                          <div className="text-sm font-semibold text-gray-900 group-hover:text-indigo-700">
                             {classroom.schoolGrade.name}
                             {classroom.track ? ` ${classroom.track.name}` : ""} {classroom.section}
-                          </Link>
-                          <span className="ml-2 text-gray-500 text-sm">
-                            ({classroom._count.students} élèves)
-                          </span>
-                          <span className="ml-2 text-gray-400 text-sm">
-                            - {classroom.schoolYear}
-                          </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">{classroom.schoolYear}</div>
                         </div>
-                      </div>
+                        <div className="flex items-center gap-1 text-xs font-medium text-gray-500 bg-white border border-gray-200 rounded-full px-2.5 py-1 ml-2 shrink-0">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>{classroom._count.students}</span>
+                        </div>
+                      </Link>
                     ))}
                   </div>
                 </div>
@@ -103,7 +115,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
       </div>
 
       {classrooms.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
+        <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
           Aucune classe créée pour le moment.
         </div>
       )}

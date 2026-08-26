@@ -4,11 +4,13 @@ import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { getClassrooms, getStudentById, updateStudent } from "@/lib/actions/student"
 import { studentFormSchema, type StudentFormInput, type StudentInput } from "@/lib/validations/student"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ArrowLeft, User, GraduationCap, Users, AlertTriangle } from "lucide-react"
 
 export default function EditStudentPage() {
   const router = useRouter()
@@ -22,20 +24,19 @@ export default function EditStudentPage() {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<StudentFormInput>({
     resolver: zodResolver(studentFormSchema),
   })
 
+  const selectedSex = watch("sex")
+
   useEffect(() => {
-    if (!id) {
-      return
-    }
+    if (!id) return
 
     async function load() {
-      if (!id) {
-        return
-      }
+      if (!id) return
 
       const [studentResult, classroomsResult] = await Promise.all([getStudentById(id), getClassrooms()])
 
@@ -67,9 +68,7 @@ export default function EditStudentPage() {
   }, [id, setValue])
 
   async function onSubmit(data: StudentFormInput) {
-    if (!id) {
-      return
-    }
+    if (!id) return
 
     setError(null)
     setIsLoading(true)
@@ -97,138 +96,213 @@ export default function EditStudentPage() {
   }
 
   if (isLoading) {
-    return <div className="p-8">Chargement...</div>
+    return <div className="p-8 text-gray-500">Chargement des informations de l'élève...</div>
   }
 
   return (
-    <div className="p-8">
-      <div className="mb-6">
+    <div className="p-8 max-w-4xl mx-auto space-y-6">
+      {/* Navigation Breadcrumb */}
+      <div>
+        <Link
+          href={`/admin/users/students/${id}`}
+          className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-2 gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Retour à la fiche de l'élève</span>
+        </Link>
         <h1 className="text-3xl font-bold text-gray-900">Modifier l'élève</h1>
-        <p className="text-gray-600 mt-2">Mettre à jour les informations de l'élève</p>
+        <p className="text-gray-600 mt-1">Mettre à jour les informations et la scolarité de l'élève.</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl">
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Section 1: Informations personnelles */}
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <User className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Informations personnelles</h2>
           </div>
-        )}
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="firstName" className="font-medium text-gray-700">
+                  Prénom <span className="text-red-500">*</span>
+                </Label>
+                <Input id="firstName" {...register("firstName")} className="mt-1.5" />
+                {errors.firstName && <p className="text-sm text-red-600 mt-1">{errors.firstName.message}</p>}
+              </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="firstName">Prénom</Label>
-              <Input id="firstName" {...register("firstName")} className="mt-1" />
-              {errors.firstName && <p className="text-sm text-red-600 mt-1">{errors.firstName.message}</p>}
+              <div>
+                <Label htmlFor="lastName" className="font-medium text-gray-700">
+                  Nom <span className="text-red-500">*</span>
+                </Label>
+                <Input id="lastName" {...register("lastName")} className="mt-1.5" />
+                {errors.lastName && <p className="text-sm text-red-600 mt-1">{errors.lastName.message}</p>}
+              </div>
             </div>
 
+            {/* Sexe : Segmented Control Buttons */}
             <div>
-              <Label htmlFor="lastName">Nom</Label>
-              <Input id="lastName" {...register("lastName")} className="mt-1" />
-              {errors.lastName && <p className="text-sm text-red-600 mt-1">{errors.lastName.message}</p>}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" {...register("email")} className="mt-1" />
-            {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>}
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="registrationNumber">Numéro matricule</Label>
-              <Input id="registrationNumber" {...register("registrationNumber")} className="mt-1" />
-              {errors.registrationNumber && <p className="text-sm text-red-600 mt-1">{errors.registrationNumber.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="sex">Sexe</Label>
-              <select
-                id="sex"
-                {...register("sex")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-              >
-                <option value="">Sélectionner</option>
-                <option value="MALE">Masculin</option>
-                <option value="FEMALE">Féminin</option>
-              </select>
+              <Label className="font-medium text-gray-700 block mb-2">
+                Sexe <span className="text-gray-400 font-normal">(Optionnel)</span>
+              </Label>
+              <div className="grid grid-cols-2 gap-3 max-w-sm">
+                <button
+                  type="button"
+                  onClick={() => setValue("sex", "MALE", { shouldValidate: true })}
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border font-medium text-sm transition-all ${
+                    selectedSex === "MALE"
+                      ? "bg-indigo-50 border-indigo-600 text-indigo-700 shadow-xs ring-1 ring-indigo-600"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="text-lg">♂️</span>
+                  <span>Masculin</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setValue("sex", "FEMALE", { shouldValidate: true })}
+                  className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border font-medium text-sm transition-all ${
+                    selectedSex === "FEMALE"
+                      ? "bg-pink-50 border-pink-600 text-pink-700 shadow-xs ring-1 ring-pink-600"
+                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="text-lg">♀️</span>
+                  <span>Féminin</span>
+                </button>
+              </div>
               {errors.sex && <p className="text-sm text-red-600 mt-1">{errors.sex.message}</p>}
             </div>
-          </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="status">Statut</Label>
-              <select
-                id="status"
-                {...register("status")}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-              >
-                <option value="PASSING">Passant</option>
-                <option value="REPEATING">Redoublant</option>
-                <option value="TRIPLING">Triplant</option>
-              </select>
-              {errors.status && <p className="text-sm text-red-600 mt-1">{errors.status.message}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="placeOfBirth">Lieu de naissance</Label>
-              <Input id="placeOfBirth" {...register("placeOfBirth")} className="mt-1" />
-              {errors.placeOfBirth && <p className="text-sm text-red-600 mt-1">{errors.placeOfBirth.message}</p>}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="dateOfBirth">Date de naissance</Label>
-            <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} className="mt-1" />
-            {errors.dateOfBirth && <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth.message}</p>}
-          </div>
-
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Tuteur / responsable légal</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <Label htmlFor="guardianName">Nom du tuteur</Label>
-                <Input id="guardianName" {...register("guardianName")} className="mt-1" />
+                <Label htmlFor="dateOfBirth" className="font-medium text-gray-700">
+                  Date de naissance
+                </Label>
+                <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} className="mt-1.5" />
+                {errors.dateOfBirth && <p className="text-sm text-red-600 mt-1">{errors.dateOfBirth.message}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="placeOfBirth" className="font-medium text-gray-700">
+                  Lieu de naissance
+                </Label>
+                <Input id="placeOfBirth" {...register("placeOfBirth")} className="mt-1.5" />
+                {errors.placeOfBirth && <p className="text-sm text-red-600 mt-1">{errors.placeOfBirth.message}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: Scolarité & Compte d'accès */}
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Scolarité & Compte d'accès</h2>
+          </div>
+          <div className="p-6 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="registrationNumber" className="font-medium text-gray-700">
+                  Numéro matricule <span className="text-red-500">*</span>
+                </Label>
+                <Input id="registrationNumber" {...register("registrationNumber")} className="mt-1.5 font-mono" />
+                {errors.registrationNumber && <p className="text-sm text-red-600 mt-1">{errors.registrationNumber.message}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="status" className="font-medium text-gray-700">
+                  Statut scolaire
+                </Label>
+                <select
+                  id="status"
+                  {...register("status")}
+                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                >
+                  <option value="PASSING">Passant</option>
+                  <option value="REPEATING">Redoublant</option>
+                  <option value="TRIPLING">Triplant</option>
+                </select>
+                {errors.status && <p className="text-sm text-red-600 mt-1">{errors.status.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="classroomId" className="font-medium text-gray-700">
+                  Classe assignée
+                </Label>
+                <select
+                  id="classroomId"
+                  {...register("classroomId")}
+                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
+                >
+                  <option value="">Non assigné</option>
+                  {classrooms.map((classroom) => (
+                    <option key={classroom.id} value={classroom.id}>
+                      {classroom.name} ({classroom.schoolYear})
+                    </option>
+                  ))}
+                </select>
+                {errors.classroomId && <p className="text-sm text-red-600 mt-1">{errors.classroomId.message}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="email" className="font-medium text-gray-700">
+                  Email <span className="text-gray-400 font-normal">(Optionnel)</span>
+                </Label>
+                <Input id="email" type="email" {...register("email")} className="mt-1.5" />
+                {errors.email && <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Responsable légal / Tuteur */}
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-200 flex items-center gap-2">
+            <Users className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Responsable légal / Tuteur</h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <Label htmlFor="guardianName" className="font-medium text-gray-700">
+                  Nom du tuteur
+                </Label>
+                <Input id="guardianName" {...register("guardianName")} className="mt-1.5" />
                 {errors.guardianName && <p className="text-sm text-red-600 mt-1">{errors.guardianName.message}</p>}
               </div>
 
               <div>
-                <Label htmlFor="guardianPhone">Téléphone du tuteur</Label>
-                <Input id="guardianPhone" {...register("guardianPhone")} className="mt-1" />
+                <Label htmlFor="guardianPhone" className="font-medium text-gray-700">
+                  Téléphone du tuteur
+                </Label>
+                <Input id="guardianPhone" {...register("guardianPhone")} className="mt-1.5" />
                 {errors.guardianPhone && <p className="text-sm text-red-600 mt-1">{errors.guardianPhone.message}</p>}
               </div>
             </div>
           </div>
+        </div>
 
-          <div>
-            <Label htmlFor="classroomId">Classe (optionnel)</Label>
-            <select
-              id="classroomId"
-              {...register("classroomId")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-            >
-              <option value="">Non assigné</option>
-              {classrooms.map((classroom) => (
-                <option key={classroom.id} value={classroom.id}>
-                  {classroom.name} ({classroom.schoolYear})
-                </option>
-              ))}
-            </select>
-            {errors.classroomId && <p className="text-sm text-red-600 mt-1">{errors.classroomId.message}</p>}
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <span>{error}</span>
           </div>
+        )}
 
-          <div className="flex gap-4">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Enregistrement..." : "Enregistrer"}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => router.back()}>
-              Annuler
-            </Button>
-          </div>
-        </form>
-      </div>
+        {/* Actions Bar */}
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
+            {isSubmitting ? "Enregistrement..." : "Enregistrer"}
+          </Button>
+        </div>
+      </form>
     </div>
   )
 }

@@ -3,7 +3,7 @@ import { getSchoolName } from "@/lib/getSchoolName"
 import { redirect } from "next/navigation"
 import { Sidebar } from "@/components/Sidebar"
 
-export default async function TeacherLayout({
+export default async function ProfileLayout({
   children,
 }: {
   children: React.ReactNode
@@ -12,10 +12,6 @@ export default async function TeacherLayout({
 
   if (!session?.user) {
     redirect("/login")
-  }
-
-  if (session.user.role !== "TEACHER") {
-    redirect("/unauthorized")
   }
 
   const schoolNameResult: Awaited<ReturnType<typeof getSchoolName>> = session.user.schoolId

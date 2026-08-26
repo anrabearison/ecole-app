@@ -13,6 +13,7 @@ import {
   User,
   BookOpen,
   ClipboardList,
+  Percent,
 } from "lucide-react"
 
 type Role =
@@ -94,6 +95,12 @@ export const navByRole: Record<Role, NavItem[]> = {
         },
         {
           type: "link",
+          label: "Coefficients",
+          href: "/admin/academics/coefficients",
+          icon: Percent,
+        },
+        {
+          type: "link",
           label: "Salles",
           href: "/admin/academics/rooms",
           icon: MapPin,
@@ -169,6 +176,12 @@ export const navByRole: Record<Role, NavItem[]> = {
           label: "Matières",
           href: "/admin/academics/subjects",
           icon: FileText,
+        },
+        {
+          type: "link",
+          label: "Coefficients",
+          href: "/admin/academics/coefficients",
+          icon: Percent,
         },
         {
           type: "link",
