@@ -20,7 +20,7 @@ type StudentWithRelations = {
   sex: string
   user: {
     id: string
-    email: string
+    email: string | null
     active: boolean
   }
   classroom: {
@@ -313,13 +313,15 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
   }
 
   try {
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    })
+    // Check if email already exists (only if email is provided)
+    if (data.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: data.email },
+      })
 
-    if (existingUser) {
-      return { success: false, error: "Email already exists" }
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
     }
 
     // Check if registration number already exists in the same school
@@ -354,7 +356,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: data.email || null,
           passwordHash,
           role: "STUDENT",
           schoolId: session.user.schoolId,

@@ -53,7 +53,7 @@ export default function NewStudentPage() {
 
     if (result.success) {
       setTemporaryPassword(result.data.temporaryPassword)
-      setStudentEmail(data.email)
+      setStudentEmail(data.email ?? null)
       setShowPasswordModal(true)
       reset()
     } else {

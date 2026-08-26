@@ -5,7 +5,7 @@ export const schoolSchema = z.object({
   address: z.string().optional(),
   adminFirstName: z.string().min(1, "Le prénom de l'admin est requis"),
   adminLastName: z.string().min(1, "Le nom de l'admin est requis"),
-  adminEmail: z.string().email("Email invalide"),
+  adminEmail: z.string().email("Email invalide").optional(),
 })
 
 export type SchoolInput = z.infer<typeof schoolSchema>

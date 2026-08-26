@@ -103,6 +103,17 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
   }
 
   try {
+    // Check if email already exists (only if email is provided)
+    if (validation.data.adminEmail) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: validation.data.adminEmail },
+      })
+
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
+    }
+
     // Generate temporary password
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
     const passwordHash = await bcrypt.hash(tempPassword, 10)
@@ -118,7 +129,7 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
 
       const adminUser = await tx.user.create({
         data: {
-          email: validation.data.adminEmail,
+          email: validation.data.adminEmail || null,
           passwordHash,
           role: "SCHOOL_ADMIN",
           schoolId: school.id,

@@ -18,7 +18,7 @@ type TeacherWithRelations = {
   sex: string
   user: {
     id: string
-    email: string
+    email: string | null
     active: boolean
   }
   schoolId: string
@@ -165,13 +165,15 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
   }
 
   try {
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    })
+    // Check if email already exists (only if email is provided)
+    if (data.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: data.email },
+      })
 
-    if (existingUser) {
-      return { success: false, error: "Email already exists" }
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
     }
 
     // Generate temporary password (8 characters)
@@ -182,7 +184,7 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: data.email || null,
           passwordHash,
           role: "TEACHER",
           schoolId: session.user.schoolId,

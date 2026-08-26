@@ -27,7 +27,11 @@ app/(auth)/
   reset-password/page.tsx
 ```
 
-- Connexion par email/mot de passe.
+- Connexion par identifiant/mot de passe.
+- **Identifiant** : peut être :
+  - Email (pour tous les utilisateurs, optionnel pour élèves et enseignants)
+  - Numéro matricule (pour les élèves)
+  - Numéro CIN (pour les enseignants)
 - Redirection post-connexion selon le rôle :
   - `PLATFORM_SUPER_ADMIN` → `/platform`
   - `SCHOOL_ADMIN`, `STAFF_ADMIN` → `/admin`

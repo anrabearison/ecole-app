@@ -21,11 +21,18 @@ export function DevSeedAccounts() {
               <div>
                 <span className="font-medium">Email :</span> {account.email}
               </div>
+              {account.identifier && (
+                <div>
+                  <span className="font-medium">
+                    {account.role === "TEACHER" ? "CIN :" : "Matricule :"}
+                  </span> {account.identifier}
+                </div>
+              )}
               <div>
                 <span className="font-medium">Mot de passe :</span> {account.password}
               </div>
             </div>
-            <CopyCredentialsButton email={account.email} password={account.password} />
+            <CopyCredentialsButton email={account.email} password={account.password} identifier={account.identifier} />
           </div>
         ))}
       </div>

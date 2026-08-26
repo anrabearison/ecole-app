@@ -89,6 +89,18 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - Une même matière peut être enseignée par lui dans certaines classes seulement, pas forcément toutes (ex: Maths en 6ème A mais pas en 6ème B).
 - Cette assignation est modélisée par une table de liaison (`TeacherSubject` : enseignant + matière + classe).
 
+## Authentification
+
+- L'authentification utilise un champ unique "Identifiant" qui peut être :
+  - **Email** : pour tous les utilisateurs (optionnel pour élèves et enseignants)
+  - **Numéro matricule** : pour les élèves (registrationNumber)
+  - **Numéro CIN** : pour les enseignants (nationalIdNumber)
+- Le système essaie successivement :
+  1. Recherche par email (si l'identifiant contient un "@")
+  2. Recherche par numéro matricule d'élève
+  3. Recherche par numéro CIN d'enseignant
+- L'email est optionnel dans le schéma pour permettre aux utilisateurs de se connecter uniquement avec leur identifiant administratif (matricule ou CIN).
+
 ## Emploi du temps (Schedule)
 
 - Un créneau (`ScheduleSlot`) relie : jour, heure de début/fin, classe, matière, enseignant, salle (optionnelle).

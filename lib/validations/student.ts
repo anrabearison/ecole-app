@@ -8,7 +8,7 @@ const sexEnum = z.enum(["MALE", "FEMALE"])
 export const studentSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Invalid email address").optional(),
   classroomId: optionalStringSchema,
   dateOfBirth: z.coerce.date().optional(),
   guardianName: optionalStringSchema,
@@ -22,7 +22,7 @@ export const studentSchema = z.object({
 export const studentFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
+  email: z.string().email("Invalid email address").optional(),
   classroomId: z.string().optional(),
   dateOfBirth: z.string().optional(),
   guardianName: z.string().optional(),

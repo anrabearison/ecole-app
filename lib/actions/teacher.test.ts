@@ -65,7 +65,7 @@ describe("Teacher Server Actions", () => {
         lastName: "Rakoto",
         email: "jean@test.com",
         phone: "+261341000000",
-        contractType: "CDI",
+        contractType: "FONCTIONNAIRE" as const,
         registrationNumber: "T-2025-001",
         nationalIdNumber: "123456789012",
         sex: "MALE" as const,

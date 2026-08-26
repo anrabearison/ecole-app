@@ -43,7 +43,7 @@ export default function EditStudentPage() {
         const student = studentResult.data
         setValue("firstName", student.firstName)
         setValue("lastName", student.lastName)
-        setValue("email", student.user.email)
+        setValue("email", student.user.email ?? "")
         setValue("classroomId", student.classroom?.id)
         setValue("dateOfBirth", student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split("T")[0] : "")
         setValue("guardianName", student.guardianName ?? "")

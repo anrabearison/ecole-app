@@ -59,6 +59,11 @@ enum Sex {
   FEMALE
 }
 
+enum TeacherContractType {
+  FONCTIONNAIRE
+  ENF
+}
+
 // ============================================================
 // Multi-tenant root
 // ============================================================
@@ -92,7 +97,7 @@ model School {
 
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
+  email        String?  @unique
   passwordHash String
   role         Role
   active       Boolean  @default(true)
@@ -237,7 +242,7 @@ model Teacher {
   firstName String
   lastName  String
   phone String?
-  contractType String?
+  contractType TeacherContractType?
   registrationNumber String?
   nationalIdNumber String
   sex Sex
@@ -250,6 +255,8 @@ model Teacher {
   scheduleSlots      ScheduleSlot[]
   homeroomClassrooms Classroom[] @relation("HomeroomTeacher")
   createdAt          DateTime @default(now())
+
+  @@unique([nationalIdNumber, schoolId])
 }
 
 // ============================================================

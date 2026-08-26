@@ -38,7 +38,7 @@ export default function NewTeacherPage() {
 
     if (result.success) {
       setTemporaryPassword(result.data.temporaryPassword)
-      setTeacherEmail(data.email)
+      setTeacherEmail(data.email ?? null)
       setShowPasswordModal(true)
       reset()
     } else {
@@ -160,11 +160,15 @@ export default function NewTeacherPage() {
 
           <div>
             <Label htmlFor="contractType">Type de contrat</Label>
-            <Input
+            <select
               id="contractType"
               {...register("contractType")}
-              className="mt-1"
-            />
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+            >
+              <option value="">Sélectionner</option>
+              <option value="FONCTIONNAIRE">Fonctionnaire</option>
+              <option value="ENF">ENF</option>
+            </select>
             {errors.contractType && (
               <p className="text-sm text-red-600 mt-1">{errors.contractType.message}</p>
             )}

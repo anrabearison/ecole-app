@@ -65,6 +65,26 @@ type StudentCreateResult = {
 }
 ```
 
+## Authentification par identifiant
+
+Le système utilise un champ unique "Identifiant" pour la connexion, qui peut être :
+
+- **Email** : pour tous les utilisateurs (optionnel pour élèves et enseignants)
+- **Numéro matricule** (`registrationNumber`) : pour les élèves
+- **Numéro CIN** (`nationalIdNumber`) : pour les enseignants
+
+**Règles d'implémentation** :
+
+- Le champ `User.email` est optionnel dans le schéma Prisma (`String? @unique`).
+- La logique d'authentification (`lib/auth.ts`) tente successivement :
+  1. Recherche par email (si l'identifiant contient un "@")
+  2. Recherche par numéro matricule d'élève (`Student.registrationNumber`)
+  3. Recherche par numéro CIN d'enseignant (`Teacher.nationalIdNumber`)
+- Les formulaires de création d'utilisateur (Student, Teacher, School) permettent de ne pas renseigner d'email.
+- Les validations Zod (`lib/validations/*.ts`) marquent `email` comme `.optional()`.
+- Les Server Actions de création (`lib/actions/*.ts`) ne vérifient l'unicité de l'email que s'il est fourni.
+- L'interface de login (`components/LoginForm.tsx`) utilise un champ "Identifiant" avec un texte d'aide expliquant les trois options possibles.
+
 ## Multi-tenant
 
 - Toute requête Prisma sur une entité scopée par école filtre explicitement sur `schoolId`.

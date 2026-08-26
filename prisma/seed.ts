@@ -94,24 +94,26 @@ async function main() {
     )
   )
 
-  // Classrooms
+  // Classrooms with passingThreshold
   let cpA = await prisma.classroom.findFirst({ where: { section: "A", schoolYear: "2025-2026", schoolGradeId: primaryGrade.id } })
   if (!cpA) {
-    cpA = await prisma.classroom.create({ data: { section: "A", schoolYear: "2025-2026", schoolGradeId: primaryGrade.id, schoolId: school.id } })
+    cpA = await prisma.classroom.create({ data: { section: "A", schoolYear: "2025-2026", schoolGradeId: primaryGrade.id, schoolId: school.id, passingThreshold: 10 } })
   }
 
   let sixieme1 = await prisma.classroom.findFirst({ where: { section: "1", schoolYear: "2025-2026", schoolGradeId: middleSchoolGrade.id } })
   if (!sixieme1) {
-    sixieme1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: middleSchoolGrade.id, schoolId: school.id } })
+    sixieme1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: middleSchoolGrade.id, schoolId: school.id, passingThreshold: 10 } })
   }
 
   let seconde1 = await prisma.classroom.findFirst({ where: { section: "1", schoolYear: "2025-2026", schoolGradeId: premiereGrade.id } })
   if (!seconde1) {
-    seconde1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: premiereGrade.id, schoolId: school.id } })
+    seconde1 = await prisma.classroom.create({ data: { section: "1", schoolYear: "2025-2026", schoolGradeId: premiereGrade.id, schoolId: school.id, passingThreshold: 10 } })
   }
 
   // Seed admin and platform admin users from shared dev account list
   const { devSeedAccounts } = await import("../lib/dev-seed-accounts")
+
+  let mainTeacherId: string | null = null
 
   await Promise.all(
     devSeedAccounts.map(async (account) => {
@@ -128,7 +130,7 @@ async function main() {
       })
 
       if (account.role === "TEACHER") {
-        await prisma.teacher.upsert({
+        const teacher = await prisma.teacher.upsert({
           where: { userId: user.id },
           update: {},
           create: {
@@ -137,9 +139,11 @@ async function main() {
             lastName: "Professeur",
             nationalIdNumber: "123456789012",
             sex: "MALE",
+            contractType: "FONCTIONNAIRE",
             schoolId: school.id,
           }
         })
+        mainTeacherId = teacher.id
       }
 
       if (account.role === "STUDENT") {
@@ -153,6 +157,10 @@ async function main() {
             registrationNumber: "2025-001",
             status: "PASSING",
             sex: "MALE",
+            placeOfBirth: "Antananarivo",
+            dateOfBirth: new Date("2010-03-15"),
+            guardianName: "Parent Eleve",
+            guardianPhone: "+261340000001",
             schoolId: school.id,
             classroomId: sixieme1.id,
           }
@@ -175,35 +183,70 @@ async function main() {
   // Create additional mock teachers for testing
   const teacherPasswords = ["teacher123", "teacher123", "teacher123"]
   const teacherNames = [
-    { firstName: "Marie", lastName: "Martin" },
-    { firstName: "Pierre", lastName: "Dubois" },
-    { firstName: "Sophie", lastName: "Bernard" },
+    { firstName: "Marie", lastName: "Martin", contractType: "FONCTIONNAIRE" as const, cin: "3012345678901" },
+    { firstName: "Pierre", lastName: "Dubois", contractType: "ENF" as const, cin: "3012345678902" },
+    { firstName: "Sophie", lastName: "Bernard", contractType: "FONCTIONNAIRE" as const, cin: "3012345678903" },
   ]
 
   const mockTeachers = await Promise.all(
     teacherNames.map(async (name, index) => {
       const passwordHash = await bcrypt.hash(teacherPasswords[index], 10)
-      const email = `teacher${index + 2}@sekoly-test.mg`
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {},
-        create: {
-          email,
-          passwordHash,
-          role: "TEACHER",
-          schoolId: school.id,
-        },
+      // Second teacher (index 1) will have no email to test CIN-only login
+      const email = index === 1 ? null : `teacher${index + 2}@sekoly-test.mg`
+
+      // First, check if teacher already exists by nationalIdNumber
+      const existingTeacher = await prisma.teacher.findFirst({
+        where: { nationalIdNumber: name.cin },
+        include: { user: true }
       })
+
+      let user
+      if (existingTeacher) {
+        // Update existing teacher's password
+        user = await prisma.user.update({
+          where: { id: existingTeacher.userId },
+          data: { passwordHash }
+        })
+      } else if (email) {
+        // Create new user with email
+        user = await prisma.user.upsert({
+          where: { email },
+          update: {},
+          create: {
+            email,
+            passwordHash,
+            role: "TEACHER",
+            schoolId: school.id,
+          },
+        })
+      } else {
+        // Create new user without email
+        user = await prisma.user.create({
+          data: {
+            email: null,
+            passwordHash,
+            role: "TEACHER",
+            schoolId: school.id,
+          },
+        })
+      }
 
       const teacher = await prisma.teacher.upsert({
         where: { userId: user.id },
-        update: {},
+        update: {
+          firstName: name.firstName,
+          lastName: name.lastName,
+          nationalIdNumber: name.cin,
+          sex: index % 2 === 0 ? "FEMALE" : "MALE",
+          contractType: name.contractType,
+        },
         create: {
           userId: user.id,
           firstName: name.firstName,
           lastName: name.lastName,
-          nationalIdNumber: `12345678901${index}`,
+          nationalIdNumber: name.cin,
           sex: index % 2 === 0 ? "FEMALE" : "MALE",
+          contractType: name.contractType,
           schoolId: school.id,
         },
       })
@@ -215,38 +258,81 @@ async function main() {
   // Create additional mock students for testing
   const studentPasswords = ["student123", "student123", "student123", "student123", "student123"]
   const studentNames = [
-    { firstName: "Lucas", lastName: "Rakoto" },
-    { firstName: "Emma", lastName: "Rasoa" },
-    { firstName: "Thomas", lastName: "Andriamanitra" },
-    { firstName: "Chloé", lastName: "Ravelonarivo" },
-    { firstName: "Hugo", lastName: "Randrianasolo" },
+    { firstName: "Lucas", lastName: "Rakoto", status: "PASSING" as const, placeOfBirth: "Antananarivo" },
+    { firstName: "Emma", lastName: "Rasoa", status: "REPEATING" as const, placeOfBirth: "Toamasina" },
+    { firstName: "Thomas", lastName: "Andriamanitra", status: "PASSING" as const, placeOfBirth: "Fianarantsoa" },
+    { firstName: "Chloé", lastName: "Ravelonarivo", status: "PASSING" as const, placeOfBirth: "Antsirabe" },
+    { firstName: "Hugo", lastName: "Randrianasolo", status: "PASSING" as const, placeOfBirth: "Mahajanga" },
   ]
 
   const mockStudents = await Promise.all(
     studentNames.map(async (name, index) => {
       const passwordHash = await bcrypt.hash(studentPasswords[index], 10)
-      const email = `student${index + 2}@sekoly-test.mg`
-      const user = await prisma.user.upsert({
-        where: { email },
-        update: {},
-        create: {
-          email,
-          passwordHash,
-          role: "STUDENT",
-          schoolId: school.id,
-        },
+      const registrationNumber = `2025-00${index + 2}`
+      // Third student (index 2) will have no email to test matricule-only login
+      const email = index === 2 ? null : `student${index + 2}@sekoly-test.mg`
+
+      // First, check if student already exists by registrationNumber
+      const existingStudent = await prisma.student.findFirst({
+        where: { registrationNumber },
+        include: { user: true }
       })
+
+      let user
+      if (existingStudent) {
+        // Update existing student's password
+        user = await prisma.user.update({
+          where: { id: existingStudent.userId },
+          data: { passwordHash }
+        })
+      } else if (email) {
+        // Create new user with email
+        user = await prisma.user.upsert({
+          where: { email },
+          update: {},
+          create: {
+            email,
+            passwordHash,
+            role: "STUDENT",
+            schoolId: school.id,
+          },
+        })
+      } else {
+        // Create new user without email
+        user = await prisma.user.create({
+          data: {
+            email: null,
+            passwordHash,
+            role: "STUDENT",
+            schoolId: school.id,
+          },
+        })
+      }
 
       const student = await prisma.student.upsert({
         where: { userId: user.id },
-        update: {},
+        update: {
+          firstName: name.firstName,
+          lastName: name.lastName,
+          registrationNumber,
+          status: name.status,
+          sex: index % 2 === 0 ? "FEMALE" : "MALE",
+          placeOfBirth: name.placeOfBirth,
+          dateOfBirth: new Date("2010-01-01"),
+          guardianName: `Parent ${name.lastName}`,
+          guardianPhone: "+26134000000" + index,
+        },
         create: {
           userId: user.id,
           firstName: name.firstName,
           lastName: name.lastName,
-          registrationNumber: `2025-00${index + 2}`,
-          status: "PASSING",
+          registrationNumber,
+          status: name.status,
           sex: index % 2 === 0 ? "FEMALE" : "MALE",
+          placeOfBirth: name.placeOfBirth,
+          dateOfBirth: new Date("2010-01-01"),
+          guardianName: `Parent ${name.lastName}`,
+          guardianPhone: "+26134000000" + index,
           schoolId: school.id,
           classroomId: sixieme1.id,
         },
@@ -271,28 +357,59 @@ async function main() {
   const strugglingStudentPassword = "student123"
   const strugglingStudentPasswordHash = await bcrypt.hash(strugglingStudentPassword, 10)
   const strugglingStudentEmail = "student-struggling@sekoly-test.mg"
-  
-  const strugglingUser = await prisma.user.upsert({
-    where: { email: strugglingStudentEmail },
-    update: {},
-    create: {
-      email: strugglingStudentEmail,
-      passwordHash: strugglingStudentPasswordHash,
-      role: "STUDENT",
-      schoolId: school.id,
-    },
+  const strugglingRegistrationNumber = "2025-007"
+
+  // Check if struggling student already exists
+  const existingStrugglingStudent = await prisma.student.findFirst({
+    where: { registrationNumber: strugglingRegistrationNumber },
+    include: { user: true }
   })
 
-  const strugglingStudent = await prisma.student.upsert({
+  let strugglingUser
+  if (existingStrugglingStudent) {
+    // Update existing student's password
+    strugglingUser = await prisma.user.update({
+      where: { id: existingStrugglingStudent.userId },
+      data: { passwordHash: strugglingStudentPasswordHash }
+    })
+  } else {
+    // Create new user
+    strugglingUser = await prisma.user.upsert({
+      where: { email: strugglingStudentEmail },
+      update: {},
+      create: {
+        email: strugglingStudentEmail,
+        passwordHash: strugglingStudentPasswordHash,
+        role: "STUDENT",
+        schoolId: school.id,
+      },
+    })
+  }
+
+  let strugglingStudent = await prisma.student.upsert({
     where: { userId: strugglingUser.id },
-    update: {},
+    update: {
+      firstName: "Marc",
+      lastName: "Difficile",
+      registrationNumber: strugglingRegistrationNumber,
+      status: "REPEATING",
+      sex: "MALE",
+      placeOfBirth: "Antananarivo",
+      dateOfBirth: new Date("2010-06-15"),
+      guardianName: "Parent Difficile",
+      guardianPhone: "+261340000009",
+    },
     create: {
       userId: strugglingUser.id,
       firstName: "Marc",
       lastName: "Difficile",
-      registrationNumber: "2025-007",
+      registrationNumber: strugglingRegistrationNumber,
       status: "REPEATING",
       sex: "MALE",
+      placeOfBirth: "Antananarivo",
+      dateOfBirth: new Date("2010-06-15"),
+      guardianName: "Parent Difficile",
+      guardianPhone: "+261340000009",
       schoolId: school.id,
       classroomId: sixieme1.id,
     },
@@ -316,6 +433,14 @@ async function main() {
   // Assign teachers to subjects in the classroom
   const originalTeacher = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
   const allTeachers = [originalTeacher?.teacher, ...mockTeachers].filter((t): t is NonNullable<typeof t> => t !== undefined)
+
+  // Set homeroom teacher on sixieme1 classroom
+  if (mainTeacherId) {
+    await prisma.classroom.update({
+      where: { id: sixieme1.id },
+      data: { homeroomTeacherId: mainTeacherId }
+    })
+  }
 
   // Assign each teacher to different subjects
   for (let i = 0; i < allTeachers.length && i < subjects.length; i++) {
@@ -425,6 +550,8 @@ async function main() {
 
   const teacherUser = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
   const mathSubject = await prisma.subject.findFirst({ where: { name: "Mathématiques", schoolId: school.id } })
+  const epsSubject = await prisma.subject.findFirst({ where: { name: "EPS", schoolId: school.id } })
+  const gymRoom = await prisma.room.findFirst({ where: { schoolId: school.id, name: "Gymnase" } })
 
   if (teacherUser?.teacher && mathSubject) {
     await prisma.teacherSubject.upsert({
@@ -439,24 +566,118 @@ async function main() {
     })
   }
 
+  // Create schedule slots
+  // Slot 1: Mathématiques in Salle 1
+  if (teacherUser?.teacher && mathSubject) {
+    await prisma.scheduleSlot.upsert({
+      where: { id: "slot-math-6eme1" },
+      update: {},
+      create: {
+        id: "slot-math-6eme1",
+        day: "MONDAY",
+        startTime: "08:00",
+        endTime: "10:00",
+        classroomId: sixieme1.id,
+        subjectId: mathSubject.id,
+        teacherId: teacherUser.teacher.id,
+        roomId: (await prisma.room.findFirst({ where: { schoolId: school.id, name: "Salle 1" } }))?.id,
+        schoolId: school.id,
+      }
+    })
+  }
+
+  // Slot 2: EPS in Gymnase (without room - uses Gymnase location)
+  if (teacherUser?.teacher && epsSubject) {
+    await prisma.scheduleSlot.upsert({
+      where: { id: "slot-eps-6eme1" },
+      update: {},
+      create: {
+        id: "slot-eps-6eme1",
+        day: "WEDNESDAY",
+        startTime: "14:00",
+        endTime: "16:00",
+        classroomId: sixieme1.id,
+        subjectId: epsSubject.id,
+        teacherId: teacherUser.teacher.id,
+        roomId: gymRoom?.id,
+        schoolId: school.id,
+      }
+    })
+  }
+
   console.log("✓ Seed terminé — school:", school.id)
   console.log("  Niveaux :", primaryGrade.name, middleSchoolGrade.name, "Seconde", premiereGrade.name)
   console.log("  Séries Première : A, C, D")
-  console.log("  Classe de test : 6ème 1 avec", allStudents.length, "élèves")
-  console.log("  Enseignants mock : 3 enseignants supplémentaires")
-  console.log("  Notes créées : pour tous les élèves, matières et trimestres")
-  console.log("  Élève en difficulté : Marc Difficile (notes < 10)")
+  console.log("  Classes : CP A, 6ème 1 (avec prof. principal), Seconde 1")
+  console.log("  Matières : Mathématiques, Français, SVT, Histoire-Géographie, EPS")
+  console.log("  Salles : Salle 1, Salle 2, Labo Sciences, Gymnase")
+  console.log("  Périodes : Trimestre 1, Trimestre 2, Trimestre 3 (2025-2026)")
+  console.log("  Créneaux emploi du temps : 2 créneaux créés (Maths, EPS)")
+  console.log("")
+  console.log("=== COMPTES DE TEST ===")
+  console.log("")
+  console.log("Administrateurs (connexion par email) :")
   devSeedAccounts.forEach((account) => {
-    console.log(`  ${account.label} : ${account.email} / ${account.password}`)
+    if (account.role === "PLATFORM_SUPER_ADMIN" || account.role === "SCHOOL_ADMIN" || account.role === "STAFF_ADMIN") {
+      console.log(`  ${account.label} :`)
+      console.log(`    Identifiant : ${account.email}`)
+      console.log(`    Mot de passe : ${account.password}`)
+    }
   })
-  console.log("  Comptes mock supplémentaires :")
+  console.log("")
+  console.log("Enseignants (connexion par email ou CIN) :")
+  console.log("  Professeur principal (Jean Professeur) :")
+  console.log(`    Email : prof@sekoly-test.mg`)
+  console.log(`    CIN : 123456789012`)
+  console.log(`    Mot de passe : motdepasse123`)
+  console.log(`    Type contrat : FONCTIONNAIRE`)
   mockTeachers.forEach((teacher, i) => {
-    console.log(`    Enseignant ${i + 2} : teacher${i + 2}@sekoly-test.mg / ${teacherPasswords[i]}`)
+    const hasEmail = i !== 1
+    console.log(`  Enseignant ${i + 2} (${teacherNames[i].firstName} ${teacherNames[i].lastName}) :`)
+    if (hasEmail) {
+      console.log(`    Email : teacher${i + 2}@sekoly-test.mg`)
+    }
+    console.log(`    CIN : ${teacherNames[i].cin}`)
+    console.log(`    Mot de passe : ${teacherPasswords[i]}`)
+    console.log(`    Type contrat : ${teacherNames[i].contractType}`)
   })
+  console.log("")
+  console.log("Élèves (connexion par email ou matricule) :")
+  console.log("  Élève principal (Paul Eleve) :")
+  console.log(`    Email : eleve@sekoly-test.mg`)
+  console.log(`    Matricule : 2025-001`)
+  console.log(`    Mot de passe : motdepasse123`)
+  console.log(`    Statut : PASSING`)
   mockStudents.forEach((student, i) => {
-    console.log(`    Élève ${i + 2} : student${i + 2}@sekoly-test.mg / ${studentPasswords[i]}`)
+    const hasEmail = i !== 2
+    const registrationNumber = `2025-00${i + 2}`
+    console.log(`  Élève ${i + 2} (${studentNames[i].firstName} ${studentNames[i].lastName}) :`)
+    if (hasEmail) {
+      console.log(`    Email : student${i + 2}@sekoly-test.mg`)
+    }
+    console.log(`    Matricule : ${registrationNumber}`)
+    console.log(`    Mot de passe : ${studentPasswords[i]}`)
+    console.log(`    Statut : ${studentNames[i].status}`)
+    console.log(`    Lieu de naissance : ${studentNames[i].placeOfBirth}`)
   })
-  console.log(`    Élève en difficulté : ${strugglingStudentEmail} / ${strugglingStudentPassword}`)
+  console.log("")
+  console.log("  Élève en difficulté (Marc Difficile) :")
+  console.log(`    Email : ${strugglingStudentEmail}`)
+  console.log(`    Matricule : ${strugglingRegistrationNumber}`)
+  console.log(`    Mot de passe : ${strugglingStudentPassword}`)
+  console.log(`    Statut : REPEATING`)
+  console.log("")
+  console.log("=== RÉSUMÉ ===")
+  console.log(`  ${allStudents.length} élèves créés avec notes pour toutes les matières et périodes`)
+  console.log(`  ${allTeachers.length + 1} enseignants créés avec assignations de matières`)
+  console.log(`  2 créneaux d'emploi du temps créés`)
+  console.log("")
+  console.log("Cas de test d'authentification :")
+  console.log("  1. Email admin : admin@sekoly-test.mg")
+  console.log("  2. Email enseignant : prof@sekoly-test.mg")
+  console.log("  3. CIN enseignant (sans email) : 3012345678902")
+  console.log("  4. Email élève : eleve@sekoly-test.mg")
+  console.log("  5. Matricule élève (sans email) : 2025-004")
 }
 
 

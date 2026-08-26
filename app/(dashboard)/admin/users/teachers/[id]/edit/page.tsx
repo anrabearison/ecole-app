@@ -42,9 +42,9 @@ export default function EditTeacherPage() {
         const teacher = result.data
         setValue("firstName", teacher.firstName)
         setValue("lastName", teacher.lastName)
-        setValue("email", teacher.user.email)
+        setValue("email", teacher.user.email ?? "")
         setValue("phone", teacher.phone ?? "")
-        setValue("contractType", teacher.contractType ?? "")
+        setValue("contractType", (teacher.contractType as "FONCTIONNAIRE" | "ENF" | undefined) ?? undefined)
         setValue("registrationNumber", teacher.registrationNumber ?? "")
         setValue("nationalIdNumber", teacher.nationalIdNumber)
         setValue("sex", teacher.sex as "MALE" | "FEMALE")
@@ -163,7 +163,15 @@ export default function EditTeacherPage() {
 
           <div>
             <Label htmlFor="contractType">Type de contrat</Label>
-            <Input id="contractType" {...register("contractType")} className="mt-1" />
+            <select
+              id="contractType"
+              {...register("contractType")}
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+            >
+              <option value="">Sélectionner</option>
+              <option value="FONCTIONNAIRE">Fonctionnaire</option>
+              <option value="ENF">ENF</option>
+            </select>
             {errors.contractType && <p className="text-sm text-red-600 mt-1">{errors.contractType.message}</p>}
           </div>
 
