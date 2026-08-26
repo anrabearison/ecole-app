@@ -47,6 +47,7 @@ export default function NewStudentPage() {
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       guardianName: data.guardianName || undefined,
       guardianPhone: data.guardianPhone || undefined,
+      status: data.status || "PASSING",
     }
     const result = await createStudent(payload)
 
@@ -114,6 +115,66 @@ export default function NewStudentPage() {
             {errors.email && (
               <p className="text-sm text-red-600 mt-1">{errors.email.message}</p>
             )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="registrationNumber">Numéro matricule</Label>
+              <Input
+                id="registrationNumber"
+                {...register("registrationNumber")}
+                className="mt-1"
+              />
+              {errors.registrationNumber && (
+                <p className="text-sm text-red-600 mt-1">{errors.registrationNumber.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="sex">Sexe</Label>
+              <select
+                id="sex"
+                {...register("sex")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              >
+                <option value="">Sélectionner</option>
+                <option value="MALE">Masculin</option>
+                <option value="FEMALE">Féminin</option>
+              </select>
+              {errors.sex && (
+                <p className="text-sm text-red-600 mt-1">{errors.sex.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">Statut</Label>
+              <select
+                id="status"
+                {...register("status")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              >
+                <option value="PASSING">Passant</option>
+                <option value="REPEATING">Redoublant</option>
+                <option value="TRIPLING">Triplant</option>
+              </select>
+              {errors.status && (
+                <p className="text-sm text-red-600 mt-1">{errors.status.message}</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="placeOfBirth">Lieu de naissance</Label>
+              <Input
+                id="placeOfBirth"
+                {...register("placeOfBirth")}
+                className="mt-1"
+              />
+              {errors.placeOfBirth && (
+                <p className="text-sm text-red-600 mt-1">{errors.placeOfBirth.message}</p>
+              )}
+            </div>
           </div>
 
           <div>

@@ -133,12 +133,34 @@ export default async function StudentDetailPage({
             </div>
 
             <div>
+              <p className="text-sm text-gray-500">Numéro matricule</p>
+              <p className="text-lg font-medium">{student.registrationNumber}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Sexe</p>
+              <p className="text-lg font-medium">{student.sex === "MALE" ? "Masculin" : "Féminin"}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Statut scolaire</p>
+              <p className="text-lg font-medium">
+                {student.status === "PASSING" ? "Passant" : student.status === "REPEATING" ? "Redoublant" : "Triplant"}
+              </p>
+            </div>
+
+            <div>
               <p className="text-sm text-gray-500">Date de naissance</p>
               <p className="text-lg font-medium">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("fr-FR") : "—"}</p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">Statut</p>
+              <p className="text-sm text-gray-500">Lieu de naissance</p>
+              <p className="text-lg font-medium">{student.placeOfBirth || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Statut du compte</p>
               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                 student.user.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
               }`}>

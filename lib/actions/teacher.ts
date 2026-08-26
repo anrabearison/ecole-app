@@ -13,6 +13,9 @@ type TeacherWithRelations = {
   lastName: string
   phone: string | null
   contractType: string | null
+  registrationNumber: string | null
+  nationalIdNumber: string
+  sex: string
   user: {
     id: string
     email: string
@@ -194,6 +197,9 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,
+          registrationNumber: data.registrationNumber,
+          nationalIdNumber: data.nationalIdNumber,
+          sex: data.sex,
           schoolId: session.user.schoolId,
         },
         include: {
@@ -284,6 +290,9 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,
+          registrationNumber: data.registrationNumber,
+          nationalIdNumber: data.nationalIdNumber,
+          sex: data.sex,
         },
         include: {
           user: {

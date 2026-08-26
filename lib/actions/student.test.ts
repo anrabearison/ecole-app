@@ -64,7 +64,10 @@ describe("Student Server Actions", () => {
         classroomId: "classroom-1",
         dateOfBirth: new Date("2008-05-10"),
         guardianName: "Aline Rakoto",
-        guardianPhone: "+261341000000"
+        guardianPhone: "+261341000000",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
       }
       
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
@@ -121,21 +124,63 @@ describe("Student Server Actions", () => {
 
     it("should return error for duplicate email", async () => {
       mockSession("SCHOOL_ADMIN")
-      
+
       const input = {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "existing@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
       }
-      
+
       vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "u1" } as any)
 
       const result = await createStudent(input)
-      
+
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error).toBe("Email already exists")
       }
+      expect(prisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it("should return error for duplicate registration number in same school", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
+      }
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.student.findFirst).mockResolvedValue({ id: "s1" } as any)
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe("Ce numéro matricule est déjà utilisé.")
+      }
+      expect(prisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it("should return error for missing required fields (registrationNumber, status, sex)", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+      } as any
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(false)
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
 
@@ -146,8 +191,11 @@ describe("Student Server Actions", () => {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "jean@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
       }
-      
+
       const result = await createStudent(input)
       
       expect(result).toEqual({ success: false, error: "Forbidden" })
@@ -199,7 +247,7 @@ describe("Student Server Actions", () => {
 
     it("should return error for invalid data without calling Prisma", async () => {
       mockSession("SCHOOL_ADMIN")
-      const result = await updateStudent("s1", { firstName: "" })
+      const result = await updateStudent("s1", { firstName: "" } as any)
       expect(result.success).toBe(false)
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })

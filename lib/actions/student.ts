@@ -14,6 +14,10 @@ type StudentWithRelations = {
   dateOfBirth: Date | null
   guardianName: string | null
   guardianPhone: string | null
+  registrationNumber: string
+  status: string
+  placeOfBirth: string | null
+  sex: string
   user: {
     id: string
     email: string
@@ -318,6 +322,18 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
       return { success: false, error: "Email already exists" }
     }
 
+    // Check if registration number already exists in the same school
+    const existingRegistrationNumber = await prisma.student.findFirst({
+      where: {
+        registrationNumber: data.registrationNumber,
+        schoolId: session.user.schoolId,
+      },
+    })
+
+    if (existingRegistrationNumber) {
+      return { success: false, error: "Ce numéro matricule est déjà utilisé." }
+    }
+
     // If classroomId is provided, verify it belongs to the school
     let classroom = null
     if (data.classroomId) {
@@ -354,6 +370,10 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,
           guardianPhone: data.guardianPhone,
+          registrationNumber: data.registrationNumber,
+          status: data.status,
+          placeOfBirth: data.placeOfBirth,
+          sex: data.sex,
           schoolId: session.user.schoolId,
           classroomId: data.classroomId,
         },
@@ -448,6 +468,21 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
       }
     }
 
+    // If registration number is being updated, check if it's already taken in the same school
+    if (data.registrationNumber && data.registrationNumber !== existingStudent.registrationNumber) {
+      const existingRegistrationNumber = await prisma.student.findFirst({
+        where: {
+          registrationNumber: data.registrationNumber,
+          schoolId: session.user.schoolId,
+          id: { not: id },
+        },
+      })
+
+      if (existingRegistrationNumber) {
+        return { success: false, error: "Ce numéro matricule est déjà utilisé." }
+      }
+    }
+
     // If classroomId is being updated, verify it belongs to the school
     let classroom = null
     if (data.classroomId) {
@@ -479,6 +514,10 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,
           guardianPhone: data.guardianPhone,
+          registrationNumber: data.registrationNumber,
+          status: data.status,
+          placeOfBirth: data.placeOfBirth,
+          sex: data.sex,
           classroomId: data.classroomId,
         },
         include: {

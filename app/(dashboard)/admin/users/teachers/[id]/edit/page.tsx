@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams, useRouter } from "next/navigation"
 import { getTeacherById, updateTeacher } from "@/lib/actions/teacher"
-import { teacherSchema, type TeacherInput } from "@/lib/validations/teacher"
+import { teacherFormSchema, type TeacherFormInput, type TeacherUpdateInput } from "@/lib/validations/teacher"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,8 +22,8 @@ export default function EditTeacherPage() {
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<TeacherInput>({
-    resolver: zodResolver(teacherSchema),
+  } = useForm<TeacherFormInput>({
+    resolver: zodResolver(teacherFormSchema),
   })
 
   useEffect(() => {
@@ -45,6 +45,9 @@ export default function EditTeacherPage() {
         setValue("email", teacher.user.email)
         setValue("phone", teacher.phone ?? "")
         setValue("contractType", teacher.contractType ?? "")
+        setValue("registrationNumber", teacher.registrationNumber ?? "")
+        setValue("nationalIdNumber", teacher.nationalIdNumber)
+        setValue("sex", teacher.sex as "MALE" | "FEMALE")
       } else {
         setError(result.error)
       }
@@ -55,7 +58,7 @@ export default function EditTeacherPage() {
     load()
   }, [id, setValue])
 
-  async function onSubmit(data: TeacherInput) {
+  async function onSubmit(data: TeacherFormInput) {
     if (!id) {
       return
     }
@@ -63,7 +66,13 @@ export default function EditTeacherPage() {
     setError(null)
     setIsLoading(true)
 
-    const result = await updateTeacher(id, data)
+    const payload: TeacherUpdateInput = {
+      ...data,
+      phone: data.phone || undefined,
+      contractType: data.contractType || undefined,
+      registrationNumber: data.registrationNumber || undefined,
+    }
+    const result = await updateTeacher(id, payload)
 
     if (result.success) {
       router.push(`/admin/users/teachers/${id}`)
@@ -118,16 +127,44 @@ export default function EditTeacherPage() {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
+              <Label htmlFor="registrationNumber">Numéro matricule</Label>
+              <Input id="registrationNumber" {...register("registrationNumber")} className="mt-1" />
+              {errors.registrationNumber && <p className="text-sm text-red-600 mt-1">{errors.registrationNumber.message}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="nationalIdNumber">Numéro CIN</Label>
+              <Input id="nationalIdNumber" {...register("nationalIdNumber")} className="mt-1" />
+              {errors.nationalIdNumber && <p className="text-sm text-red-600 mt-1">{errors.nationalIdNumber.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="sex">Sexe</Label>
+              <select
+                id="sex"
+                {...register("sex")}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+              >
+                <option value="">Sélectionner</option>
+                <option value="MALE">Masculin</option>
+                <option value="FEMALE">Féminin</option>
+              </select>
+              {errors.sex && <p className="text-sm text-red-600 mt-1">{errors.sex.message}</p>}
+            </div>
+
+            <div>
               <Label htmlFor="phone">Téléphone</Label>
               <Input id="phone" {...register("phone")} className="mt-1" />
               {errors.phone && <p className="text-sm text-red-600 mt-1">{errors.phone.message}</p>}
             </div>
+          </div>
 
-            <div>
-              <Label htmlFor="contractType">Type de contrat</Label>
-              <Input id="contractType" {...register("contractType")} className="mt-1" />
-              {errors.contractType && <p className="text-sm text-red-600 mt-1">{errors.contractType.message}</p>}
-            </div>
+          <div>
+            <Label htmlFor="contractType">Type de contrat</Label>
+            <Input id="contractType" {...register("contractType")} className="mt-1" />
+            {errors.contractType && <p className="text-sm text-red-600 mt-1">{errors.contractType.message}</p>}
           </div>
 
           <div className="flex gap-4">

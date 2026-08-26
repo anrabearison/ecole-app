@@ -48,6 +48,17 @@ enum DeliberationDecision {
   REPEATED
 }
 
+enum StudentStatus {
+  PASSING
+  REPEATING
+  TRIPLING
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
 // ============================================================
 // Multi-tenant root
 // ============================================================
@@ -175,6 +186,10 @@ model Student {
   dateOfBirth DateTime?
   guardianName String?
   guardianPhone String?
+  registrationNumber String
+  status StudentStatus @default(PASSING)
+  placeOfBirth String?
+  sex Sex
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
@@ -189,6 +204,8 @@ model Student {
   reportCardComments ReportCardComment[]
   deliberations Deliberation[]
   createdAt     DateTime @default(now())
+
+  @@unique([registrationNumber, schoolId])
 }
 
 // Historizes a student's classroom assignment per school year.
@@ -221,6 +238,9 @@ model Teacher {
   lastName  String
   phone String?
   contractType String?
+  registrationNumber String?
+  nationalIdNumber String
+  sex Sex
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])

@@ -135,6 +135,8 @@ async function main() {
             userId: user.id,
             firstName: "Jean",
             lastName: "Professeur",
+            nationalIdNumber: "123456789012",
+            sex: "MALE",
             schoolId: school.id,
           }
         })
@@ -148,6 +150,9 @@ async function main() {
             userId: user.id,
             firstName: "Paul",
             lastName: "Eleve",
+            registrationNumber: "2025-001",
+            status: "PASSING",
+            sex: "MALE",
             schoolId: school.id,
             classroomId: sixieme1.id,
           }
@@ -197,6 +202,8 @@ async function main() {
           userId: user.id,
           firstName: name.firstName,
           lastName: name.lastName,
+          nationalIdNumber: `12345678901${index}`,
+          sex: index % 2 === 0 ? "FEMALE" : "MALE",
           schoolId: school.id,
         },
       })
@@ -237,6 +244,9 @@ async function main() {
           userId: user.id,
           firstName: name.firstName,
           lastName: name.lastName,
+          registrationNumber: `2025-00${index + 2}`,
+          status: "PASSING",
+          sex: index % 2 === 0 ? "FEMALE" : "MALE",
           schoolId: school.id,
           classroomId: sixieme1.id,
         },
@@ -280,6 +290,9 @@ async function main() {
       userId: strugglingUser.id,
       firstName: "Marc",
       lastName: "Difficile",
+      registrationNumber: "2025-007",
+      status: "REPEATING",
+      sex: "MALE",
       schoolId: school.id,
       classroomId: sixieme1.id,
     },

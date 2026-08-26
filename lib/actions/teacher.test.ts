@@ -29,13 +29,16 @@ describe("Teacher Server Actions", () => {
       mockSession()
       
       const mockData = [
-        { 
-          id: "t1", 
+        {
+          id: "t1",
           firstName: "Jean",
           lastName: "Rakoto",
           user: { id: "u1", email: "jean@test.com", active: true },
           schoolId: mockSchoolId,
           _count: { subjects: 2 },
+          registrationNumber: "T-2025-001",
+          nationalIdNumber: "123456789012",
+          sex: "MALE",
           createdAt: new Date()
         }
       ]
@@ -62,7 +65,10 @@ describe("Teacher Server Actions", () => {
         lastName: "Rakoto",
         email: "jean@test.com",
         phone: "+261341000000",
-        contractType: "CDI"
+        contractType: "CDI",
+        registrationNumber: "T-2025-001",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
       }
       
       vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
@@ -110,21 +116,38 @@ describe("Teacher Server Actions", () => {
 
     it("should return error for duplicate email", async () => {
       mockSession("SCHOOL_ADMIN")
-      
+
       const input = {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "existing@test.com",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
       }
-      
+
       vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "u1" } as any)
 
       const result = await createTeacher(input)
-      
+
       expect(result.success).toBe(false)
       if (!result.success) {
         expect(result.error).toBe("Email already exists")
       }
+      expect(prisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it("should return error for missing required fields (nationalIdNumber, sex)", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+      } as any
+
+      const result = await createTeacher(input)
+
+      expect(result.success).toBe(false)
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
 
@@ -135,8 +158,10 @@ describe("Teacher Server Actions", () => {
         firstName: "Jean",
         lastName: "Rakoto",
         email: "jean@test.com",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
       }
-      
+
       const result = await createTeacher(input)
       
       expect(result).toEqual({ success: false, error: "Forbidden" })
@@ -183,7 +208,7 @@ describe("Teacher Server Actions", () => {
 
     it("should return error for invalid data without calling Prisma", async () => {
       mockSession("SCHOOL_ADMIN")
-      const result = await updateTeacher("t1", { firstName: "" })
+      const result = await updateTeacher("t1", { firstName: "" } as any)
       expect(result.success).toBe(false)
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })

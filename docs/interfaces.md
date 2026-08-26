@@ -80,7 +80,7 @@ app/(dashboard)/admin/
 ```
 [Informations] [Matières & classes] [Notes saisies] [Emploi du temps] [Activité]
 ```
-- **Informations** : identité, coordonnées, statut du compte.
+- **Informations** : identité, coordonnées, numéro matricule (optionnel), numéro CIN (obligatoire), sexe, statut du compte.
 - **Matières & classes** : liste des `TeacherSubject` (matière + classe assignées), éditable par l'admin.
 - **Notes saisies** : historique en lecture seule, à but d'audit.
 - **Emploi du temps** : ses créneaux, en lecture seule depuis cette vue.
@@ -91,7 +91,7 @@ app/(dashboard)/admin/
 ```
 [Informations] [Classe & scolarité] [Notes] [Emploi du temps]
 ```
-- **Informations** : identité, coordonnées (ou contact représentant légal).
+- **Informations** : identité, coordonnées (ou contact représentant légal), numéro matricule (obligatoire, unique par école), statut scolaire (Passant/Redoublant/Triplant), lieu de naissance (optionnel), sexe.
 - **Classe & scolarité** : classe actuelle, historique des classes par année scolaire.
 - **Notes** : toutes ses notes, groupées par matière (vue identique à celle de l'élève lui-même, en lecture seule pour l'admin). Inclut :
   - Sélecteur de période
@@ -103,6 +103,19 @@ app/(dashboard)/admin/
 
 - `SCHOOL_ADMIN` : toutes les actions (créer, modifier, désactiver, supprimer un compte, changer un rôle).
 - `STAFF_ADMIN` : peut créer/modifier les informations administratives (coordonnées, classe assignée, matières d'un enseignant) mais **ne peut pas** supprimer un compte ni changer un rôle. Ces actions sont masquées côté UI et bloquées côté `can()`.
+
+### Champs administratifs dans les formulaires
+
+**Formulaire de création/édition d'élève** :
+- Numéro matricule (obligatoire, validation d'unicité par école)
+- Statut scolaire (enum : Passant / Redoublant / Triplant, défaut Passant)
+- Sexe (enum : Masculin / Féminin)
+- Lieu de naissance (optionnel)
+
+**Formulaire de création/édition d'enseignant** :
+- Numéro matricule (optionnel)
+- Numéro CIN (obligatoire)
+- Sexe (enum : Masculin / Féminin)
 
 ---
 

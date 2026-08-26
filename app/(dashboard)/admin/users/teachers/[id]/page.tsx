@@ -119,6 +119,21 @@ export default async function TeacherDetailPage({
             </div>
 
             <div>
+              <p className="text-sm text-gray-500">Numéro matricule</p>
+              <p className="text-lg font-medium">{teacher.registrationNumber || "—"}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Numéro CIN</p>
+              <p className="text-lg font-medium">{teacher.nationalIdNumber}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Sexe</p>
+              <p className="text-lg font-medium">{teacher.sex === "MALE" ? "Masculin" : "Féminin"}</p>
+            </div>
+
+            <div>
               <p className="text-sm text-gray-500">Téléphone</p>
               <p className="text-lg font-medium">{teacher.phone || "—"}</p>
             </div>

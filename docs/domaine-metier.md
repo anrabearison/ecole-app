@@ -105,6 +105,23 @@ Lors de la création ou modification d'un créneau, le système détecte les con
 
 Plusieurs conflits peuvent être détectés simultanément (ex: conflit classe + salle) et tous sont affichés à l'utilisateur.
 
+## Champs administratifs
+
+### Élève (Student)
+- **Numéro matricule** (`registrationNumber`) : obligatoire, unique par école. Deux élèves de la même école ne peuvent pas avoir le même numéro matricule.
+- **Statut scolaire** (`status`) : obligatoire, enum avec trois valeurs :
+  - `PASSING` (Passant) : élève qui progresse normalement
+  - `REPEATING` (Redoublant) : élève qui redouble son année
+  - `TRIPLING` (Triplant) : élève qui trieple son année
+  - Valeur par défaut : `PASSING`
+- **Lieu de naissance** (`placeOfBirth`) : optionnel, cohérent avec dateOfBirth déjà optionnel
+- **Sexe** (`sex`) : obligatoire, enum `MALE` ou `FEMALE`
+
+### Enseignant (Teacher)
+- **Numéro matricule** (`registrationNumber`) : optionnel
+- **Numéro CIN** (`nationalIdNumber`) : obligatoire (Carte d'Identité Nationale)
+- **Sexe** (`sex`) : obligatoire, enum `MALE` ou `FEMALE`
+
 ## Règles de permission par ressource
 
 > `PLATFORM_SUPER_ADMIN` : accès `view`/`create`/`update`/`delete` total sur **toutes** les ressources ci-dessous, sur **toutes** les écoles, sans exception. Cette règle prime sur toutes les autres listées par ressource — elle n'est pas répétée à chaque ligne ci-dessous.
