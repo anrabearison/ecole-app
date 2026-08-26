@@ -1,6 +1,7 @@
 import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
@@ -17,6 +18,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
   }
 
   const classrooms = result.data
+  const pagination = result.pagination
 
   // Group by cycle, then schoolGrade, then track
   const groupedByCycle = classrooms.reduce((acc, classroom) => {
@@ -30,7 +32,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
     }
     acc[cycle][schoolGrade].push(classroom)
     return acc
-  }, {} as Record<string, Record<string, typeof classrooms>>)
+  }, {} as Record<string, Record<string, any[]>>)
 
   const cycleNames: Record<string, string> = {
     PRIMARY: "Primaire",
@@ -47,7 +49,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
         </div>
         <div className="flex gap-4">
           <form method="get" className="flex items-center" action="/admin/academics/classrooms">
-            <input name="search" placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
+            <input name="search" defaultValue={search || ""} placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
             <input type="hidden" name="page" value="1" />
             <Button type="submit">Rechercher</Button>
           </form>
@@ -64,13 +66,13 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
               {cycleNames[cycle] || cycle}
             </h2>
             <div className="space-y-4 ml-4">
-              {Object.entries(grades).map(([gradeName, classroomsInGrade]) => (
+              {Object.entries(grades as Record<string, any[]>).map(([gradeName, classroomsInGrade]) => (
                 <div key={gradeName}>
                   <h3 className="text-lg font-medium text-gray-700 mb-2">
                     {gradeName}
                   </h3>
                   <div className="space-y-2 ml-4">
-                    {classroomsInGrade.map((classroom) => (
+                    {classroomsInGrade.map((classroom: any) => (
                       <div
                         key={classroom.id}
                         className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm border"
@@ -104,6 +106,15 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
         <div className="text-center py-12 text-gray-500">
           Aucune classe créée pour le moment.
         </div>
+      )}
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
       )}
     </div>
   )

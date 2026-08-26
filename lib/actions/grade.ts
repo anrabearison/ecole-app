@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { gradeSchema, gradeUpdateSchema, bulkGradeCreateSchema, type GradeInput, type GradeUpdateInput, type BulkGradeCreateInput } from "@/lib/validations/grade"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 type GradeWithRelations = {
   id: string
@@ -46,7 +46,9 @@ export async function listGradesForTeacher(filters?: {
   type?: "EXAM" | "DAILY"
   studentId?: string
   periodId?: string
-}): Promise<ActionResult<GradeWithRelations[]>> {
+  page?: number
+  pageSize?: number
+}): Promise<PaginatedActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -66,57 +68,78 @@ export async function listGradesForTeacher(filters?: {
   }
 
   try {
-    const grades = await prisma.grade.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        teacherId: session.user.teacherId, // CRITICAL: Only grades entered by this teacher
-        ...(filters?.classroomId && { classroomId: filters.classroomId }),
-        ...(filters?.subjectId && { subjectId: filters.subjectId }),
-        ...(filters?.type && { type: filters.type }),
-        ...(filters?.studentId && { studentId: filters.studentId }),
-        ...(filters?.periodId && { periodId: filters.periodId }),
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+    const page = filters?.page && filters.page > 0 ? filters.page : 1
+    const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 20
+
+    const where: Record<string, unknown> = {
+      schoolId: session.user.schoolId,
+      teacherId: session.user.teacherId, // CRITICAL: Only grades entered by this teacher
+      ...(filters?.classroomId && { classroomId: filters.classroomId }),
+      ...(filters?.subjectId && { subjectId: filters.subjectId }),
+      ...(filters?.type && { type: filters.type }),
+      ...(filters?.studentId && { studentId: filters.studentId }),
+      ...(filters?.periodId && { periodId: filters.periodId }),
+    }
+
+    const [grades, total] = await Promise.all([
+      prisma.grade.findMany({
+        where,
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        subject: {
-          select: {
-            id: true,
-            name: true,
+          subject: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        classroom: {
-          include: {
-            schoolGrade: {
-              select: {
-                id: true,
-                name: true,
-                cycle: true,
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [
-        { date: "desc" },
-        { subject: { name: "asc" } },
-        { student: { lastName: "asc" } },
-      ],
-    })
+        orderBy: [
+          { date: "desc" },
+          { subject: { name: "asc" } },
+          { student: { lastName: "asc" } },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.grade.count({ where })
+    ])
 
-    return { success: true, data: grades }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: grades,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing grades for teacher:", error)
     return { success: false, error: "Erreur lors du chargement des notes" }
@@ -125,7 +148,9 @@ export async function listGradesForTeacher(filters?: {
 
 export async function listGradesForStudent(filters?: {
   periodId?: string
-}): Promise<ActionResult<GradeWithRelations[]>> {
+  page?: number
+  pageSize?: number
+}): Promise<PaginatedActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -145,52 +170,73 @@ export async function listGradesForStudent(filters?: {
   }
 
   try {
-    const grades = await prisma.grade.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-        studentId: session.user.studentId, // CRITICAL: Only this student's grades
-        ...(filters?.periodId && { periodId: filters.periodId }),
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+    const page = filters?.page && filters.page > 0 ? filters.page : 1
+    const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 20
+
+    const where: Record<string, unknown> = {
+      schoolId: session.user.schoolId,
+      studentId: session.user.studentId, // CRITICAL: Only this student's grades
+      ...(filters?.periodId && { periodId: filters.periodId }),
+    }
+
+    const [grades, total] = await Promise.all([
+      prisma.grade.findMany({
+        where,
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        subject: {
-          select: {
-            id: true,
-            name: true,
+          subject: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        classroom: {
-          include: {
-            schoolGrade: {
-              select: {
-                id: true,
-                name: true,
-                cycle: true,
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [
-        { subject: { name: "asc" } },
-        { date: "desc" },
-      ],
-    })
+        orderBy: [
+          { subject: { name: "asc" } },
+          { date: "desc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.grade.count({ where })
+    ])
 
-    return { success: true, data: grades }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: grades,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing grades for student:", error)
     return { success: false, error: "Erreur lors du chargement des notes" }
@@ -206,7 +252,9 @@ export async function listGradesForAdmin(filters?: {
   type?: "EXAM" | "DAILY"
   startDate?: string
   endDate?: string
-}): Promise<ActionResult<GradeWithRelations[]>> {
+  page?: number
+  pageSize?: number
+}): Promise<PaginatedActionResult<GradeWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -222,6 +270,9 @@ export async function listGradesForAdmin(filters?: {
   }
 
   try {
+    const page = filters?.page && filters.page > 0 ? filters.page : 1
+    const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 20
+
     const dateFilter: Record<string, Date> = {}
     if (filters?.startDate) {
       dateFilter.gte = new Date(filters.startDate)
@@ -244,49 +295,65 @@ export async function listGradesForAdmin(filters?: {
       where.date = dateFilter
     }
 
-    const grades = await prisma.grade.findMany({
-      where,
-      include: {
-        student: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+    const [grades, total] = await Promise.all([
+      prisma.grade.findMany({
+        where,
+        include: {
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        subject: {
-          select: {
-            id: true,
-            name: true,
+          subject: {
+            select: {
+              id: true,
+              name: true,
+            },
           },
-        },
-        teacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+          teacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
           },
-        },
-        classroom: {
-          include: {
-            schoolGrade: {
-              select: {
-                id: true,
-                name: true,
-                cycle: true,
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [
-        { date: "desc" },
-        { subject: { name: "asc" } },
-        { student: { lastName: "asc" } },
-      ],
-    })
+        orderBy: [
+          { date: "desc" },
+          { subject: { name: "asc" } },
+          { student: { lastName: "asc" } },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.grade.count({ where })
+    ])
 
-    return { success: true, data: grades }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: grades,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing grades for admin:", error)
     return { success: false, error: "Erreur lors du chargement des notes" }

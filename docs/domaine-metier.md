@@ -38,6 +38,14 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - Une `Classroom` est toujours rattachée à une année scolaire (`schoolYear`) — les élèves d'une classe changent d'une année sur l'autre, ne pas mélanger les années.
 - Le nom d'affichage complet d'une classe (ex. "Première C 1") est **généré**, jamais stocké en dur.
 - L'affectation d'un élève à une classe est historisée par année scolaire via `Enrollment` (une ligne par élève × année scolaire) — `Student.classroomId` ne reflète que la classe courante ; l'historique complet passe toujours par `Enrollment`.
+- Une classe peut avoir un **professeur principal** (homeroom teacher) désigné, qui est un enseignant de l'école (champ optionnel `homeroomTeacherId`). Ce professeur n'est pas restreint aux enseignants déjà assignés à cette classe via `TeacherSubject` — n'importe quel enseignant de l'école peut être désigné comme professeur principal.
+
+### Professeur principal
+
+- Chaque classe peut avoir un professeur principal optionnel (`homeroomTeacherId`)
+- Choisi parmi tous les enseignants de l'école (pas restreint aux enseignants assignés à la classe via `TeacherSubject`)
+- Visible sur la fiche classe et sur la fiche élève (via sa classe actuelle)
+- Modifiable à tout moment par `SCHOOL_ADMIN` / `STAFF_ADMIN`
 
 ## Notes (Grades)
 
@@ -81,6 +89,18 @@ Cycle (PRIMARY / MIDDLE_SCHOOL / HIGH_SCHOOL)
 - Une même matière peut être enseignée par lui dans certaines classes seulement, pas forcément toutes (ex: Maths en 6ème A mais pas en 6ème B).
 - Cette assignation est modélisée par une table de liaison (`TeacherSubject` : enseignant + matière + classe).
 
+## Authentification
+
+- L'authentification utilise un champ unique "Identifiant" qui peut être :
+  - **Email** : pour tous les utilisateurs (optionnel pour élèves et enseignants)
+  - **Numéro matricule** : pour les élèves (registrationNumber)
+  - **Numéro CIN** : pour les enseignants (nationalIdNumber)
+- Le système essaie successivement :
+  1. Recherche par email (si l'identifiant contient un "@")
+  2. Recherche par numéro matricule d'élève
+  3. Recherche par numéro CIN d'enseignant
+- L'email est optionnel dans le schéma pour permettre aux utilisateurs de se connecter uniquement avec leur identifiant administratif (matricule ou CIN).
+
 ## Emploi du temps (Schedule)
 
 - Un créneau (`ScheduleSlot`) relie : jour, heure de début/fin, classe, matière, enseignant, salle (optionnelle).
@@ -96,6 +116,23 @@ Lors de la création ou modification d'un créneau, le système détecte les con
 - **Conflit classe** : une classe ne peut pas avoir deux créneaux qui se chevauchent au même moment, quelle que soit la matière, l'enseignant ou la salle.
 
 Plusieurs conflits peuvent être détectés simultanément (ex: conflit classe + salle) et tous sont affichés à l'utilisateur.
+
+## Champs administratifs
+
+### Élève (Student)
+- **Numéro matricule** (`registrationNumber`) : obligatoire, unique par école. Deux élèves de la même école ne peuvent pas avoir le même numéro matricule.
+- **Statut scolaire** (`status`) : obligatoire, enum avec trois valeurs :
+  - `PASSING` (Passant) : élève qui progresse normalement
+  - `REPEATING` (Redoublant) : élève qui redouble son année
+  - `TRIPLING` (Triplant) : élève qui trieple son année
+  - Valeur par défaut : `PASSING`
+- **Lieu de naissance** (`placeOfBirth`) : optionnel, cohérent avec dateOfBirth déjà optionnel
+- **Sexe** (`sex`) : obligatoire, enum `MALE` ou `FEMALE`
+
+### Enseignant (Teacher)
+- **Numéro matricule** (`registrationNumber`) : optionnel
+- **Numéro CIN** (`nationalIdNumber`) : obligatoire (Carte d'Identité Nationale)
+- **Sexe** (`sex`) : obligatoire, enum `MALE` ou `FEMALE`
 
 ## Règles de permission par ressource
 

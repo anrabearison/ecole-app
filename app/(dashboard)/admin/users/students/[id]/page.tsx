@@ -115,7 +115,7 @@ export default async function StudentDetailPage({
       </div>
 
       {activeTab === "info" && (
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Prénom</p>
@@ -133,27 +133,54 @@ export default async function StudentDetailPage({
             </div>
 
             <div>
+              <p className="text-sm text-gray-500">Numéro matricule</p>
+              <p className="text-lg font-medium">{student.registrationNumber}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Sexe</p>
+              <p className="text-lg font-medium">{student.sex === "MALE" ? "Masculin" : "Féminin"}</p>
+            </div>
+
+            <div>
+              <p className="text-sm text-gray-500">Statut scolaire</p>
+              <p className="text-lg font-medium">
+                {student.status === "PASSING" ? "Passant" : student.status === "REPEATING" ? "Redoublant" : "Triplant"}
+              </p>
+            </div>
+
+            <div>
               <p className="text-sm text-gray-500">Date de naissance</p>
               <p className="text-lg font-medium">{student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString("fr-FR") : "—"}</p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">Nom du responsable</p>
-              <p className="text-lg font-medium">{student.guardianName || "—"}</p>
+              <p className="text-sm text-gray-500">Lieu de naissance</p>
+              <p className="text-lg font-medium">{student.placeOfBirth || "—"}</p>
             </div>
 
             <div>
-              <p className="text-sm text-gray-500">Téléphone du responsable</p>
-              <p className="text-lg font-medium">{student.guardianPhone || "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Statut</p>
+              <p className="text-sm text-gray-500">Statut du compte</p>
               <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                 student.user.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
               }`}>
                 {student.user.active ? "Actif" : "Inactif"}
               </span>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Tuteur / responsable légal</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Nom du tuteur</p>
+                <p className="text-lg font-medium">{student.guardianName || "—"}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Téléphone du tuteur</p>
+                <p className="text-lg font-medium">{student.guardianPhone || "—"}</p>
+              </div>
             </div>
           </div>
 
@@ -180,6 +207,14 @@ export default async function StudentDetailPage({
                   : "Non assigné"}
               </p>
             </div>
+            {student.classroom?.homeroomTeacher && (
+              <div>
+                <p className="text-sm text-gray-500">Professeur principal</p>
+                <p className="text-lg font-medium">
+                  {student.classroom.homeroomTeacher.firstName} {student.classroom.homeroomTeacher.lastName}
+                </p>
+              </div>
+            )}
             <div>
               <p className="text-sm text-gray-500">Historique des inscriptions</p>
               {enrollments.length === 0 ? (

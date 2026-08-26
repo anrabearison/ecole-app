@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const session = await auth()
@@ -25,6 +26,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
   }
 
   const students = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-8">
@@ -35,7 +37,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
         </div>
         <div className="flex gap-4">
           <form method="get" className="flex items-center" action="/admin/users/students">
-            <input name="search" placeholder="Rechercher nom, prénom, email" className="border rounded px-3 py-2 mr-2" />
+            <input name="search" defaultValue={search || ""} placeholder="Rechercher nom, prénom, email" className="border rounded px-3 py-2 mr-2" />
             <input type="hidden" name="page" value="1" />
             <Button type="submit">Rechercher</Button>
           </form>
@@ -108,6 +110,15 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

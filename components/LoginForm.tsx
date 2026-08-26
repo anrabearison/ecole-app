@@ -27,19 +27,20 @@ export default function LoginForm() {
 
     try {
       const result = await signIn("credentials", {
-        email: data.email,
+        identifier: data.identifier,
         password: data.password,
         redirect: false,
       })
 
       if (result?.error) {
-        setError("Email ou mot de passe invalide")
-      } else if (result?.ok) {
+        setError("Identifiant ou mot de passe invalide")
+        setIsLoading(false)
+      } else {
         router.push("/")
+        router.refresh()
       }
     } catch {
       setError("Une erreur est survenue. Veuillez réessayer.")
-    } finally {
       setIsLoading(false)
     }
   }
@@ -54,19 +55,22 @@ export default function LoginForm() {
 
       <div className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-            Adresse e-mail
+          <label htmlFor="identifier" className="block text-sm font-medium text-gray-700">
+            Identifiant
           </label>
           <input
-            {...register("email")}
-            id="email"
-            type="email"
-            autoComplete="email"
+            {...register("identifier")}
+            id="identifier"
+            type="text"
+            autoComplete="username"
             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            placeholder="vous@exemple.com"
+            placeholder="email, numéro matricule, ou CIN"
           />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Entrez votre adresse e-mail, votre numéro matricule (élève), ou votre numéro CIN (enseignant)
+          </p>
+          {errors.identifier && (
+            <p className="mt-1 text-sm text-red-600">{errors.identifier.message}</p>
           )}
         </div>
 

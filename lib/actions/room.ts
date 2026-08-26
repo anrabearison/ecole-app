@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { roomSchema, type RoomInput } from "@/lib/validations/room"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 type RoomWithRelations = {
   id: string
@@ -12,7 +12,7 @@ type RoomWithRelations = {
   schoolId: string
 }
 
-export async function listRooms(): Promise<ActionResult<RoomWithRelations[]>> {
+export async function listRooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<RoomWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -28,16 +28,39 @@ export async function listRooms(): Promise<ActionResult<RoomWithRelations[]>> {
   }
 
   try {
-    const rooms = await prisma.room.findMany({
-      where: {
-        schoolId: session.user.schoolId,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    })
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
 
-    return { success: true, data: rooms }
+    const where: any = { schoolId: session.user.schoolId }
+    if (search) {
+      where.name = { contains: search, mode: "insensitive" }
+    }
+
+    const [rooms, total] = await Promise.all([
+      prisma.room.findMany({
+        where,
+        orderBy: {
+          name: "asc",
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.room.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: rooms,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing rooms:", error)
     return { success: false, error: "Erreur lors du chargement des salles" }

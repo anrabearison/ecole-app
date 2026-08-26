@@ -5,11 +5,16 @@ import { Button } from "@/components/ui/button"
 type CopyCredentialsButtonProps = {
   email: string
   password: string
+  identifier?: string
 }
 
-export function CopyCredentialsButton({ email, password }: CopyCredentialsButtonProps) {
+export function CopyCredentialsButton({ email, password, identifier }: CopyCredentialsButtonProps) {
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(`Email: ${email}\nPassword: ${password}`)
+    let text = `Email: ${email}\nPassword: ${password}`
+    if (identifier) {
+      text += `\nIdentifier: ${identifier}`
+    }
+    await navigator.clipboard.writeText(text)
   }
 
   return (

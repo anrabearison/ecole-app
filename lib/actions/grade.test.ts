@@ -149,6 +149,7 @@ describe("Grade Server Actions", () => {
       ]
       
       vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForAdmin()
 
@@ -157,7 +158,7 @@ describe("Grade Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual({ success: true, data: mockData })
+      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
     })
 
     it("should return all grades for STAFF_ADMIN", async () => {
@@ -180,6 +181,7 @@ describe("Grade Server Actions", () => {
       ]
       
       vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForAdmin()
 
@@ -188,7 +190,7 @@ describe("Grade Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual({ success: true, data: mockData })
+      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
     })
   })
 

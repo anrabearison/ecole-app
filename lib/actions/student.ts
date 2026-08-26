@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { studentSchema, studentUpdateSchema, type StudentInput, type StudentUpdateInput } from "@/lib/validations/student"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
 type StudentWithRelations = {
@@ -14,9 +14,13 @@ type StudentWithRelations = {
   dateOfBirth: Date | null
   guardianName: string | null
   guardianPhone: string | null
+  registrationNumber: string
+  status: string
+  placeOfBirth: string | null
+  sex: string
   user: {
     id: string
-    email: string
+    email: string | null
     active: boolean
   }
   classroom: {
@@ -28,6 +32,11 @@ type StudentWithRelations = {
       name: string
       cycle: string
     }
+    homeroomTeacher: {
+      id: string
+      firstName: string
+      lastName: string
+    } | null
   } | null
   schoolId: string
   createdAt: Date
@@ -130,6 +139,13 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
                 cycle: true,
               },
             },
+            homeroomTeacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -181,6 +197,13 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
                 cycle: true,
               },
             },
+            homeroomTeacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
           },
         },
       },
@@ -194,7 +217,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -224,37 +247,58 @@ export async function listStudents(opts?: { search?: string; page?: number; page
       ]
     }
 
-    const students = await prisma.student.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            active: true,
+    const [students, total] = await Promise.all([
+      prisma.student.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
           },
-        },
-        classroom: {
-          include: {
-            schoolGrade: {
-              select: {
-                id: true,
-                name: true,
-                cycle: true,
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
+              },
+              homeroomTeacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [
-        { lastName: "asc" },
-        { firstName: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.student.count({ where })
+    ])
 
-    return { success: true, data: students }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: students,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing students:", error)
     return { success: false, error: "Erreur lors du chargement des élèves" }
@@ -283,13 +327,27 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
   }
 
   try {
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
+    // Check if email already exists (only if email is provided)
+    if (data.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: data.email },
+      })
+
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
+    }
+
+    // Check if registration number already exists in the same school
+    const existingRegistrationNumber = await prisma.student.findFirst({
+      where: {
+        registrationNumber: data.registrationNumber,
+        schoolId: session.user.schoolId,
+      },
     })
 
-    if (existingUser) {
-      return { success: false, error: "Email already exists" }
+    if (existingRegistrationNumber) {
+      return { success: false, error: "Ce numéro matricule est déjà utilisé." }
     }
 
     // If classroomId is provided, verify it belongs to the school
@@ -312,7 +370,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: data.email || null,
           passwordHash,
           role: "STUDENT",
           schoolId: session.user.schoolId,
@@ -328,6 +386,10 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,
           guardianPhone: data.guardianPhone,
+          registrationNumber: data.registrationNumber,
+          status: data.status,
+          placeOfBirth: data.placeOfBirth,
+          sex: data.sex,
           schoolId: session.user.schoolId,
           classroomId: data.classroomId,
         },
@@ -422,6 +484,21 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
       }
     }
 
+    // If registration number is being updated, check if it's already taken in the same school
+    if (data.registrationNumber && data.registrationNumber !== existingStudent.registrationNumber) {
+      const existingRegistrationNumber = await prisma.student.findFirst({
+        where: {
+          registrationNumber: data.registrationNumber,
+          schoolId: session.user.schoolId,
+          id: { not: id },
+        },
+      })
+
+      if (existingRegistrationNumber) {
+        return { success: false, error: "Ce numéro matricule est déjà utilisé." }
+      }
+    }
+
     // If classroomId is being updated, verify it belongs to the school
     let classroom = null
     if (data.classroomId) {
@@ -453,6 +530,10 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,
           guardianPhone: data.guardianPhone,
+          registrationNumber: data.registrationNumber,
+          status: data.status,
+          placeOfBirth: data.placeOfBirth,
+          sex: data.sex,
           classroomId: data.classroomId,
         },
         include: {

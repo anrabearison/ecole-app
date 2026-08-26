@@ -20,7 +20,7 @@ export default async function StudentGradesPage({
 
   const { periodId } = await searchParams
   const [gradesResult, periodsResult] = await Promise.all([
-    listGradesForStudent(),
+    listGradesForStudent({ periodId, page: 1, pageSize: 1000 }),
     listPeriods(),
   ])
 
@@ -32,7 +32,7 @@ export default async function StudentGradesPage({
     )
   }
 
-  const grades = gradesResult.data
+  const grades = gradesResult.success ? gradesResult.data : []
   const periods = periodsResult.success ? periodsResult.data : []
   const selectedPeriodId = periodId || periods[0]?.id || ""
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId) || null

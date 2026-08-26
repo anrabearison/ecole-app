@@ -30,14 +30,20 @@ type TeacherSubjectWithRelations = {
   schoolId: string
 }
 
-export async function listTeacherSubjects(teacherId: string): Promise<ActionResult<TeacherSubjectWithRelations[]>> {
+export async function listTeacherSubjects(teacherId?: string): Promise<ActionResult<TeacherSubjectWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined, teacherId, ownerId: teacherId })) {
+  const targetTeacherId = (teacherId && teacherId.trim() !== "") ? teacherId : session.user.teacherId
+
+  if (!targetTeacherId) {
+    return { success: false, error: "Teacher ID is required" }
+  }
+
+  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined, teacherId: targetTeacherId, ownerId: targetTeacherId })) {
     return { success: false, error: "Forbidden" }
   }
 
@@ -48,7 +54,7 @@ export async function listTeacherSubjects(teacherId: string): Promise<ActionResu
   try {
     const teacherSubjects = await prisma.teacherSubject.findMany({
       where: {
-        teacherId,
+        teacherId: targetTeacherId,
         schoolId: session.user.schoolId,
       },
       include: {

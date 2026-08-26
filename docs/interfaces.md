@@ -27,7 +27,11 @@ app/(auth)/
   reset-password/page.tsx
 ```
 
-- Connexion par email/mot de passe.
+- Connexion par identifiant/mot de passe.
+- **Identifiant** : peut être :
+  - Email (pour tous les utilisateurs, optionnel pour élèves et enseignants)
+  - Numéro matricule (pour les élèves)
+  - Numéro CIN (pour les enseignants)
 - Redirection post-connexion selon le rôle :
   - `PLATFORM_SUPER_ADMIN` → `/platform`
   - `SCHOOL_ADMIN`, `STAFF_ADMIN` → `/admin`
@@ -80,7 +84,7 @@ app/(dashboard)/admin/
 ```
 [Informations] [Matières & classes] [Notes saisies] [Emploi du temps] [Activité]
 ```
-- **Informations** : identité, coordonnées, statut du compte.
+- **Informations** : identité, coordonnées, numéro matricule (optionnel), numéro CIN (obligatoire), sexe, statut du compte.
 - **Matières & classes** : liste des `TeacherSubject` (matière + classe assignées), éditable par l'admin.
 - **Notes saisies** : historique en lecture seule, à but d'audit.
 - **Emploi du temps** : ses créneaux, en lecture seule depuis cette vue.
@@ -91,7 +95,7 @@ app/(dashboard)/admin/
 ```
 [Informations] [Classe & scolarité] [Notes] [Emploi du temps]
 ```
-- **Informations** : identité, coordonnées (ou contact représentant légal).
+- **Informations** : identité, coordonnées (ou contact représentant légal), numéro matricule (obligatoire, unique par école), statut scolaire (Passant/Redoublant/Triplant), lieu de naissance (optionnel), sexe.
 - **Classe & scolarité** : classe actuelle, historique des classes par année scolaire.
 - **Notes** : toutes ses notes, groupées par matière (vue identique à celle de l'élève lui-même, en lecture seule pour l'admin). Inclut :
   - Sélecteur de période
@@ -103,6 +107,19 @@ app/(dashboard)/admin/
 
 - `SCHOOL_ADMIN` : toutes les actions (créer, modifier, désactiver, supprimer un compte, changer un rôle).
 - `STAFF_ADMIN` : peut créer/modifier les informations administratives (coordonnées, classe assignée, matières d'un enseignant) mais **ne peut pas** supprimer un compte ni changer un rôle. Ces actions sont masquées côté UI et bloquées côté `can()`.
+
+### Champs administratifs dans les formulaires
+
+**Formulaire de création/édition d'élève** :
+- Numéro matricule (obligatoire, validation d'unicité par école)
+- Statut scolaire (enum : Passant / Redoublant / Triplant, défaut Passant)
+- Sexe (enum : Masculin / Féminin)
+- Lieu de naissance (optionnel)
+
+**Formulaire de création/édition d'enseignant** :
+- Numéro matricule (optionnel)
+- Numéro CIN (obligatoire)
+- Sexe (enum : Masculin / Féminin)
 
 ---
 
@@ -146,15 +163,14 @@ Niveau : [Première ▾]
 Série : [C ▾]
 Classe parallèle : [1]
 Année scolaire : [2025-2026]
+Professeur principal (optionnel) : [Jean Dupont ▾] ou [Aucun]
 ```
 
-Le champ Série n'apparaît que si le niveau sélectionné en possède (logique déjà détaillée dans `docs/domaine-metier.md`).
+Le champ Série n'apparaît que si le niveau sélectionné en possède (logique déjà détaillée dans `docs/domaine-metier.md`). Le champ Professeur principal liste tous les enseignants de l'école (pas restreint aux enseignants assignés à la classe).
 
 ### Fiche classe (`[id]/page.tsx`)
 
-```
-[Élèves] [Emploi du temps] [Notes de la classe]
-```
+- **Informations** : détails de la classe (cycle, niveau, série, section, année scolaire, seuil de passage, nombre d'élèves) + professeur principal si renseigné.
 - **Élèves** : liste des élèves inscrits, actions d'ajout/retrait.
 - **Emploi du temps** : grille semaine de la classe (`<ScheduleView>`, voir section 6).
 - **Notes de la classe** : vue globale des notes par matière, filtrable — utile pour un admin qui prépare un conseil de classe.

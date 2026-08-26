@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { classroomSchema, classroomUpdateSchema, type ClassroomInput, type ClassroomUpdateInput } from "@/lib/validations/classroom"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
 export async function getSchoolGrades(): Promise<ActionResult<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>> {
   const session = await auth()
@@ -88,6 +88,7 @@ type ClassroomWithRelations = {
   passingThreshold: number
   schoolGradeId: string
   trackId: string | null
+  homeroomTeacherId: string | null
   schoolGrade: {
     id: string
     name: string
@@ -96,6 +97,11 @@ type ClassroomWithRelations = {
   track: {
     id: string
     name: string
+  } | null
+  homeroomTeacher: {
+    id: string
+    firstName: string
+    lastName: string
   } | null
   _count: {
     students: number
@@ -130,6 +136,13 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
             name: true,
           },
         },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
         _count: {
           select: {
             students: true,
@@ -153,7 +166,7 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
   }
 }
 
-export async function listClassrooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<ClassroomWithRelations[]>> {
+export async function listClassrooms(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<ClassroomWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -182,37 +195,58 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
       ]
     }
 
-    const classrooms = await prisma.classroom.findMany({
-      where,
-      include: {
-        schoolGrade: {
-          select: {
-            id: true,
-            name: true,
-            cycle: true,
+    const [classrooms, total] = await Promise.all([
+      prisma.classroom.findMany({
+        where,
+        include: {
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
+            },
+          },
+          track: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          homeroomTeacher: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          _count: {
+            select: {
+              students: true,
+            },
           },
         },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        _count: {
-          select: {
-            students: true,
-          },
-        },
-      },
-      orderBy: [
-        { schoolGrade: { order: "asc" } },
-        { section: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { schoolGrade: { order: "asc" } },
+          { section: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.classroom.count({ where })
+    ])
 
-    return { success: true, data: classrooms }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: classrooms,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing classrooms:", error)
     return { success: false, error: "Erreur lors du chargement des classes" }
@@ -241,6 +275,9 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
   }
 
   try {
+    // Normalize trackId: convert empty string or "$undefined" to null
+    const normalizedTrackId = (!data.trackId || data.trackId === "" || data.trackId === "$undefined") ? null : data.trackId
+
     // Verify schoolGrade belongs to the school
     const schoolGrade = await prisma.schoolGrade.findUnique({
       where: { id: data.schoolGradeId },
@@ -251,9 +288,9 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     }
 
     // If trackId is provided, verify it belongs to the school and schoolGrade
-    if (data.trackId) {
+    if (normalizedTrackId) {
       const track = await prisma.track.findUnique({
-        where: { id: data.trackId },
+        where: { id: normalizedTrackId },
       })
 
       if (!track || track.schoolId !== session.user.schoolId || track.schoolGradeId !== data.schoolGradeId) {
@@ -261,17 +298,26 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
       }
     }
 
+    // If homeroomTeacherId is provided, verify it belongs to the same school
+    if (data.homeroomTeacherId) {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: data.homeroomTeacherId },
+      })
+
+      if (!teacher || teacher.schoolId !== session.user.schoolId) {
+        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+      }
+    }
+
     // Check if classroom already exists (unique constraint)
-    const existing = await prisma.classroom.findUnique({
+    const existing = await prisma.classroom.findFirst({
       where: {
-        schoolGradeId_trackId_section_schoolYear: {
-          schoolGradeId: data.schoolGradeId,
-          trackId: data.trackId ?? null,
-          section: data.section,
-          schoolYear: data.schoolYear,
-        },
+        schoolGradeId: data.schoolGradeId,
+        section: data.section,
+        schoolYear: data.schoolYear,
+        trackId: normalizedTrackId,
       },
-    } as any)
+    })
 
     if (existing) {
       return { success: false, error: "A classroom with this configuration already exists" }
@@ -280,10 +326,11 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
     const classroom = await prisma.classroom.create({
       data: {
         schoolGradeId: data.schoolGradeId,
-        trackId: data.trackId,
+        trackId: normalizedTrackId,
         section: data.section,
         schoolYear: data.schoolYear,
         passingThreshold: data.passingThreshold,
+        homeroomTeacherId: data.homeroomTeacherId,
         schoolId: session.user.schoolId,
       },
       include: {
@@ -298,6 +345,13 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
           select: {
             id: true,
             name: true,
+          },
+        },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
         _count: {
@@ -381,9 +435,23 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
       }
     }
 
+    // If homeroomTeacherId is being updated, verify it belongs to the same school
+    if (data.homeroomTeacherId) {
+      const teacher = await prisma.teacher.findUnique({
+        where: { id: data.homeroomTeacherId },
+      })
+
+      if (!teacher || teacher.schoolId !== session.user.schoolId) {
+        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+      }
+    }
+
     const classroom = await prisma.classroom.update({
       where: { id },
-      data: validation.data,
+      data: {
+        ...validation.data,
+        homeroomTeacherId: data.homeroomTeacherId,
+      },
       include: {
         schoolGrade: {
           select: {
@@ -396,6 +464,13 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
           select: {
             id: true,
             name: true,
+          },
+        },
+        homeroomTeacher: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
           },
         },
         _count: {

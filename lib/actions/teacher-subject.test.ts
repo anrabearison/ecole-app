@@ -55,6 +55,31 @@ describe("TeacherSubject Server Actions", () => {
       )
       expect(result).toEqual({ success: true, data: mockData })
     })
+
+    it("should fallback to session.user.teacherId if teacherId parameter is empty string", async () => {
+      vi.mocked(auth).mockResolvedValue({
+        user: {
+          id: "user-123",
+          email: "test@example.com",
+          role: "TEACHER",
+          schoolId: mockSchoolId,
+          teacherId: mockTeacherId,
+          studentId: null,
+        },
+        expires: "9999-12-31T23:59:59.999Z"
+      } as any)
+
+      vi.mocked(prisma.teacherSubject.findMany).mockResolvedValue([] as any)
+
+      const result = await listTeacherSubjects("")
+
+      expect(prisma.teacherSubject.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { teacherId: mockTeacherId, schoolId: mockSchoolId }
+        })
+      )
+      expect(result.success).toBe(true)
+    })
   })
 
   describe("assignTeacherSubject", () => {

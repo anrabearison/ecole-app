@@ -1,6 +1,7 @@
 import { listSchools } from "@/lib/actions/school"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export default async function PlatformPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
@@ -18,6 +19,7 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
   }
 
   const schools = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-6">
@@ -97,6 +99,15 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
           </tbody>
         </table>
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }

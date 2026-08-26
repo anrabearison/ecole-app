@@ -48,6 +48,22 @@ enum DeliberationDecision {
   REPEATED
 }
 
+enum StudentStatus {
+  PASSING
+  REPEATING
+  TRIPLING
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum TeacherContractType {
+  FONCTIONNAIRE
+  ENF
+}
+
 // ============================================================
 // Multi-tenant root
 // ============================================================
@@ -81,7 +97,7 @@ model School {
 
 model User {
   id           String   @id @default(cuid())
-  email        String   @unique
+  email        String?  @unique
   passwordHash String
   role         Role
   active       Boolean  @default(true)
@@ -146,6 +162,9 @@ model Classroom {
   trackId String? // null if the level has no track (before Première)
   track   Track?  @relation(fields: [trackId], references: [id])
 
+  homeroomTeacherId String? // optional homeroom teacher (professeur principal)
+  homeroomTeacher   Teacher? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
+
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
@@ -172,6 +191,10 @@ model Student {
   dateOfBirth DateTime?
   guardianName String?
   guardianPhone String?
+  registrationNumber String
+  status StudentStatus @default(PASSING)
+  placeOfBirth String?
+  sex Sex
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
@@ -186,6 +209,8 @@ model Student {
   reportCardComments ReportCardComment[]
   deliberations Deliberation[]
   createdAt     DateTime @default(now())
+
+  @@unique([registrationNumber, schoolId])
 }
 
 // Historizes a student's classroom assignment per school year.
@@ -217,15 +242,21 @@ model Teacher {
   firstName String
   lastName  String
   phone String?
-  contractType String?
+  contractType TeacherContractType?
+  registrationNumber String?
+  nationalIdNumber String
+  sex Sex
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  subjects      TeacherSubject[]
-  grades        Grade[] // grades this teacher has personally entered
-  scheduleSlots ScheduleSlot[]
-  createdAt     DateTime @default(now())
+  subjects           TeacherSubject[]
+  grades             Grade[] // grades this teacher has personally entered
+  scheduleSlots      ScheduleSlot[]
+  homeroomClassrooms Classroom[] @relation("HomeroomTeacher")
+  createdAt          DateTime @default(now())
+
+  @@unique([nationalIdNumber, schoolId])
 }
 
 // ============================================================

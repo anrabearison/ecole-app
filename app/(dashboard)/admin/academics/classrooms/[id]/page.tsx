@@ -111,6 +111,13 @@ export default async function ClassroomDetailPage({
           <p className="text-sm text-gray-500">Nombre d'élèves</p>
           <p className="text-lg font-medium">{classroom._count.students}</p>
         </div>
+
+        {classroom.homeroomTeacher && (
+          <div>
+            <p className="text-sm text-gray-500">Professeur principal</p>
+            <p className="text-lg font-medium">{classroom.homeroomTeacher.firstName} {classroom.homeroomTeacher.lastName}</p>
+          </div>
+        )}
       </div>
 
       <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />

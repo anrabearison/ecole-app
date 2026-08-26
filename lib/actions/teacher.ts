@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { teacherSchema, teacherUpdateSchema, type TeacherInput, type TeacherUpdateInput } from "@/lib/validations/teacher"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
 type TeacherWithRelations = {
@@ -13,9 +13,12 @@ type TeacherWithRelations = {
   lastName: string
   phone: string | null
   contractType: string | null
+  registrationNumber: string | null
+  nationalIdNumber: string
+  sex: string
   user: {
     id: string
-    email: string
+    email: string | null
     active: boolean
   }
   schoolId: string
@@ -79,7 +82,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 }
 
-export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<TeacherWithRelations[]>> {
+export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -109,31 +112,45 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
       ]
     }
 
-    const teachers = await prisma.teacher.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            active: true,
+    const [teachers, total] = await Promise.all([
+      prisma.teacher.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
+          },
+          _count: {
+            select: {
+              subjects: true,
+            },
           },
         },
-        _count: {
-          select: {
-            subjects: true,
-          },
-        },
-      },
-      orderBy: [
-        { lastName: "asc" },
-        { firstName: "asc" },
-      ],
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.teacher.count({ where })
+    ])
 
-    return { success: true, data: teachers }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: teachers,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing teachers:", error)
     return { success: false, error: "Erreur lors du chargement des enseignants" }
@@ -162,13 +179,15 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
   }
 
   try {
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: data.email },
-    })
+    // Check if email already exists (only if email is provided)
+    if (data.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: data.email },
+      })
 
-    if (existingUser) {
-      return { success: false, error: "Email already exists" }
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
     }
 
     // Generate temporary password (8 characters)
@@ -179,7 +198,7 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email,
+          email: data.email || null,
           passwordHash,
           role: "TEACHER",
           schoolId: session.user.schoolId,
@@ -194,6 +213,9 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,
+          registrationNumber: data.registrationNumber,
+          nationalIdNumber: data.nationalIdNumber,
+          sex: data.sex,
           schoolId: session.user.schoolId,
         },
         include: {
@@ -284,6 +306,9 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,
+          registrationNumber: data.registrationNumber,
+          nationalIdNumber: data.nationalIdNumber,
+          sex: data.sex,
         },
         include: {
           user: {

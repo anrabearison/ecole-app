@@ -9,24 +9,53 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Identifier", type: "text" },
         password: { label: "Password", type: "password" }
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined
+        const identifier = credentials?.identifier as string | undefined
         const password = credentials?.password as string | undefined
 
-        if (!email || !password) {
+        if (!identifier || !password) {
           return null
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: {
-            teacher: true,
-            student: true
+        let user = null
+
+        // Try to find user by email first (if identifier looks like an email)
+        if (identifier.includes('@')) {
+          user = await prisma.user.findUnique({
+            where: { email: identifier },
+            include: {
+              teacher: true,
+              student: true
+            }
+          })
+        }
+
+        // If not found by email, try to find student by registration number
+        if (!user) {
+          const student = await prisma.student.findFirst({
+            where: { registrationNumber: identifier },
+            include: { user: { include: { teacher: true, student: true } } }
+          })
+
+          if (student?.user) {
+            user = student.user
           }
-        })
+        }
+
+        // If not found by student registration, try to find teacher by national ID number
+        if (!user) {
+          const teacher = await prisma.teacher.findFirst({
+            where: { nationalIdNumber: identifier },
+            include: { user: { include: { teacher: true, student: true } } }
+          })
+
+          if (teacher?.user) {
+            user = teacher.user
+          }
+        }
 
         if (!user || !user.active) {
           return null

@@ -3,6 +3,7 @@ export type DevSeedAccount = {
   label: string
   email: string
   password: string
+  identifier?: string // For teachers: CIN, for students: registration number
 }
 
 export const devSeedAccounts: DevSeedAccount[] = [
@@ -29,11 +30,13 @@ export const devSeedAccounts: DevSeedAccount[] = [
     label: "Professeur",
     email: "prof@sekoly-test.mg",
     password: "motdepasse123",
+    identifier: "123456789012", // CIN
   },
   {
     role: "STUDENT",
     label: "Élève",
     email: "eleve@sekoly-test.mg",
     password: "motdepasse123",
+    identifier: "2025-001", // Registration number
   },
 ]

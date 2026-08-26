@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { schoolSchema, type SchoolInput } from "@/lib/validations/school"
-import type { ActionResult } from "@/lib/utils"
+import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
 
 export type SchoolWithStats = {
@@ -27,7 +27,7 @@ export type SchoolStats = {
  * List all schools - PLATFORM_SUPER_ADMIN only
  * NOTE: No schoolId filter here - PLATFORM_SUPER_ADMIN sees all schools by design
  */
-export async function listSchools(opts?: { search?: string; page?: number; pageSize?: number }): Promise<ActionResult<SchoolWithStats[]>> {
+export async function listSchools(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<SchoolWithStats[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -48,21 +48,24 @@ export async function listSchools(opts?: { search?: string; page?: number; pageS
       where.name = { contains: search, mode: "insensitive" }
     }
 
-    const schools = await prisma.school.findMany({
-      where,
-      include: {
-        _count: {
-          select: {
-            students: { where: { user: { active: true } } },
-            teachers: { where: { user: { active: true } } },
-            classrooms: true,
+    const [schools, total] = await Promise.all([
+      prisma.school.findMany({
+        where,
+        include: {
+          _count: {
+            select: {
+              students: { where: { user: { active: true } } },
+              teachers: { where: { user: { active: true } } },
+              classrooms: true,
+            },
           },
         },
-      },
-      orderBy: { name: "asc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-    })
+        orderBy: { name: "asc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.school.count({ where })
+    ])
 
     const schoolsWithStats: SchoolWithStats[] = schools.map((school: any) => ({
       id: school.id,
@@ -74,7 +77,18 @@ export async function listSchools(opts?: { search?: string; page?: number; pageS
       classroomCount: school._count.classrooms,
     }))
 
-    return { success: true, data: schoolsWithStats }
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: schoolsWithStats,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
   } catch (error: any) {
     console.error("Error listing schools:", error)
     return { success: false, error: "Erreur lors du chargement des écoles" }
@@ -103,6 +117,17 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
   }
 
   try {
+    // Check if email already exists (only if email is provided)
+    if (validation.data.adminEmail) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email: validation.data.adminEmail },
+      })
+
+      if (existingUser) {
+        return { success: false, error: "Email already exists" }
+      }
+    }
+
     // Generate temporary password
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
     const passwordHash = await bcrypt.hash(tempPassword, 10)
@@ -118,7 +143,7 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
 
       const adminUser = await tx.user.create({
         data: {
-          email: validation.data.adminEmail,
+          email: validation.data.adminEmail || null,
           passwordHash,
           role: "SCHOOL_ADMIN",
           schoolId: school.id,

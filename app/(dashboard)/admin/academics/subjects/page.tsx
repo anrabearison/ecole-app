@@ -2,11 +2,14 @@ import Link from "next/link"
 import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { PaginationClient } from "@/components/PaginationClient"
 
 export const dynamic = "force-dynamic"
 
-export default async function SubjectsPage() {
-  const result = await listSubjects()
+export default async function SubjectsPage({ searchParams }: { searchParams?: { page?: string } }) {
+  const params = await searchParams
+  const page = parseInt(params?.page || '1', 10) || 1
+  const result = await listSubjects({ page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -19,6 +22,7 @@ export default async function SubjectsPage() {
   }
 
   const subjects = result.data
+  const pagination = result.pagination
 
   return (
     <div className="p-8">
@@ -77,6 +81,15 @@ export default async function SubjectsPage() {
           </table>
         )}
       </div>
+
+      {pagination && (
+        <PaginationClient
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          total={pagination.total}
+          pageSize={pagination.pageSize}
+        />
+      )}
     </div>
   )
 }
