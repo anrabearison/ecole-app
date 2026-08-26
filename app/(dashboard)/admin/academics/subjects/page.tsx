@@ -3,6 +3,7 @@ import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
+import { Plus } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -13,8 +14,8 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
 
   if (!result.success) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {result.error}
         </div>
       </div>
@@ -25,60 +26,69 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
   const pagination = result.pagination
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Matières</h1>
-          <p className="text-gray-600 mt-2">Gestion des matières enseignées dans l'établissement</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Matières</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">
+            {subjects.length} matière(s) configurée(s)
+          </p>
         </div>
-        <Link href="/admin/academics/subjects/new">
-          <Button>Nouvelle matière</Button>
+        <Link href="/admin/academics/subjects/new" className="self-start sm:self-auto">
+          <Button className="gap-2 shadow-xs">
+            <Plus className="w-4 h-4" />
+            <span>Nouvelle matière</span>
+          </Button>
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Table */}
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
         {subjects.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-500">
             Aucune matière configurée.
           </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nom
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {subjects.map((subject) => (
-                <tr key={subject.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{subject.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <form action={async () => {
-                      "use server"
-                      await deleteSubject(subject.id)
-                    }}>
-                      <ConfirmActionButton
-                        message={`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`}
-                        confirmLabel="Supprimer"
-                        cancelLabel="Annuler"
-                        destructive
-                        size="sm"
-                      >
-                        Supprimer
-                      </ConfirmActionButton>
-                    </form>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50/50">
+                <tr>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                    Nom de la matière
+                  </th>
+                  <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {subjects.map((subject) => (
+                  <tr key={subject.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-4 py-4 sm:px-6">
+                      <div className="text-sm font-semibold text-gray-900">{subject.name}</div>
+                    </td>
+                    <td className="px-4 py-4 sm:px-6 text-right">
+                      <form action={async () => {
+                        "use server"
+                        await deleteSubject(subject.id)
+                      }}>
+                        <ConfirmActionButton
+                          message={`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`}
+                          confirmLabel="Supprimer"
+                          cancelLabel="Annuler"
+                          destructive
+                          size="sm"
+                        >
+                          Supprimer
+                        </ConfirmActionButton>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

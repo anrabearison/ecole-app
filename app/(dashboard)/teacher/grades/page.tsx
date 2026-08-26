@@ -36,7 +36,7 @@ export default async function TeacherGradesPage({
 
   if (!gradesResult.success) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-red-600">Erreur : {gradesResult.error}</p>
       </div>
     )
@@ -67,13 +67,13 @@ export default async function TeacherGradesPage({
   })
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Mes notes saisies</h1>
-          <p className="text-gray-600 mt-1">Consultez et gérez les évaluations saisies pour vos classes.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes notes saisies</h1>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Consultez et gérez les évaluations saisies pour vos classes.</p>
         </div>
-        <Link href="/teacher/grades/new">
+        <Link href="/teacher/grades/new" className="self-start sm:self-auto">
           <Button className="gap-2 shadow-xs">
             <Plus className="w-4 h-4" />
             <span>Saisir des notes</span>
@@ -97,82 +97,90 @@ export default async function TeacherGradesPage({
 
       {/* Grades List Table */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50/50">
-            <tr>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Élève
-              </th>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Matière
-              </th>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Classe
-              </th>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Type
-              </th>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Note
-              </th>
-              <th className="px-6 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {grades.map((grade) => {
-              const isPassing = grade.value >= 10
-              return (
-                <tr key={grade.id} className="hover:bg-gray-50/80 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900">
-                      {grade.student.lastName} {grade.student.firstName}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-700">{grade.subject.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600">
-                      {grade.classroom.schoolGrade.name} {grade.classroom.section}
-                    </div>
-                    <div className="text-xs text-gray-400">{grade.classroom.schoolYear}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${
-                      grade.type === 'EXAM' 
-                        ? 'bg-purple-50 text-purple-700 border-purple-200' 
-                        : 'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>
-                      {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 text-sm font-bold px-2.5 py-1 rounded-md ${
-                      isPassing 
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      {isPassing ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                      {grade.value} / 20
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(grade.date).toLocaleDateString('fr-FR')}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50/50">
+              <tr>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Élève
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Matière
+                </th>
+                <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Classe
+                </th>
+                <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Type
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Note
+                </th>
+                <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Date
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {grades.map((grade) => {
+                const isPassing = grade.value >= 10
+                return (
+                  <tr key={grade.id} className="hover:bg-gray-50/80 transition-colors">
+                    <td className="px-4 py-4 sm:px-6">
+                      <div className="text-sm font-semibold text-gray-900">
+                        {grade.student.lastName} {grade.student.firstName}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
+                        {grade.classroom.schoolGrade.name} {grade.classroom.section}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 sm:px-6">
+                      <div className="text-sm font-medium text-gray-700">{grade.subject.name}</div>
+                      <div className="text-xs text-gray-500 mt-0.5 md:hidden">
+                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
+                      </div>
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-4 sm:px-6">
+                      <div className="text-sm text-gray-600">
+                        {grade.classroom.schoolGrade.name} {grade.classroom.section}
+                      </div>
+                      <div className="text-xs text-gray-400">{grade.classroom.schoolYear}</div>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-4 sm:px-6">
+                      <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${
+                        grade.type === 'EXAM' 
+                          ? 'bg-purple-50 text-purple-700 border-purple-200' 
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>
+                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 sm:px-6">
+                      <span className={`inline-flex items-center gap-1 text-xs sm:text-sm font-bold px-2.5 py-1 rounded-md ${
+                        isPassing 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        {isPassing ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertCircle className="w-3.5 h-3.5 shrink-0" />}
+                        {grade.value} / 20
+                      </span>
+                    </td>
+                    <td className="hidden sm:table-cell px-4 py-4 sm:px-6 text-sm text-gray-500">
+                      {new Date(grade.date).toLocaleDateString('fr-FR')}
+                    </td>
+                  </tr>
+                )
+              })}
+              {grades.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                    Aucune note saisie avec les filtres sélectionnés.
                   </td>
                 </tr>
-              )
-            })}
-            {grades.length === 0 && (
-              <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                  Aucune note saisie avec les filtres sélectionnés.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {pagination && (

@@ -8,16 +8,21 @@ export default async function AdminPage() {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-4">
-        Admin Dashboard
-      </h1>
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <p className="text-lg text-gray-700">
-          Bienvenue, {session.user.email} ({session.user.role})
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+          Tableau de bord Admin
+        </h1>
+        <p className="text-gray-600 mt-1 text-sm sm:text-base">
+          Bienvenue dans l'espace d'administration
         </p>
-        <p className="text-sm text-gray-500 mt-2">
-          School ID: {session.user.schoolId || "N/A"}
+      </div>
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+        <p className="text-base sm:text-lg font-medium text-gray-800">
+          Connecté en tant que <span className="text-indigo-600">{session.user.email}</span> ({session.user.role})
+        </p>
+        <p className="text-xs sm:text-sm text-gray-500 mt-1">
+          Identifiant établissement : {session.user.schoolId || "N/A"}
         </p>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import { listTeacherSubjects } from "@/lib/actions/teacher-subject"
+import { BookOpen, Users } from "lucide-react"
 
 export default async function TeacherMyClassroomsPage() {
   const session = await auth()
@@ -11,7 +12,7 @@ export default async function TeacherMyClassroomsPage() {
 
   if (!session.user.teacherId) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-red-600">Erreur : Aucun profil enseignant associé</p>
       </div>
     )
@@ -21,7 +22,7 @@ export default async function TeacherMyClassroomsPage() {
 
   if (!subjectsResult.success) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-red-600">Erreur : {subjectsResult.error}</p>
       </div>
     )
@@ -39,32 +40,39 @@ export default async function TeacherMyClassroomsPage() {
   }, {})
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Mes matières et classes</h1>
-        <p className="text-gray-600 mt-2">Gérez vos classes et matières assignées</p>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Mes matières et classes</h1>
+        <p className="text-gray-600 mt-1 text-sm sm:text-base">Gérez vos classes et matières assignées</p>
       </div>
 
       {Object.keys(subjectsBySubject).length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <p className="text-gray-500">Aucune matière assignée</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500">
+          Aucune matière assignée.
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {Object.entries(subjectsBySubject).map(([subjectName, assignments]) => (
-            <div key={subjectName} className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">{subjectName}</h2>
-              <div className="space-y-2">
+            <div key={subjectName} className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+              <div className="bg-gray-50/50 px-5 py-4 border-b border-gray-200 flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-indigo-600" />
+                <h2 className="text-base font-semibold text-gray-900">{subjectName}</h2>
+              </div>
+              <div className="p-4 space-y-2.5">
                 {assignments.map((assignment) => (
                   <div
                     key={assignment.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100/80 rounded-lg border border-gray-100 transition-colors"
                   >
-                    <div className="text-gray-900">
+                    <div className="text-sm font-medium text-gray-900">
                       {assignment.classroom.schoolGrade.name} {assignment.classroom.section}
-                      <span className="text-gray-500 ml-2">
+                      <span className="text-gray-500 text-xs font-normal ml-2">
                         ({assignment.classroom.schoolYear})
                       </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-gray-500 bg-white px-2.5 py-1 rounded-full border border-gray-200">
+                      <Users className="w-3 h-3" />
+                      <span>Classe</span>
                     </div>
                   </div>
                 ))}

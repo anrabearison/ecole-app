@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { ScheduleView } from "@/components/ScheduleView"
 import { redirect } from "next/navigation"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { ArrowLeft, Pencil, CheckCircle2, AlertCircle } from "lucide-react"
 
 export default async function TeacherDetailPage({
   params,
@@ -39,50 +40,62 @@ export default async function TeacherDetailPage({
   async function handleDelete() {
     "use server"
     const result = await deleteTeacher(id)
-    if (result.success) {
-      redirect("/admin/users/teachers")
-    }
+    if (result.success) redirect("/admin/users/teachers")
   }
 
   if (!teacher) {
     return (
-      <div className="p-8">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         <p className="text-gray-600">Enseignant non trouvé</p>
-        <Link href="/admin/users/teachers">
-          <Button className="mt-4">Retour</Button>
-        </Link>
+        <Link href="/admin/users/teachers"><Button className="mt-4">Retour</Button></Link>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {teacher.firstName} {teacher.lastName}
-        </h1>
-        <div className="flex gap-2">
-          <Link href="/admin/users/teachers">
-            <Button variant="outline">Retour</Button>
-          </Link>
-          <Link href={`/admin/users/teachers/${id}/edit`}>
-            <Button variant="outline">Modifier</Button>
-          </Link>
-          <form action={handleDelete}>
-            <ConfirmActionButton
-              message={`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`}
-              confirmLabel="Désactiver"
-              cancelLabel="Annuler"
-              destructive
-            >
-              Désactiver
-            </ConfirmActionButton>
-          </form>
+    <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      {/* Page Header */}
+      <div>
+        <Link
+          href="/admin/users/teachers"
+          className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-2 gap-1.5"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Retour à la liste</span>
+        </Link>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {teacher.firstName} {teacher.lastName}
+            </h1>
+            {teacher.registrationNumber && (
+              <p className="text-sm text-gray-500 mt-1">Matricule : {teacher.registrationNumber}</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/admin/users/teachers/${id}/edit`}>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" />
+                Modifier
+              </Button>
+            </Link>
+            <form action={handleDelete}>
+              <ConfirmActionButton
+                message={`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`}
+                confirmLabel="Désactiver"
+                cancelLabel="Annuler"
+                destructive
+              >
+                Désactiver
+              </ConfirmActionButton>
+            </form>
+          </div>
         </div>
       </div>
 
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex flex-wrap gap-4" aria-label="Tabs">
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex overflow-x-auto gap-1 scrollbar-none" aria-label="Tabs">
           {[
             { key: "info", label: "Informations" },
             { key: "subjects", label: "Matières & classes" },
@@ -92,7 +105,11 @@ export default async function TeacherDetailPage({
             <Link
               key={tabItem.key}
               href={`/admin/users/teachers/${id}?tab=${tabItem.key}`}
-              className={`${activeTab === tabItem.key ? "border-indigo-500 text-indigo-600" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+              className={`whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm shrink-0 transition-colors ${
+                activeTab === tabItem.key
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
             >
               {tabItem.label}
             </Link>
@@ -100,72 +117,50 @@ export default async function TeacherDetailPage({
         </nav>
       </div>
 
+      {/* Tab: Informations */}
       {activeTab === "info" && (
-        <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+            {[
+              { label: "Prénom", value: teacher.firstName },
+              { label: "Nom", value: teacher.lastName },
+              { label: "Email", value: teacher.user.email || "—" },
+              { label: "Numéro matricule", value: teacher.registrationNumber || "—" },
+              { label: "Numéro CIN", value: teacher.nationalIdNumber || "—" },
+              { label: "Sexe", value: teacher.sex === "MALE" ? "Masculin" : "Féminin" },
+              { label: "Téléphone", value: teacher.phone || "—" },
+              { label: "Type de contrat", value: teacher.contractType || "—" },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">{label}</p>
+                <p className="text-base font-medium text-gray-900 mt-0.5">{value}</p>
+              </div>
+            ))}
             <div>
-              <p className="text-sm text-gray-500">Prénom</p>
-              <p className="text-lg font-medium">{teacher.firstName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Nom</p>
-              <p className="text-lg font-medium">{teacher.lastName}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Email</p>
-              <p className="text-lg font-medium">{teacher.user.email}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Numéro matricule</p>
-              <p className="text-lg font-medium">{teacher.registrationNumber || "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Numéro CIN</p>
-              <p className="text-lg font-medium">{teacher.nationalIdNumber}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Sexe</p>
-              <p className="text-lg font-medium">{teacher.sex === "MALE" ? "Masculin" : "Féminin"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Téléphone</p>
-              <p className="text-lg font-medium">{teacher.phone || "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Type de contrat</p>
-              <p className="text-lg font-medium">{teacher.contractType || "—"}</p>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">Statut</p>
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                teacher.user.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</p>
+              <span className={`inline-flex items-center gap-1 mt-0.5 px-2.5 py-1 text-xs font-semibold rounded-full border ${
+                teacher.user.active ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"
               }`}>
+                {teacher.user.active ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
                 {teacher.user.active ? "Actif" : "Inactif"}
               </span>
             </div>
           </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Matières/Classes assignées</p>
-            <p className="text-lg font-medium">{teacher._count.subjects} assignation(s)</p>
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Assignations</p>
+            <p className="text-base font-medium text-gray-900 mt-0.5">{teacher._count.subjects} matière(s)/classe(s) assignée(s)</p>
           </div>
         </div>
       )}
 
+      {/* Tab: Matières & Classes */}
       {activeTab === "subjects" && (
-        <div className="mt-8 space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Ajouter une matière et classe</h2>
+        <div className="space-y-5">
+          {/* Add assignment */}
+          <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+            <h2 className="text-base font-semibold text-gray-900 mb-4">Ajouter une assignation</h2>
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
                 {error}
               </div>
             )}
@@ -174,25 +169,30 @@ export default async function TeacherDetailPage({
               const subjectId = formData.get("subjectId") as string
               const classroomId = formData.get("classroomId") as string
               const result = await (await import("@/lib/actions/teacher-subject")).assignTeacherSubject({ teacherId: id, subjectId, classroomId })
-              if (!result.success) {
-                redirect(`/admin/users/teachers/${id}?tab=subjects&error=${encodeURIComponent(result.error)}`)
-              }
+              if (!result.success) redirect(`/admin/users/teachers/${id}?tab=subjects&error=${encodeURIComponent(result.error)}`)
               redirect(`/admin/users/teachers/${id}?tab=subjects`)
             }} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="subjectId">Matière</Label>
-                  <select id="subjectId" name="subjectId" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                  <Label htmlFor="subjectId" className="text-xs font-medium text-gray-700 uppercase tracking-wider">Matière</Label>
+                  <select
+                    id="subjectId"
+                    name="subjectId"
+                    className="mt-1 block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
                     <option value="">Sélectionner une matière</option>
                     {subjects.map((subject) => (
                       <option key={subject.id} value={subject.id}>{subject.name}</option>
                     ))}
                   </select>
                 </div>
-
                 <div>
-                  <Label htmlFor="classroomId">Classe</Label>
-                  <select id="classroomId" name="classroomId" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                  <Label htmlFor="classroomId" className="text-xs font-medium text-gray-700 uppercase tracking-wider">Classe</Label>
+                  <select
+                    id="classroomId"
+                    name="classroomId"
+                    className="mt-1 block w-full rounded-lg border border-gray-300 py-2.5 px-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 bg-white"
+                  >
                     <option value="">Sélectionner une classe</option>
                     {classrooms.map((classroom) => (
                       <option key={classroom.id} value={classroom.id}>{classroom.name} ({classroom.schoolYear})</option>
@@ -200,64 +200,75 @@ export default async function TeacherDetailPage({
                   </select>
                 </div>
               </div>
-
-              <Button type="submit">Ajouter</Button>
+              <Button type="submit" size="sm">Ajouter</Button>
             </form>
           </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Assignations actuelles</h2>
+          {/* Existing assignments */}
+          <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-200 bg-gray-50/50">
+              <h2 className="text-base font-semibold text-gray-900">Assignations actuelles</h2>
+            </div>
             {teacherSubjects.length === 0 ? (
-              <p className="text-gray-500">Aucune assignation</p>
+              <p className="text-gray-500 text-sm p-5">Aucune assignation.</p>
             ) : (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Matière</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classe</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {teacherSubjects.map((ts) => (
-                    <tr key={ts.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ts.subject.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{ts.classroom.schoolGrade.name} {ts.classroom.section} ({ts.classroom.schoolYear})</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <form action={async () => {
-                          "use server"
-                          await (await import("@/lib/actions/teacher-subject")).removeTeacherSubject(ts.id)
-                          redirect(`/admin/users/teachers/${id}?tab=subjects`)
-                        }}>
-                          <Button variant="destructive" size="sm" type="submit">Retirer</Button>
-                        </form>
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">Matière</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">Classe</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {teacherSubjects.map((ts) => (
+                      <tr key={ts.id} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-4 py-3.5 text-sm text-gray-900 sm:px-6">{ts.subject.name}</td>
+                        <td className="px-4 py-3.5 text-sm text-gray-600 sm:px-6">
+                          {ts.classroom.schoolGrade.name} {ts.classroom.section} ({ts.classroom.schoolYear})
+                        </td>
+                        <td className="px-4 py-3.5 text-right sm:px-6">
+                          <form action={async () => {
+                            "use server"
+                            await (await import("@/lib/actions/teacher-subject")).removeTeacherSubject(ts.id)
+                            redirect(`/admin/users/teachers/${id}?tab=subjects`)
+                          }}>
+                            <Button variant="destructive" size="sm" type="submit">Retirer</Button>
+                          </form>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>
       )}
 
+      {/* Tab: Notes */}
       {activeTab === "grades" && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes saisies</h2>
-          <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-200 bg-gray-50/50">
+            <h2 className="text-base font-semibold text-gray-900">Notes saisies</h2>
+          </div>
+          <div className="p-5 sm:p-6">
             {grades.length === 0 ? (
-              <p className="text-gray-500">Aucune note saisie par cet enseignant.</p>
+              <p className="text-gray-500 text-sm">Aucune note saisie par cet enseignant.</p>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {grades.map((grade) => (
-                  <div key={grade.id} className="flex items-center justify-between rounded border p-3 text-sm">
+                  <div key={grade.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-lg border border-gray-200 p-3.5 bg-gray-50 text-sm">
                     <div>
-                      <p className="font-medium text-gray-900">{grade.student.lastName} {grade.student.firstName}</p>
-                      <p className="text-gray-500">{grade.subject.name} • {grade.classroom.schoolGrade.name} {grade.classroom.section}</p>
+                      <p className="font-semibold text-gray-900">{grade.student.lastName} {grade.student.firstName}</p>
+                      <p className="text-gray-500 text-xs mt-0.5">{grade.subject.name} · {grade.classroom.schoolGrade.name} {grade.classroom.section}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900">{grade.value}/20</p>
-                      <p className="text-gray-500">{new Date(grade.date).toLocaleDateString("fr-FR")}</p>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs text-gray-500">{new Date(grade.date).toLocaleDateString("fr-FR")}</span>
+                      <span className={`font-bold text-base ${grade.value >= 10 ? "text-emerald-700" : "text-rose-700"}`}>
+                        {grade.value}/20
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -267,16 +278,16 @@ export default async function TeacherDetailPage({
         </div>
       )}
 
+      {/* Tab: Emploi du temps */}
       {activeTab === "schedule" && (
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Emploi du temps</h2>
-          <div className="bg-white rounded-lg shadow-md p-6">
-            {scheduleSlots.length > 0 ? (
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+          {scheduleSlots.length > 0 ? (
+            <div className="overflow-x-auto">
               <ScheduleView slots={scheduleSlots} />
-            ) : (
-              <p className="text-gray-500">Aucun créneau disponible pour cet enseignant.</p>
-            )}
-          </div>
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-8">Aucun créneau disponible pour cet enseignant.</p>
+          )}
         </div>
       )}
     </div>
