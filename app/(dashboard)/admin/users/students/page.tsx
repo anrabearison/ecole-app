@@ -37,7 +37,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
         </div>
         <div className="flex gap-4">
           <form method="get" className="flex items-center" action="/admin/users/students">
-            <input name="search" placeholder="Rechercher nom, prénom, email" className="border rounded px-3 py-2 mr-2" />
+            <input name="search" defaultValue={search || ""} placeholder="Rechercher nom, prénom, email" className="border rounded px-3 py-2 mr-2" />
             <input type="hidden" name="page" value="1" />
             <Button type="submit">Rechercher</Button>
           </form>

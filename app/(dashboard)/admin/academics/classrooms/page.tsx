@@ -49,7 +49,7 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
         </div>
         <div className="flex gap-4">
           <form method="get" className="flex items-center" action="/admin/academics/classrooms">
-            <input name="search" placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
+            <input name="search" defaultValue={search || ""} placeholder="Rechercher une classe" className="border rounded px-3 py-2 mr-2" />
             <input type="hidden" name="page" value="1" />
             <Button type="submit">Rechercher</Button>
           </form>
