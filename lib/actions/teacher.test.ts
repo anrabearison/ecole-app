@@ -44,6 +44,7 @@ describe("Teacher Server Actions", () => {
       ]
       
       vi.mocked(prisma.teacher.findMany).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(1)
 
       const result = await listTeachers()
 
@@ -52,7 +53,7 @@ describe("Teacher Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual({ success: true, data: mockData })
+      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
     })
   })
 

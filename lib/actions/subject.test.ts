@@ -28,6 +28,7 @@ describe("Subject Actions", () => {
       ]
 
       vi.mocked(prisma.subject.findMany).mockResolvedValue(mockSubjects as any)
+      vi.mocked(prisma.subject.count).mockResolvedValue(2)
 
       const result = await listSubjects()
 
@@ -40,6 +41,8 @@ describe("Subject Actions", () => {
         where: { schoolId: "school-1" },
         orderBy: { name: "asc" },
         select: { id: true, name: true },
+        skip: 0,
+        take: 20,
       })
     })
 
