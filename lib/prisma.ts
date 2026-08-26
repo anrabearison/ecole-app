@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
+import { Pool } from "pg"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -23,11 +24,10 @@ function cleanConnectionString(url: string): string {
 }
 
 function createPrismaClient() {
-  // Prefer DIRECT_URL when available (bypasses PgBouncer entirely)
-  // Fall back to DATABASE_URL with pgbouncer params stripped
   const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL!
   const connectionString = cleanConnectionString(rawUrl)
-  const adapter = new PrismaPg({ connectionString })
+  const pool = new Pool({ connectionString })
+  const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }
 
