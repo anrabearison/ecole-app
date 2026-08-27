@@ -234,7 +234,15 @@ export default async function TeacherDetailPage({
                             await (await import("@/lib/actions/teacher-subject")).removeTeacherSubject(ts.id)
                             redirect(`/admin/users/teachers/${id}?tab=subjects`)
                           }}>
-                            <Button variant="destructive" size="sm" type="submit">Retirer</Button>
+                            <ConfirmActionButton
+                              variant="delete"
+                              size="sm"
+                              title="Retirer l'assignation"
+                              message={`Êtes-vous sûr de vouloir retirer cet enseignant de la matière "${ts.subject.name}" dans la classe ${ts.classroom.schoolGrade.name} ${ts.classroom.section} ?`}
+                              confirmLabel="Oui, retirer"
+                            >
+                              Retirer
+                            </ConfirmActionButton>
                           </form>
                         </td>
                       </tr>

@@ -6,6 +6,7 @@ import { createPeriod } from "@/lib/actions/period"
 import type { PeriodInput } from "@/lib/validations/period"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default function NewPeriodPage() {
   const router = useRouter()
@@ -146,9 +147,17 @@ export default function NewPeriodPage() {
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Création..." : "Créer la période"}
-            </Button>
+            <ConfirmActionButton
+              type="submit"
+              variant="create"
+              btnVariant="default"
+              title="Confirmation d'enregistrement"
+              message="Êtes-vous sûr de vouloir créer cette période scolaire ?"
+              confirmLabel="Oui, enregistrer"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Création..." : "Enregistrer"}
+            </ConfirmActionButton>
             <Button
               type="button"
               variant="outline"

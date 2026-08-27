@@ -10,6 +10,7 @@ import { studentFormSchema, type StudentFormInput, type StudentInput } from "@/l
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ArrowLeft, User, GraduationCap, Users, AlertTriangle } from "lucide-react"
 
 export default function EditStudentPage() {
@@ -298,9 +299,18 @@ export default function EditStudentPage() {
           <Button type="button" variant="outline" onClick={() => router.back()}>
             Annuler
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
+          <ConfirmActionButton
+            type="submit"
+            variant="update"
+            btnVariant="default"
+            title="Confirmation de modification"
+            message="Êtes-vous sûr de vouloir enregistrer les modifications apportées à cet élève ?"
+            confirmLabel="Oui, modifier"
+            disabled={isSubmitting}
+            className="min-w-[140px]"
+          >
             {isSubmitting ? "Enregistrement..." : "Enregistrer"}
-          </Button>
+          </ConfirmActionButton>
         </div>
       </form>
     </div>

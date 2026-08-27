@@ -10,6 +10,7 @@ import { getSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ArrowLeft, ClipboardEdit, Users, AlertTriangle } from "lucide-react"
 
 export default function NewGradesPage() {
@@ -341,13 +342,18 @@ export default function NewGradesPage() {
           >
             Annuler
           </Button>
-          <Button
+          <ConfirmActionButton
             type="submit"
+            variant="create"
+            btnVariant="default"
+            title="Confirmation d'enregistrement"
+            message="Êtes-vous sûr de vouloir enregistrer toutes les notes saisies ?"
+            confirmLabel="Oui, enregistrer"
             disabled={submitting || students.length === 0}
             className="min-w-[180px]"
           >
             {submitting ? "Enregistrement..." : "Enregistrer toutes les notes"}
-          </Button>
+          </ConfirmActionButton>
         </div>
       </form>
     </div>
