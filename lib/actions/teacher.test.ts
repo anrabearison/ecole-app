@@ -132,7 +132,7 @@ describe("Teacher Server Actions", () => {
 
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error).toBe("Email already exists")
+        expect(result.error).toBe("Cet email est déjà utilisé par un autre compte")
       }
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
