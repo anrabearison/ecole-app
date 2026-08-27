@@ -71,7 +71,10 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
             <thead className="bg-gray-50/50">
               <tr>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
-                  Nom
+                  Nom & Prénom
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  N° CIN
                 </th>
                 <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Email
@@ -101,6 +104,11 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                       {teacher._count.subjects} assignation(s)
                     </div>
                   </td>
+                  <td className="px-4 py-4 sm:px-6">
+                    <div className="text-sm font-mono font-medium text-gray-900">
+                      {teacher.nationalIdNumber}
+                    </div>
+                  </td>
                   <td className="hidden sm:table-cell px-4 py-4 sm:px-6">
                     <div className="text-sm text-gray-600">{teacher.user.email || "—"}</div>
                   </td>
@@ -127,7 +135,7 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
               ))}
               {teachers.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     Aucun enseignant trouvé.
                   </td>
                 </tr>

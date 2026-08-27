@@ -333,7 +333,7 @@ export default function NewTeacherPage() {
             Annuler
           </Button>
           <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
-            {isSubmitting ? "Création..." : "Créer l'enseignant"}
+            {isSubmitting ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </div>
       </form>

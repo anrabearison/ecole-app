@@ -108,6 +108,7 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
       where.OR = [
         { firstName: { contains: search, mode: "insensitive" } },
         { lastName: { contains: search, mode: "insensitive" } },
+        { nationalIdNumber: { contains: search, mode: "insensitive" } },
         { user: { email: { contains: search, mode: "insensitive" } } },
       ]
     }
@@ -178,15 +179,17 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     return { success: false, error: validation.error.issues[0].message }
   }
 
+  const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+
   try {
     // Check if email already exists (only if email is provided)
-    if (data.email) {
+    if (cleanEmail) {
       const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
+        where: { email: cleanEmail },
       })
 
       if (existingUser) {
-        return { success: false, error: "Email already exists" }
+        return { success: false, error: "Cet email est déjà utilisé par un autre compte" }
       }
     }
 
@@ -198,7 +201,7 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email || null,
+          email: cleanEmail || null,
           passwordHash,
           role: "TEACHER",
           schoolId: session.user.schoolId,
