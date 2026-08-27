@@ -21,7 +21,7 @@ async function main() {
   }
 
   // SchoolGrade unique: (name, cycle, schoolId)
-  const [primaryGrade, middleSchoolGrade, , premiereGrade] = await Promise.all([
+  const [primaryGrade, middleSchoolGrade, secondeGrade, premiereGrade] = await Promise.all([
     prisma.schoolGrade.upsert({
       where: { name_cycle_schoolId: { name: "CP", cycle: "PRIMARY", schoolId: school.id } },
       update: {},
@@ -55,7 +55,7 @@ async function main() {
 
   // Basic Subjects — skip duplicates
   await Promise.all(
-    ["Mathématiques", "Français", "Sciences de la Vie et de la Terre", "Histoire-Géographie", "EPS"].map(
+    ["Mathématiques", "Français", "Sciences de la Vie et de la Terre", "Histoire-Géographie", "EPS", "Philosophie"].map(
       (name) =>
         prisma.subject.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
           if (!existing) {
@@ -66,6 +66,25 @@ async function main() {
         })
     )
   )
+
+  // Seed coefficient 0 for Philosophie in Seconde
+  const philoSubject = await prisma.subject.findFirst({ where: { schoolId: school.id, name: "Philosophie" } })
+  if (secondeGrade && philoSubject) {
+    const existingCoeff = await prisma.subjectCoefficient.findFirst({
+      where: { schoolId: school.id, subjectId: philoSubject.id, schoolGradeId: secondeGrade.id, trackId: null }
+    })
+    if (!existingCoeff) {
+      await prisma.subjectCoefficient.create({
+        data: {
+          schoolId: school.id,
+          subjectId: philoSubject.id,
+          schoolGradeId: secondeGrade.id,
+          trackId: null,
+          coefficient: 0,
+        }
+      })
+    }
+  }
 
   // Rooms — skip duplicates
   await Promise.all(

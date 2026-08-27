@@ -85,24 +85,24 @@ describe("SubjectCoefficient Actions & Fallback Chain", () => {
       })
     })
 
-    it("should create a new entry if none exists", async () => {
+    it("should allow creating a coefficient of 0 (e.g. Philosophie in Seconde)", async () => {
       vi.mocked(prisma.subjectCoefficient.findFirst).mockResolvedValueOnce(null)
-      vi.mocked(prisma.subjectCoefficient.create).mockResolvedValueOnce({ id: "new-sc" } as any)
+      vi.mocked(prisma.subjectCoefficient.create).mockResolvedValueOnce({ id: "sc-zero" } as any)
 
       const res = await upsertSubjectCoefficient({
-        subjectId: "subj-1",
-        schoolGradeId: "grade-1",
+        subjectId: "subj-philo",
+        schoolGradeId: "grade-2nde",
         trackId: null,
-        coefficient: 3.5,
+        coefficient: 0,
       })
 
       expect(res.success).toBe(true)
       expect(prisma.subjectCoefficient.create).toHaveBeenCalledWith({
         data: {
-          subjectId: "subj-1",
-          schoolGradeId: "grade-1",
+          subjectId: "subj-philo",
+          schoolGradeId: "grade-2nde",
           trackId: null,
-          coefficient: 3.5,
+          coefficient: 0,
           schoolId: "school-1",
         },
         select: { id: true },

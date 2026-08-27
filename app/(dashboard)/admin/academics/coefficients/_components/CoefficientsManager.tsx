@@ -87,7 +87,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
 
   const handleInputChange = (subjectId: string, valueStr: string) => {
     const num = parseFloat(valueStr)
-    if (!isNaN(num) && num >= 0.5 && num <= 20) {
+    if (!isNaN(num) && num >= 0 && num <= 20) {
       setEditedValues((prev) => ({ ...prev, [subjectId]: num }))
     }
   }
@@ -351,7 +351,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
                           <input
                             type="number"
                             step="0.5"
-                            min="0.5"
+                            min="0"
                             max="20"
                             value={currentVal}
                             onChange={(e) => handleInputChange(subject.id, e.target.value)}
