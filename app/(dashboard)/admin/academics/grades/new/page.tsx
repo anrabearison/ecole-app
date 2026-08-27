@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { createSchoolGrade } from "@/lib/actions/school-grade"
 import { schoolGradeSchema, type SchoolGradeInput } from "@/lib/validations/school-grade"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default function NewSchoolGradePage() {
   const router = useRouter()
@@ -83,9 +84,17 @@ export default function NewSchoolGradePage() {
         </div>
 
         <div className="flex gap-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Création..." : "Créer le niveau"}
-          </Button>
+          <ConfirmActionButton
+            type="submit"
+            variant="create"
+            btnVariant="default"
+            title="Confirmation d'enregistrement"
+            message="Êtes-vous sûr de vouloir créer ce niveau scolaire ?"
+            confirmLabel="Oui, enregistrer"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Création..." : "Enregistrer"}
+          </ConfirmActionButton>
           <Button
             type="button"
             variant="outline"

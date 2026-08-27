@@ -9,6 +9,7 @@ import { roomSchema, type RoomInput } from "@/lib/validations/room"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default function NewRoomPage() {
   const router = useRouter()
@@ -68,9 +69,18 @@ export default function NewRoomPage() {
           </div>
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Création..." : "Créer la salle"}
-            </Button>
+            <ConfirmActionButton
+              type="submit"
+              variant="create"
+              btnVariant="default"
+              title="Confirmation d'enregistrement"
+              message="Êtes-vous sûr de vouloir créer cette salle ?"
+              confirmLabel="Oui, enregistrer"
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? "Création..." : "Enregistrer"}
+            </ConfirmActionButton>
             <Button
               type="button"
               variant="outline"

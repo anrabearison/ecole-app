@@ -8,6 +8,7 @@ import { updateClassroom, getSchoolGrades, getTracks, getClassroomById } from "@
 import { listTeachers } from "@/lib/actions/teacher"
 import { classroomUpdateSchema, type ClassroomUpdateInput } from "@/lib/validations/classroom"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default function EditClassroomPage() {
   const router = useRouter()
@@ -265,13 +266,18 @@ export default function EditClassroomPage() {
           </div>
 
           <div className="flex gap-4">
-            <Button
+            <ConfirmActionButton
               type="submit"
+              variant="update"
+              btnVariant="default"
+              title="Confirmation de modification"
+              message="Êtes-vous sûr de vouloir enregistrer les modifications apportées à cette classe ?"
+              confirmLabel="Oui, modifier"
               disabled={isLoading}
               className="flex-1"
             >
-              {isLoading ? "Modification..." : "Enregistrer"}
-            </Button>
+              {isLoading ? "Enregistrement..." : "Enregistrer"}
+            </ConfirmActionButton>
             <Button
               type="button"
               variant="outline"

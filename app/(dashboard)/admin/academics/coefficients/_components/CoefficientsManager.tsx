@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react"
 import { upsertSubjectCoefficient, deleteSubjectCoefficient, type SubjectCoefficientWithRelations } from "@/lib/actions/subject-coefficient"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { Save, RotateCcw, Check, AlertCircle, Layers, BookOpen, Sparkles } from "lucide-react"
 
 type GradeItem = {
@@ -32,6 +33,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
   const [coefficients, setCoefficients] = useState<SubjectCoefficientWithRelations[]>(initialCoefficients)
   const [editedValues, setEditedValues] = useState<Record<string, number>>({}) // subjectId -> new coeff number
   const [savingSubjectId, setSavingSubjectId] = useState<string | null>(null)
+  const [pendingResetSubjectId, setPendingResetSubjectId] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
   const [isPending, startTransition] = useTransition()
@@ -85,7 +87,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
 
   const handleInputChange = (subjectId: string, valueStr: string) => {
     const num = parseFloat(valueStr)
-    if (!isNaN(num) && num >= 0.5 && num <= 20) {
+    if (!isNaN(num) && num >= 0 && num <= 20) {
       setEditedValues((prev) => ({ ...prev, [subjectId]: num }))
     }
   }
@@ -349,7 +351,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
                           <input
                             type="number"
                             step="0.5"
-                            min="0.5"
+                            min="0"
                             max="20"
                             value={currentVal}
                             onChange={(e) => handleInputChange(subject.id, e.target.value)}
@@ -380,7 +382,7 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleReset(subject.id)}
+                              onClick={() => setPendingResetSubjectId(subject.id)}
                               disabled={isLoading}
                               className="gap-1.5 text-gray-600 hover:text-gray-900"
                               title="Réinitialiser au coefficient par défaut"
@@ -399,6 +401,22 @@ export function CoefficientsManager({ grades, subjects, initialCoefficients }: P
           </div>
         )}
       </div>
+
+      {/* Confirm Reset Dialog */}
+      {pendingResetSubjectId && (
+        <ConfirmDialog
+          variant="delete"
+          title="Réinitialiser le coefficient"
+          message={`Êtes-vous sûr de vouloir supprimer le coefficient personnalisé pour "${subjects.find((s) => s.id === pendingResetSubjectId)?.name}" ? Le coefficient par défaut de la matière sera utilisé à la place.`}
+          confirmLabel="Oui, réinitialiser"
+          onConfirm={() => {
+            const id = pendingResetSubjectId
+            setPendingResetSubjectId(null)
+            handleReset(id)
+          }}
+          onCancel={() => setPendingResetSubjectId(null)}
+        />
+      )}
     </div>
   )
 }

@@ -7,7 +7,7 @@ export const SubjectCoefficientSchema = z.object({
   trackId: z.string().nullable().optional(),
   coefficient: z
     .number({ message: "Le coefficient doit être un nombre" })
-    .min(0.5, "Le coefficient minimum est 0.5")
+    .min(0, "Le coefficient ne peut pas être négatif")
     .max(20, "Le coefficient maximum est 20"),
 })
 

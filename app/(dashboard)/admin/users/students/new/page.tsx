@@ -10,6 +10,7 @@ import { studentFormSchema, type StudentFormInput, type StudentInput } from "@/l
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { 
   ArrowLeft, 
   User, 
@@ -390,9 +391,18 @@ export default function NewStudentPage() {
           >
             Annuler
           </Button>
-          <Button type="submit" disabled={isSubmitting} className="min-w-[140px]">
+          <ConfirmActionButton
+            type="submit"
+            variant="create"
+            btnVariant="default"
+            title="Confirmation d'enregistrement"
+            message="Êtes-vous sûr de vouloir enregistrer cet élève ?"
+            confirmLabel="Oui, enregistrer"
+            disabled={isSubmitting}
+            className="min-w-[140px]"
+          >
             {isSubmitting ? "Création..." : "Créer l'élève"}
-          </Button>
+          </ConfirmActionButton>
         </div>
       </form>
 

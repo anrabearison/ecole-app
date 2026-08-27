@@ -13,6 +13,7 @@ import { updateProfile, updatePassword, type UserProfileData } from "@/lib/actio
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { User, Lock, CheckCircle2, AlertCircle, Shield, Building2 } from "lucide-react"
 
 type ProfileFormProps = {
@@ -320,9 +321,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={profileLoading} className="w-full sm:w-auto">
+              <ConfirmActionButton
+                type="submit"
+                variant="update"
+                btnVariant="default"
+                title="Confirmation de modification"
+                message="Êtes-vous sûr de vouloir mettre à jour vos informations personnelles ?"
+                confirmLabel="Oui, enregistrer"
+                disabled={profileLoading}
+                className="w-full sm:w-auto"
+              >
                 {profileLoading ? "Enregistrement..." : "Enregistrer les modifications"}
-              </Button>
+              </ConfirmActionButton>
             </div>
           </form>
         </div>
@@ -402,9 +412,18 @@ export function ProfileForm({ profile }: ProfileFormProps) {
             </div>
 
             <div className="pt-2">
-              <Button type="submit" disabled={passwordLoading} className="w-full sm:w-auto">
+              <ConfirmActionButton
+                type="submit"
+                variant="update"
+                btnVariant="default"
+                title="Confirmation de sécurité"
+                message="Êtes-vous sûr de vouloir modifier votre mot de passe ?"
+                confirmLabel="Oui, modifier"
+                disabled={passwordLoading}
+                className="w-full sm:w-auto"
+              >
                 {passwordLoading ? "Modification..." : "Modifier mon mot de passe"}
-              </Button>
+              </ConfirmActionButton>
             </div>
           </form>
         </div>

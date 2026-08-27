@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ClassroomDeliberationSection } from "./deliberation-section"
 import { ArrowLeft, Pencil, Users, BookOpen } from "lucide-react"
 
@@ -78,7 +79,15 @@ export default async function ClassroomDetailPage({
               </Button>
             </Link>
             <form action={handleDelete}>
-              <Button variant="destructive" size="sm" type="submit">Supprimer</Button>
+              <ConfirmActionButton
+                variant="delete"
+                size="sm"
+                title="Supprimer la classe"
+                message={`Êtes-vous sûr de vouloir supprimer cette classe ? Cette action est irréversible et supprimera également tous les emplois du temps et données associés.`}
+                confirmLabel="Oui, supprimer"
+              >
+                Supprimer
+              </ConfirmActionButton>
             </form>
           </div>
         </div>

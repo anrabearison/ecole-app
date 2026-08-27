@@ -9,6 +9,7 @@ import { subjectSchema, type SubjectInput } from "@/lib/validations/subject"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
 export default function NewSubjectPage() {
   const router = useRouter()
@@ -84,9 +85,18 @@ export default function NewSubjectPage() {
           </div>
 
           <div className="flex gap-4">
-            <Button type="submit" disabled={isLoading} className="flex-1">
-              {isLoading ? "Création..." : "Créer la matière"}
-            </Button>
+            <ConfirmActionButton
+              type="submit"
+              variant="create"
+              btnVariant="default"
+              title="Confirmation d'enregistrement"
+              message="Êtes-vous sûr de vouloir créer cette nouvelle matière ?"
+              confirmLabel="Oui, enregistrer"
+              disabled={isLoading}
+              className="flex-1"
+            >
+              {isLoading ? "Création..." : "Enregistrer"}
+            </ConfirmActionButton>
             <Button
               type="button"
               variant="outline"

@@ -11,6 +11,7 @@ import { classroomSchema, type ClassroomInput } from "@/lib/validations/classroo
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ArrowLeft, School, UserCheck, AlertTriangle } from "lucide-react"
 
 export default function NewClassroomPage() {
@@ -312,9 +313,18 @@ export default function NewClassroomPage() {
           >
             Annuler
           </Button>
-          <Button type="submit" disabled={isLoading} className="min-w-[140px]">
+          <ConfirmActionButton
+            type="submit"
+            variant="create"
+            btnVariant="default"
+            title="Confirmation d'enregistrement"
+            message="Êtes-vous sûr de vouloir créer cette nouvelle classe ?"
+            confirmLabel="Oui, enregistrer"
+            disabled={isLoading}
+            className="min-w-[140px]"
+          >
             {isLoading ? "Création..." : "Créer la classe"}
-          </Button>
+          </ConfirmActionButton>
         </div>
       </form>
     </div>
