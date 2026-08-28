@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth"
 import { getSchoolName } from "@/lib/getSchoolName"
 import { redirect } from "next/navigation"
 import { Sidebar } from "@/components/Sidebar"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 export default async function AdminLayout({
   children,
@@ -28,7 +29,9 @@ export default async function AdminLayout({
       <div className="lg:flex">
         <Sidebar user={session.user} schoolName={schoolName} />
         <main className="flex-1 p-3 sm:p-6 pt-16 lg:min-h-screen lg:pt-6">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { createStudent, getClassrooms } from "@/lib/actions/student"
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { useToast } from "@/components/Toast"
+import { useQuery } from "@tanstack/react-query"
 import { 
   ArrowLeft, 
   User, 
@@ -26,12 +28,21 @@ import {
 export default function NewStudentPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
-  const [classrooms, setClassrooms] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null)
   const [studentInfo, setStudentInfo] = useState<{ email?: string; name: string; registrationNumber?: string } | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
+  const { showToast } = useToast()
+
+  // Fetch classrooms using TanStack Query
+  const { data: classrooms = [], isLoading: isLoadingClassrooms } = useQuery({
+    queryKey: ["classrooms"],
+    queryFn: async () => {
+      const result = await getClassrooms()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+  })
 
   const {
     register,
@@ -48,17 +59,6 @@ export default function NewStudentPage() {
   })
 
   const selectedSex = watch("sex")
-
-  useEffect(() => {
-    async function fetchClassrooms() {
-      const result = await getClassrooms()
-      if (result.success) {
-        setClassrooms(result.data)
-      }
-      setIsLoading(false)
-    }
-    fetchClassrooms()
-  }, [])
 
   function generateMatricule() {
     const year = new Date().getFullYear()
@@ -299,7 +299,7 @@ export default function NewStudentPage() {
                   id="classroomId"
                   {...register("classroomId")}
                   className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
-                  disabled={isLoading}
+                  disabled={isLoadingClassrooms}
                 >
                   <option value="">Non assigné (à affecter ultérieurement)</option>
                   {classrooms.map((classroom) => (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams, useRouter } from "next/navigation"
@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { Skeleton } from "@/components/Skeleton"
+import { useToast } from "@/components/Toast"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, User, GraduationCap, Users, AlertTriangle } from "lucide-react"
 
 export default function EditStudentPage() {
@@ -18,8 +21,32 @@ export default function EditStudentPage() {
   const params = useParams()
   const id = params.id as string | undefined
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [classrooms, setClassrooms] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
+  const { showToast } = useToast()
+  const queryClient = useQueryClient()
+
+  // Fetch student data using TanStack Query
+  const { data: student, isLoading: isLoadingStudent, isError: isStudentError } = useQuery({
+    queryKey: ["student", id],
+    queryFn: async () => {
+      if (!id) throw new Error("ID manquant")
+      const result = await getStudentById(id)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    enabled: !!id,
+  })
+
+  // Fetch classrooms using TanStack Query
+  const { data: classrooms = [], isLoading: isLoadingClassrooms } = useQuery({
+    queryKey: ["classrooms"],
+    queryFn: async () => {
+      const result = await getClassrooms()
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+  })
+
+  const isLoading = isLoadingStudent || isLoadingClassrooms
 
   const {
     register,
@@ -33,46 +60,44 @@ export default function EditStudentPage() {
 
   const selectedSex = watch("sex")
 
+  // Populate form when student data is loaded
   useEffect(() => {
-    if (!id) return
-
-    async function load() {
-      if (!id) return
-
-      const [studentResult, classroomsResult] = await Promise.all([getStudentById(id), getClassrooms()])
-
-      if (studentResult.success) {
-        const student = studentResult.data
-        setValue("firstName", student.firstName)
-        setValue("lastName", student.lastName)
-        setValue("email", student.user.email || "")
-        setValue("classroomId", student.classroom?.id)
-        setValue("dateOfBirth", student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split("T")[0] : "")
-        setValue("guardianName", student.guardianName ?? "")
-        setValue("guardianPhone", student.guardianPhone ?? "")
-        setValue("registrationNumber", student.registrationNumber)
-        setValue("sex", student.sex as "MALE" | "FEMALE")
-        setValue("status", student.status as "PASSING" | "REPEATING" | "TRIPLING")
-        setValue("placeOfBirth", student.placeOfBirth ?? "")
-      } else {
-        setError(studentResult.error)
-      }
-
-      if (classroomsResult.success) {
-        setClassrooms(classroomsResult.data)
-      }
-
-      setIsLoading(false)
+    if (student) {
+      setValue("firstName", student.firstName)
+      setValue("lastName", student.lastName)
+      setValue("email", student.user.email || "")
+      setValue("classroomId", student.classroom?.id)
+      setValue("dateOfBirth", student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split("T")[0] : "")
+      setValue("guardianName", student.guardianName ?? "")
+      setValue("guardianPhone", student.guardianPhone ?? "")
+      setValue("registrationNumber", student.registrationNumber)
+      setValue("sex", student.sex as "MALE" | "FEMALE")
+      setValue("status", student.status as "PASSING" | "REPEATING" | "TRIPLING")
+      setValue("placeOfBirth", student.placeOfBirth ?? "")
     }
+  }, [student, setValue])
 
-    load()
-  }, [id, setValue])
+  // Update student using TanStack Query mutation
+  const updateStudentMutation = useMutation({
+    mutationFn: (data: StudentInput) => {
+      if (!id) throw new Error("ID manquant")
+      return updateStudent(id, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["student", id] })
+      showToast('success', 'Élève modifié avec succès')
+      router.push(`/admin/users/students/${id}`)
+    },
+    onError: (error: Error) => {
+      setError(error.message)
+      showToast('error', error.message)
+    },
+  })
 
   async function onSubmit(data: StudentFormInput) {
     if (!id) return
 
     setError(null)
-    setIsLoading(true)
 
     const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: StudentInput = {
@@ -84,14 +109,7 @@ export default function EditStudentPage() {
       guardianPhone: data.guardianPhone || undefined,
       status: data.status || "PASSING",
     }
-    const result = await updateStudent(id, payload)
-
-    if (result.success) {
-      router.push(`/admin/users/students/${id}`)
-    } else {
-      setError(result.error)
-      setIsLoading(false)
-    }
+    updateStudentMutation.mutate(payload)
   }
 
   if (!id) {
@@ -99,7 +117,33 @@ export default function EditStudentPage() {
   }
 
   if (isLoading) {
-    return <div className="p-8 text-gray-500">Chargement des informations de l'élève...</div>
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isStudentError) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          Erreur lors du chargement de l'élève
+        </div>
+      </div>
+    )
   }
 
   return (
