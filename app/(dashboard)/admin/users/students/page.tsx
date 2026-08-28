@@ -4,6 +4,7 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
+import { Eye } from "lucide-react"
 import { Plus, Search } from "lucide-react"
 
 export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
@@ -126,7 +127,10 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                   </td>
                   <td className="px-4 py-4 sm:px-6 text-right">
                     <Link href={`/admin/users/students/${student.id}`}>
-                      <Button variant="outline" size="sm">Voir</Button>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        <span className="hidden sm:inline">Voir</span>
+                      </Button>
                     </Link>
                   </td>
                 </tr>

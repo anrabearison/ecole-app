@@ -2,7 +2,7 @@ import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus, Search, Users } from "lucide-react"
+import { Plus, Search, Users, Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams

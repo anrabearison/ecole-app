@@ -3,7 +3,7 @@ import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus } from "lucide-react"
+import { Plus, Eye, Edit, Trash2 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
@@ -69,20 +69,30 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
                       <div className="text-sm font-semibold text-gray-900">{subject.name}</div>
                     </td>
                     <td className="px-4 py-4 sm:px-6 text-right">
-                      <form action={async () => {
-                        "use server"
-                        await deleteSubject(subject.id)
-                      }}>
-                        <ConfirmActionButton
-                          message={`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`}
-                          confirmLabel="Supprimer"
-                          cancelLabel="Annuler"
-                          destructive
-                          size="sm"
-                        >
-                          Supprimer
-                        </ConfirmActionButton>
-                      </form>
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/admin/academics/subjects/${subject.id}`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">Voir</span>
+                          </Button>
+                        </Link>
+                        <form action={async () => {
+                          "use server"
+                          await deleteSubject(subject.id)
+                        }}>
+                          <ConfirmActionButton
+                            message={`Êtes-vous sûr de vouloir supprimer ${subject.name} ? Cette action est irréversible.`}
+                            confirmLabel="Supprimer"
+                            cancelLabel="Annuler"
+                            destructive
+                            size="sm"
+                            className="flex items-center gap-2"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">Supprimer</span>
+                          </ConfirmActionButton>
+                        </form>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus } from "lucide-react"
+import { Plus, Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function PeriodsPage({ searchParams }: { searchParams?: { page?: string } }) {
   const params = await searchParams
@@ -74,18 +74,28 @@ export default async function PeriodsPage({ searchParams }: { searchParams?: { p
                     {period.order}
                   </td>
                   <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-right text-sm font-medium">
-                    <form action={deletePeriod as any}>
-                      <input type="hidden" name="id" value={period.id} />
-                      <ConfirmActionButton
-                        message={`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`}
-                        confirmLabel="Supprimer"
-                        cancelLabel="Annuler"
-                        destructive
-                        size="sm"
-                      >
-                        Supprimer
-                      </ConfirmActionButton>
-                    </form>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/admin/academics/periods/${period.id}`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Eye className="h-4 w-4" />
+                          <span className="hidden sm:inline">Voir</span>
+                        </Button>
+                      </Link>
+                      <form action={deletePeriod as any}>
+                        <input type="hidden" name="id" value={period.id} />
+                        <ConfirmActionButton
+                          message={`Êtes-vous sûr de vouloir supprimer ${period.name} ? Cette action est irréversible.`}
+                          confirmLabel="Supprimer"
+                          cancelLabel="Annuler"
+                          destructive
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="hidden sm:inline">Supprimer</span>
+                        </ConfirmActionButton>
+                      </form>
+                    </div>
                   </td>
                 </tr>
               ))}
