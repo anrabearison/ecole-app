@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { Skeleton } from "@/components/Skeleton"
+import { useToast } from "@/components/Toast"
 import { ArrowLeft, User, GraduationCap, Users, AlertTriangle } from "lucide-react"
 
 export default function EditStudentPage() {
@@ -20,6 +22,7 @@ export default function EditStudentPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [classrooms, setClassrooms] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
+  const { showToast } = useToast()
 
   const {
     register,
@@ -87,9 +90,11 @@ export default function EditStudentPage() {
     const result = await updateStudent(id, payload)
 
     if (result.success) {
+      showToast('success', 'Élève modifié avec succès')
       router.push(`/admin/users/students/${id}`)
     } else {
       setError(result.error)
+      showToast('error', result.error)
       setIsLoading(false)
     }
   }
@@ -99,7 +104,23 @@ export default function EditStudentPage() {
   }
 
   if (isLoading) {
-    return <div className="p-8 text-gray-500">Chargement des informations de l'élève...</div>
+    return (
+      <div className="p-8 max-w-4xl mx-auto space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    )
   }
 
   return (

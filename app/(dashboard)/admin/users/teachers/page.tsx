@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
 import { FilterBar } from "@/components/FilterBar"
+import { EmptyState } from "@/components/EmptyState"
 import { Plus, Eye } from "lucide-react"
 
 export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
@@ -30,6 +31,7 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
 
   const teachers = result.data
   const pagination = result.pagination
+  const hasActiveFilters = !!search || active !== undefined
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
@@ -140,8 +142,13 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
               ))}
               {teachers.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    Aucun enseignant trouvé.
+                  <td colSpan={7} className="p-0">
+                    <EmptyState
+                      type="teachers"
+                      hasActiveFilters={hasActiveFilters}
+                      resetFiltersHref="/admin/users/teachers"
+                      createAction={{ label: "Ajouter un enseignant", href: "/admin/users/teachers/new" }}
+                    />
                   </td>
                 </tr>
               )}
