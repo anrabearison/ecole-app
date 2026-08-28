@@ -16,14 +16,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Andakilasy - Gestion scolaire",
   description: "Plateforme moderne de gestion scolaire",
-  icons: {
-    icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
-      { url: "/favicon.png", type: "image/png" },
-    ],
-    shortcut: "/favicon.png",
-    apple: "/apple-touch-icon.png",
-  },
 };
 
 export default function RootLayout({
