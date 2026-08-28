@@ -4,20 +4,20 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Eye } from "lucide-react"
-import { Plus, Search } from "lucide-react"
+import { Eye, Plus, Search, CheckCircle2, XCircle } from "lucide-react"
 
-export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
+export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
+  const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listStudents({ search, page, pageSize: 20 })
+  const result = await listStudents({ search, page, pageSize: 20, active })
 
   if (!result.success) {
     return (
@@ -48,22 +48,68 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
         </Link>
       </div>
 
-      {/* Search Bar */}
-      <form method="get" action="/admin/users/students">
-        <div className="flex gap-2">
-          <div className="relative flex-1 max-w-sm">
+      {/* Search Bar & Filters */}
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+        <div className="flex flex-col lg:flex-row gap-4">
+          {/* Search Section */}
+          <form method="get" action="/admin/users/students" className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               name="search"
               defaultValue={search || ""}
-              placeholder="Rechercher un élève..."
+              placeholder="Rechercher par nom ou email..."
               className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
+            {active !== undefined && <input type="hidden" name="active" value={active ? "true" : "false"} />}
+            <input type="hidden" name="page" value="1" />
+          </form>
+
+          {/* Status Filter Section */}
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-gray-700">Statut :</span>
+            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+              <Link
+                href={`/admin/users/students${search ? `?search=${encodeURIComponent(search)}` : ''}`}
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  active === undefined
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Tous
+              </Link>
+              <Link
+                href={`/admin/users/students?active=true${search ? `&search=${encodeURIComponent(search)}` : ''}`}
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  active === true
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Actif
+              </Link>
+              <Link
+                href={`/admin/users/students?active=false${search ? `&search=${encodeURIComponent(search)}` : ''}`}
+                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                  active === false
+                    ? 'bg-red-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <XCircle className="w-3.5 h-3.5" />
+                Inactif
+              </Link>
+            </div>
+
+            {(search || active !== undefined) && (
+              <Link href="/admin/users/students" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
+                ✕ Réinitialiser
+              </Link>
+            )}
           </div>
-          <input type="hidden" name="page" value="1" />
-          <Button type="submit" variant="outline">Rechercher</Button>
         </div>
-      </form>
+      </div>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">

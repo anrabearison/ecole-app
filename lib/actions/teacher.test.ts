@@ -27,7 +27,7 @@ describe("Teacher Server Actions", () => {
   describe("listTeachers", () => {
     it("should return teachers filtered by schoolId", async () => {
       mockSession()
-      
+
       const mockData = [
         {
           id: "t1",
@@ -42,7 +42,7 @@ describe("Teacher Server Actions", () => {
           createdAt: new Date()
         }
       ]
-      
+
       vi.mocked(prisma.teacher.findMany).mockResolvedValue(mockData as any)
       vi.mocked(prisma.teacher.count).mockResolvedValue(1)
 
@@ -53,7 +53,31 @@ describe("Teacher Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
+      expect(result).toEqual({
+        success: true,
+        data: mockData,
+        pagination: {
+          total: 1,
+          page: 1,
+          pageSize: 20,
+          totalPages: 1
+        }
+      })
+    })
+
+    it("should filter teachers by active status", async () => {
+      mockSession()
+
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      await listTeachers({ active: true })
+
+      expect(prisma.teacher.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { schoolId: mockSchoolId, user: { active: true } }
+        })
+      )
     })
   })
 
