@@ -54,14 +54,14 @@ export default function EditTeacherPage() {
   // Populate form when teacher data is loaded
   useEffect(() => {
     if (teacher) {
-      setValue("firstName", teacher.firstName)
+      setValue("firstName", teacher.firstName || "")
       setValue("lastName", teacher.lastName)
       setValue("email", teacher.user.email || "")
       setValue("phone", teacher.phone ?? "")
       setValue("contractType", (teacher.contractType as "FONCTIONNAIRE" | "ENF" | undefined) ?? undefined)
       setValue("registrationNumber", teacher.registrationNumber ?? "")
       setValue("nationalIdNumber", teacher.nationalIdNumber)
-      setValue("sex", teacher.sex as "MALE" | "FEMALE")
+      if (teacher.sex) setValue("sex", teacher.sex as "MALE" | "FEMALE")
     }
   }, [teacher, setValue])
 
@@ -158,7 +158,7 @@ export default function EditTeacherPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="firstName" className="font-medium text-gray-700">
-                  Prénom <span className="text-red-500">*</span>
+                  Prénom <span className="text-gray-400 font-normal">(Optionnel)</span>
                 </Label>
                 <Input id="firstName" {...register("firstName")} className="mt-1.5" />
                 {errors.firstName && <p className="text-sm text-red-600 mt-1">{errors.firstName.message}</p>}

@@ -1,9 +1,11 @@
 import { z } from "zod"
 
 const optionalStringSchema = z.string().optional()
+const optionalStringOrEmpty = z.string().optional().or(z.literal(""))
 
 const studentStatusEnum = z.enum(["PASSING", "REPEATING", "TRIPLING"])
 const sexEnum = z.enum(["MALE", "FEMALE"])
+const optionalSexEnum = z.enum(["MALE", "FEMALE"]).optional()
 
 const optionalEmail = z
   .string()
@@ -11,8 +13,10 @@ const optionalEmail = z
   .optional()
   .or(z.literal(""))
 
+const optionalName = z.string().optional().or(z.literal(""))
+
 export const studentSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
+  firstName: optionalName,
   lastName: z.string().min(1, "Last name is required"),
   email: optionalEmail,
   classroomId: optionalStringSchema,
@@ -22,11 +26,11 @@ export const studentSchema = z.object({
   registrationNumber: z.string().min(1, "Registration number is required"),
   status: studentStatusEnum,
   placeOfBirth: z.string().optional(),
-  sex: sexEnum,
+  sex: optionalSexEnum,
 })
 
 export const studentFormSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
+  firstName: optionalName,
   lastName: z.string().min(1, "Last name is required"),
   email: optionalEmail,
   classroomId: z.string().optional(),
@@ -36,14 +40,14 @@ export const studentFormSchema = z.object({
   registrationNumber: z.string().min(1, "Registration number is required"),
   status: z.enum(["PASSING", "REPEATING", "TRIPLING"]).optional(),
   placeOfBirth: z.string().optional(),
-  sex: z.enum(["MALE", "FEMALE"]),
+  sex: z.enum(["MALE", "FEMALE"]).optional(),
 })
 
 export type StudentInput = z.infer<typeof studentSchema>
 export type StudentFormInput = z.infer<typeof studentFormSchema>
 
 export const studentUpdateSchema = z.object({
-  firstName: z.string().min(1, "First name is required").optional(),
+  firstName: optionalName,
   lastName: z.string().min(1, "Last name is required").optional(),
   email: optionalEmail,
   classroomId: z.string().optional(),

@@ -66,7 +66,7 @@ export default async function TeacherDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {teacher.firstName} {teacher.lastName}
+              {teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName}
             </h1>
             {teacher.registrationNumber && (
               <p className="text-sm text-gray-500 mt-1">Matricule : {teacher.registrationNumber}</p>
@@ -81,7 +81,7 @@ export default async function TeacherDetailPage({
             </Link>
             <form action={handleDelete}>
               <ConfirmActionButton
-                message={`Êtes-vous sûr de vouloir désactiver ${teacher.firstName} ${teacher.lastName} ? Cette action désactivera son compte.`}
+                message={`Êtes-vous sûr de vouloir désactiver ${teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName} ? Cette action désactivera son compte.`}
                 confirmLabel="Désactiver"
                 cancelLabel="Annuler"
                 destructive
@@ -122,12 +122,12 @@ export default async function TeacherDetailPage({
         <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
             {[
-              { label: "Prénom", value: teacher.firstName },
+              { label: "Prénom", value: teacher.firstName || "—" },
               { label: "Nom", value: teacher.lastName },
               { label: "Email", value: teacher.user.email || "—" },
               { label: "Numéro matricule", value: teacher.registrationNumber || "—" },
               { label: "Numéro CIN", value: teacher.nationalIdNumber || "—" },
-              { label: "Sexe", value: teacher.sex === "MALE" ? "Masculin" : "Féminin" },
+              { label: "Sexe", value: teacher.sex === "MALE" ? "Masculin" : teacher.sex === "FEMALE" ? "Féminin" : "—" },
               { label: "Téléphone", value: teacher.phone || "—" },
               { label: "Type de contrat", value: teacher.contractType || "—" },
             ].map(({ label, value }) => (

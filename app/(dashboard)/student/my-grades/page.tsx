@@ -44,7 +44,7 @@ export default async function StudentGradesPage({
   if (session.user.studentId) {
     const studentResult = await getStudentById(session.user.studentId)
     if (studentResult.success && studentResult.data) {
-      studentName = `${studentResult.data.firstName} ${studentResult.data.lastName}`
+      studentName = studentResult.data.firstName ? `${studentResult.data.firstName} ${studentResult.data.lastName}` : studentResult.data.lastName
     }
   }
 

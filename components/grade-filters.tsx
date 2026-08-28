@@ -17,7 +17,7 @@ type GradeFilterProps = {
   values: GradeFilterValues
   classrooms: Array<{ id: string; name: string; schoolYear: string }>
   subjects: Array<{ id: string; name: string }>
-  teachers: Array<{ id: string; firstName: string; lastName: string }>
+  teachers: Array<{ id: string; firstName: string | null; lastName: string }>
   periods: Array<{ id: string; name: string; schoolYear: string }>
   mode: "admin" | "teacher"
 }
@@ -119,7 +119,7 @@ export function GradeFilters({ values, classrooms, subjects, teachers, periods, 
               <option value="">Tous les enseignants</option>
               {teachers.map((teacher) => (
                 <option key={teacher.id} value={teacher.id}>
-                  {teacher.firstName} {teacher.lastName}
+                  {teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName}
                 </option>
               ))}
             </select>

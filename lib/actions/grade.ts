@@ -14,7 +14,7 @@ type GradeWithRelations = {
   comment: string | null
   student: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
   }
   subject: {
@@ -23,7 +23,7 @@ type GradeWithRelations = {
   }
   teacher: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
   }
   classroom: {
@@ -600,7 +600,7 @@ export async function deleteGrade(id: string): Promise<ActionResult<void>> {
   }
 }
 
-export async function getClassroomStudents(classroomId: string): Promise<ActionResult<Array<{ id: string; firstName: string; lastName: string }>>> {
+export async function getClassroomStudents(classroomId: string): Promise<ActionResult<Array<{ id: string; firstName: string | null; lastName: string }>>> {
   const session = await auth()
 
   if (!session?.user) {

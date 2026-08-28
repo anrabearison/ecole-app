@@ -18,7 +18,7 @@ export default function EditClassroomPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [schoolGrades, setSchoolGrades] = useState<Array<{ id: string; name: string; cycle: string; hasTracks: boolean }>>([])
   const [tracks, setTracks] = useState<Array<{ id: string; name: string }>>([])
-  const [teachers, setTeachers] = useState<Array<{ id: string; firstName: string; lastName: string }>>([])
+  const [teachers, setTeachers] = useState<Array<{ id: string; firstName: string | null; lastName: string }>>([])
   const [loadingData, setLoadingData] = useState(true)
 
   const {
@@ -250,7 +250,7 @@ export default function EditClassroomPage() {
                       className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-gray-700">
-                      {teacher.firstName} {teacher.lastName}
+                      {teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName}
                     </span>
                   </label>
                 ))

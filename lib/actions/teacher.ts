@@ -9,13 +9,13 @@ import bcrypt from "bcryptjs"
 
 type TeacherWithRelations = {
   id: string
-  firstName: string
+  firstName: string | null
   lastName: string
   phone: string | null
   contractType: string | null
   registrationNumber: string | null
   nationalIdNumber: string
-  sex: string
+  sex: string | null
   user: {
     id: string
     email: string | null
@@ -189,6 +189,7 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
   }
 
   const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+  const cleanFirstName = data.firstName && data.firstName.trim() !== "" ? data.firstName.trim() : null
 
   try {
     // Check if email already exists (only if email is provided)
@@ -220,15 +221,19 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
 
       const teacher = await tx.teacher.create({
         data: {
-          userId: user.id,
-          firstName: data.firstName,
+          user: {
+            connect: {
+              id: user.id,
+            },
+          },
+          firstName: cleanFirstName,
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,
           registrationNumber: data.registrationNumber,
           nationalIdNumber: data.nationalIdNumber,
           sex: data.sex,
-          schoolId: session.user.schoolId,
+          school: { connect: { id: session.user.schoolId! } },
         },
         include: {
           user: {
@@ -254,7 +259,13 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
     return { success: true, data: { teacher: result, temporaryPassword: tempPassword } }
   } catch (error: any) {
     console.error("Error creating teacher:", error)
-    return { success: false, error: "Erreur lors de la création de l'enseignant" }
+    if (error?.code === "P2002") {
+      const field = error?.meta?.target?.[0]
+      if (field === "nationalIdNumber") return { success: false, error: "Ce numéro CIN est déjà utilisé." }
+      if (field === "email") return { success: false, error: "Cette adresse email est déjà utilisée." }
+      return { success: false, error: "Une contrainte d'unicité a été violée." }
+    }
+    return { success: false, error: error?.message ?? "Erreur lors de la création de l'enseignant" }
   }
 }
 
@@ -280,6 +291,7 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
   }
 
   const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+  const cleanFirstName = data.firstName !== undefined ? (data.firstName && data.firstName.trim() !== "" ? data.firstName.trim() : null) : undefined
 
   try {
     // Verify teacher belongs to the school
@@ -316,7 +328,7 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
       const teacher = await tx.teacher.update({
         where: { id },
         data: {
-          firstName: data.firstName,
+          firstName: cleanFirstName !== undefined ? cleanFirstName : existingTeacher.firstName,
           lastName: data.lastName,
           phone: data.phone,
           contractType: data.contractType,

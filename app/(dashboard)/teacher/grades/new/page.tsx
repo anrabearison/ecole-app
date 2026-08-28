@@ -20,7 +20,7 @@ export default function NewGradesPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [teacherSubjects, setTeacherSubjects] = useState<any[]>([])
-  const [students, setStudents] = useState<Array<{ id: string; firstName: string; lastName: string }>>([])
+  const [students, setStudents] = useState<Array<{ id: string; firstName: string | null; lastName: string }>>([])
   const [periods, setPeriods] = useState<Array<{ id: string; name: string; schoolYear: string }>>([])
 
   const [classroomId, setClassroomId] = useState("")
@@ -286,7 +286,7 @@ export default function NewGradesPage() {
                     <div key={student.id} className="px-6 py-3.5 grid grid-cols-12 items-center hover:bg-gray-50/80 transition-colors">
                       <div className="col-span-7">
                         <span className="text-sm font-semibold text-gray-900 block">
-                          {student.lastName} {student.firstName}
+                          {student.firstName ? `${student.firstName} ${student.lastName}` : student.lastName}
                         </span>
                       </div>
                       <div className="col-span-5 flex items-center justify-end gap-2">

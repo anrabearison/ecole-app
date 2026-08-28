@@ -19,7 +19,7 @@ export type DeliberationWithRelations = {
   studentId: string
   student: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
   }
   schoolId: string
@@ -322,7 +322,7 @@ export async function listDeliberationsForClassroom(
       success: true,
       data: students.map((student) => ({
         studentId: student.id,
-        studentFirstName: student.firstName,
+        studentFirstName: student.firstName || "",
         studentLastName: student.lastName,
         studentAverage: student.deliberations[0]?.studentAverage ?? 0,
         decision: student.deliberations[0]?.decision ?? "REPEATED",
@@ -439,7 +439,7 @@ export async function generateAnnualReportPdf(
       schoolName: student.school.name,
       schoolAddress: student.school.address || undefined,
       schoolYear,
-      studentFirstName: student.firstName,
+      studentFirstName: student.firstName || "",
       studentLastName: student.lastName,
       className,
       periodAverages: periodResults,
@@ -450,7 +450,7 @@ export async function generateAnnualReportPdf(
 
     const pdfStream = await generateAnnualReportPdfBuffer(reportData)
 
-    const fileName = `Bulletin_Annuel_${student.lastName}_${student.firstName}_${schoolYear.replace(/\s+/g, "_")}.pdf`
+    const fileName = `Bulletin_Annuel_${student.lastName}_${student.firstName || ""}_${schoolYear.replace(/\s+/g, "_")}.pdf`
 
     return { success: true, data: { pdfBuffer: pdfStream as Buffer, fileName } }
   } catch (error: any) {

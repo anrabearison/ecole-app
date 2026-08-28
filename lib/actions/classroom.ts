@@ -102,7 +102,7 @@ type ClassroomWithRelations = {
     isPrimary: boolean
     teacher: {
       id: string
-      firstName: string
+      firstName: string | null
       lastName: string
     }
   }>

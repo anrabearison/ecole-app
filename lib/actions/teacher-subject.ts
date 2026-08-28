@@ -10,7 +10,7 @@ type TeacherSubjectWithRelations = {
   id: string
   teacher: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
   }
   subject: {

@@ -85,7 +85,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                 <tr key={student.id} className="hover:bg-gray-50/80 transition-colors">
                   <td className="px-4 py-4 sm:px-6">
                     <div className="text-sm font-semibold text-gray-900">
-                      {student.lastName} {student.firstName}
+                      {student.firstName ? `${student.firstName} ${student.lastName}` : student.lastName}
                     </div>
                     {/* Email visible only on mobile */}
                     <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
