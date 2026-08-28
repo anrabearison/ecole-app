@@ -2,6 +2,7 @@ import { listSchools } from "@/lib/actions/school"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
+import { SearchInput } from "@/components/SearchInput"
 import { Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function PlatformPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
@@ -30,11 +31,9 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
           <p className="text-gray-600">Gestion des écoles (plateforme)</p>
         </div>
         <div className="flex gap-4">
-          <form method="get" className="flex items-center" action="/platform">
-            <input name="search" placeholder="Rechercher une école" className="border rounded px-3 py-2 mr-2" />
-            <input type="hidden" name="page" value="1" />
-            <Button type="submit">Rechercher</Button>
-          </form>
+          <SearchInput
+            placeholder="Rechercher une école"
+          />
           <Link href="/platform/schools/new">
             <Button>Nouvelle école</Button>
           </Link>

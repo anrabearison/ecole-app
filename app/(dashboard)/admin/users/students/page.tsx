@@ -4,7 +4,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Eye, Plus, Search, CheckCircle2, XCircle } from "lucide-react"
+import { SearchInput } from "@/components/SearchInput"
+import { Eye, Plus, CheckCircle2, XCircle } from "lucide-react"
 
 export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
   const session = await auth()
@@ -52,24 +53,16 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Search Section */}
-          <form method="get" action="/admin/users/students" className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              name="search"
-              defaultValue={search || ""}
-              placeholder="Rechercher par nom ou email..."
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-            {active !== undefined && <input type="hidden" name="active" value={active ? "true" : "false"} />}
-            <input type="hidden" name="page" value="1" />
-          </form>
+          <SearchInput
+            placeholder="Rechercher par nom ou email..."
+          />
 
           {/* Status Filter Section */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-gray-700">Statut :</span>
             <div className="flex rounded-lg border border-gray-300 overflow-hidden">
               <Link
-                href={`/admin/users/students${search ? `?search=${encodeURIComponent(search)}` : ''}`}
+                href={`/admin/users/students`}
                 className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   active === undefined
                     ? 'bg-indigo-600 text-white'
@@ -79,7 +72,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                 Tous
               </Link>
               <Link
-                href={`/admin/users/students?active=true${search ? `&search=${encodeURIComponent(search)}` : ''}`}
+                href={`/admin/users/students?active=true`}
                 className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   active === true
                     ? 'bg-emerald-600 text-white'
@@ -90,7 +83,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                 Actif
               </Link>
               <Link
-                href={`/admin/users/students?active=false${search ? `&search=${encodeURIComponent(search)}` : ''}`}
+                href={`/admin/users/students?active=false`}
                 className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
                   active === false
                     ? 'bg-red-600 text-white'
