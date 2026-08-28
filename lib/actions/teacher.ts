@@ -279,6 +279,8 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
     return { success: false, error: validation.error.issues[0].message }
   }
 
+  const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+
   try {
     // Verify teacher belongs to the school
     const existingTeacher = await prisma.teacher.findUnique({
@@ -290,9 +292,9 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
     }
 
     // If email is being updated, check if it's already taken by another user
-    if (data.email) {
+    if (cleanEmail) {
       const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
+        where: { email: cleanEmail },
       })
 
       if (existingUser && existingUser.id !== existingTeacher.userId) {
@@ -302,11 +304,11 @@ export async function updateTeacher(id: string, data: TeacherUpdateInput): Promi
 
     // Update in transaction to handle user email update if needed
     const result = await prisma.$transaction(async (tx: any) => {
-      // Update user email if provided
-      if (data.email) {
+      // Update user email if provided (or set to null if empty)
+      if (data.email !== undefined) {
         await tx.user.update({
           where: { id: existingTeacher.userId },
-          data: { email: data.email },
+          data: { email: cleanEmail || null },
         })
       }
 

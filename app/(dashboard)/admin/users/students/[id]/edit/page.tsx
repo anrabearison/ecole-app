@@ -45,7 +45,7 @@ export default function EditStudentPage() {
         const student = studentResult.data
         setValue("firstName", student.firstName)
         setValue("lastName", student.lastName)
-        setValue("email", student.user.email ?? "")
+        setValue("email", student.user.email || "")
         setValue("classroomId", student.classroom?.id)
         setValue("dateOfBirth", student.dateOfBirth ? new Date(student.dateOfBirth).toISOString().split("T")[0] : "")
         setValue("guardianName", student.guardianName ?? "")
@@ -74,8 +74,10 @@ export default function EditStudentPage() {
     setError(null)
     setIsLoading(true)
 
+    const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: StudentInput = {
       ...data,
+      email: cleanEmail,
       classroomId: data.classroomId || undefined,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       guardianName: data.guardianName || undefined,

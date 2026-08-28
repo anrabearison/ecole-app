@@ -299,10 +299,10 @@ describe("Classroom Server Actions", () => {
         schoolId: mockSchoolId
       } as any)
 
-      const mockUpdated = { id: "c1", section: "B", homeroomTeacherId: "teacher-1" }
+      const mockUpdated = { id: "c1", section: "B", homeroomTeacherIds: ["teacher-1"] }
       vi.mocked(prisma.classroom.update).mockResolvedValue(mockUpdated as any)
 
-      const result = await updateClassroom("c1", { homeroomTeacherId: "teacher-1" })
+      const result = await updateClassroom("c1", { homeroomTeacherIds: ["teacher-1"] })
 
       expect(result).toEqual({ success: true, data: mockUpdated })
     })
@@ -320,7 +320,7 @@ describe("Classroom Server Actions", () => {
         schoolId: "different-school-id"
       } as any)
 
-      const result = await updateClassroom("c1", { homeroomTeacherId: "teacher-external" })
+      const result = await updateClassroom("c1", { homeroomTeacherIds: ["teacher-external"] })
 
       expect(result).toEqual({ success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" })
       expect(prisma.classroom.update).not.toHaveBeenCalled()
