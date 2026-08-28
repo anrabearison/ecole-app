@@ -71,6 +71,9 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                   Email
                 </th>
                 <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Type de contrat
+                </th>
+                <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Assignations
                 </th>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
@@ -91,6 +94,9 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                     <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
                       {teacher.user.email || "—"}
                     </div>
+                    <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
+                      {teacher.contractType === "FONCTIONNAIRE" ? "Fonctionnaire" : teacher.contractType === "ENF" ? "ENF" : "—"}
+                    </div>
                     <div className="text-xs text-gray-500 mt-0.5 md:hidden">
                       {teacher._count.subjects} assignation(s)
                     </div>
@@ -102,6 +108,11 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                   </td>
                   <td className="hidden sm:table-cell px-4 py-4 sm:px-6">
                     <div className="text-sm text-gray-600">{teacher.user.email || "—"}</div>
+                  </td>
+                  <td className="hidden md:table-cell px-4 py-4 sm:px-6">
+                    <div className="text-sm text-gray-600">
+                      {teacher.contractType === "FONCTIONNAIRE" ? "Fonctionnaire" : teacher.contractType === "ENF" ? "ENF" : "—"}
+                    </div>
                   </td>
                   <td className="hidden md:table-cell px-4 py-4 sm:px-6">
                     <div className="text-sm text-gray-600">
@@ -129,7 +140,7 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
               ))}
               {teachers.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     Aucun enseignant trouvé.
                   </td>
                 </tr>
