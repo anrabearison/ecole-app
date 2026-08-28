@@ -484,62 +484,83 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
           return { success: false, error: "Un ou plusieurs enseignants sélectionnés n'appartiennent pas à cette école" }
         }
       }
-
-      // Delete existing homeroom teachers
-      await prisma.classroomHomeroomTeacher.deleteMany({
-        where: { classroomId: id },
-      })
-
-      // Create new homeroom teachers if provided
-      if (data.homeroomTeacherIds.length > 0) {
-        await prisma.classroomHomeroomTeacher.createMany({
-          data: data.homeroomTeacherIds.map((teacherId, index) => ({
-            classroomId: id,
-            teacherId,
-            schoolId: session.user.schoolId!,
-            isPrimary: index === 0,
-          })),
-        })
-      }
     }
 
-    const classroom = await prisma.classroom.update({
-      where: { id },
-      data: validation.data,
-      include: {
-        schoolGrade: {
-          select: {
-            id: true,
-            name: true,
-            cycle: true,
-          },
-        },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        homeroomTeachers: {
-          include: {
-            teacher: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-              },
+    // Use transaction to ensure all operations succeed or fail together
+    const classroom = await prisma.$transaction(async (tx) => {
+      // If homeroomTeacherIds are being updated, handle them first
+      if (data.homeroomTeacherIds !== undefined) {
+        // Delete existing homeroom teachers
+        await tx.classroomHomeroomTeacher.deleteMany({
+          where: { classroomId: id },
+        })
+
+        // Create new homeroom teachers if provided
+        if (data.homeroomTeacherIds.length > 0) {
+          await tx.classroomHomeroomTeacher.createMany({
+            data: data.homeroomTeacherIds.map((teacherId, index) => ({
+              classroomId: id,
+              teacherId,
+              schoolId: session.user.schoolId!,
+              isPrimary: index === 0,
+            })),
+          })
+        }
+      }
+
+      // Update classroom basic fields
+      // Only include fields that are actually updateable (exclude homeroomTeacherIds)
+      const { homeroomTeacherIds, ...updateData } = validation.data
+
+      await tx.classroom.update({
+        where: { id },
+        data: updateData,
+      })
+
+      // Re-fetch with includes to get updated homeroomTeachers
+      const updatedClassroom = await tx.classroom.findUnique({
+        where: { id },
+        include: {
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
             },
           },
-          orderBy: {
-            isPrimary: 'desc',
+          track: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          homeroomTeachers: {
+            include: {
+              teacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: {
+              isPrimary: 'desc',
+            },
+          },
+          _count: {
+            select: {
+              students: true,
+            },
           },
         },
-        _count: {
-          select: {
-            students: true,
-          },
-        },
-      },
+      })
+
+      if (!updatedClassroom) {
+        throw new Error("Classroom not found after update")
+      }
+
+      return updatedClassroom
     })
 
     return { success: true, data: classroom }
