@@ -360,11 +360,13 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     return { success: false, error: validation.error.issues[0].message }
   }
 
+  const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+
   try {
     // Check if email already exists (only if email is provided)
-    if (data.email) {
+    if (cleanEmail) {
       const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
+        where: { email: cleanEmail },
       })
 
       if (existingUser) {
@@ -404,7 +406,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     const result = await prisma.$transaction(async (tx: any) => {
       const user = await tx.user.create({
         data: {
-          email: data.email || null,
+          email: cleanEmail || null,
           passwordHash,
           role: "STUDENT",
           schoolId: session.user.schoolId,
@@ -494,6 +496,8 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
     return { success: false, error: validation.error.issues[0].message }
   }
 
+  const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+
   try {
     // Verify student belongs to the school
     const existingStudent = await prisma.student.findUnique({
@@ -508,9 +512,9 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
     }
 
     // If email is being updated, check if it's already taken by another user
-    if (data.email) {
+    if (cleanEmail) {
       const existingUser = await prisma.user.findUnique({
-        where: { email: data.email },
+        where: { email: cleanEmail },
       })
 
       if (existingUser && existingUser.id !== existingStudent.userId) {
@@ -547,11 +551,11 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
 
     // Update in transaction to handle enrollment if classroom changes
     const result = await prisma.$transaction(async (tx: any) => {
-      // Update user email if provided
-      if (data.email) {
+      // Update user email if provided (or set to null if empty)
+      if (data.email !== undefined) {
         await tx.user.update({
           where: { id: existingStudent.userId },
-          data: { email: data.email },
+          data: { email: cleanEmail || null },
         })
       }
 

@@ -26,7 +26,12 @@ function cleanConnectionString(url: string): string {
 function createPrismaClient() {
   const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL!
   const connectionString = cleanConnectionString(rawUrl)
-  const pool = new Pool({ connectionString })
+  const pool = new Pool({
+    connectionString,
+    max: 50, // Increase max connections
+    idleTimeoutMillis: 30000, // Close idle connections after 30s
+    connectionTimeoutMillis: 10000, // Connection timeout
+  })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ adapter })
 }

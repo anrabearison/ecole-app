@@ -44,7 +44,7 @@ export default function EditTeacherPage() {
         const teacher = result.data
         setValue("firstName", teacher.firstName)
         setValue("lastName", teacher.lastName)
-        setValue("email", teacher.user.email ?? "")
+        setValue("email", teacher.user.email || "")
         setValue("phone", teacher.phone ?? "")
         setValue("contractType", (teacher.contractType as "FONCTIONNAIRE" | "ENF" | undefined) ?? undefined)
         setValue("registrationNumber", teacher.registrationNumber ?? "")
@@ -66,8 +66,10 @@ export default function EditTeacherPage() {
     setError(null)
     setIsLoading(true)
 
+    const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: TeacherUpdateInput = {
       ...data,
+      email: cleanEmail,
       phone: data.phone || undefined,
       contractType: data.contractType || undefined,
       registrationNumber: data.registrationNumber || undefined,

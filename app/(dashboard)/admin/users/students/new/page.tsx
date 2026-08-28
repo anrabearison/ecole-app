@@ -68,8 +68,10 @@ export default function NewStudentPage() {
 
   async function onSubmit(data: StudentFormInput) {
     setError(null)
+    const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: StudentInput = {
       ...data,
+      email: cleanEmail,
       classroomId: data.classroomId || undefined,
       dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : undefined,
       guardianName: data.guardianName || undefined,

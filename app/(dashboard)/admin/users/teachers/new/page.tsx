@@ -52,8 +52,10 @@ export default function NewTeacherPage() {
 
   async function onSubmit(data: TeacherFormInput) {
     setError(null)
+    const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: TeacherInput = {
       ...data,
+      email: cleanEmail,
       phone: data.phone || undefined,
       contractType: data.contractType || undefined,
       registrationNumber: data.registrationNumber || undefined,
@@ -63,7 +65,7 @@ export default function NewTeacherPage() {
     if (result.success) {
       setTemporaryPassword(result.data.temporaryPassword)
       setTeacherInfo({
-        email: data.email ?? undefined,
+        email: data.email || undefined,
         name: `${data.firstName} ${data.lastName}`,
         cin: data.nationalIdNumber,
       })

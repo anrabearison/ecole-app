@@ -5,10 +5,16 @@ const optionalStringSchema = z.string().optional()
 const studentStatusEnum = z.enum(["PASSING", "REPEATING", "TRIPLING"])
 const sexEnum = z.enum(["MALE", "FEMALE"])
 
+const optionalEmail = z
+  .string()
+  .email("Invalid email address")
+  .optional()
+  .or(z.literal(""))
+
 export const studentSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").optional(),
+  email: optionalEmail,
   classroomId: optionalStringSchema,
   dateOfBirth: z.coerce.date().optional(),
   guardianName: optionalStringSchema,
@@ -22,7 +28,7 @@ export const studentSchema = z.object({
 export const studentFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address").optional(),
+  email: optionalEmail,
   classroomId: z.string().optional(),
   dateOfBirth: z.string().optional(),
   guardianName: z.string().optional(),
@@ -39,7 +45,7 @@ export type StudentFormInput = z.infer<typeof studentFormSchema>
 export const studentUpdateSchema = z.object({
   firstName: z.string().min(1, "First name is required").optional(),
   lastName: z.string().min(1, "Last name is required").optional(),
-  email: z.string().email("Invalid email address").optional(),
+  email: optionalEmail,
   classroomId: z.string().optional(),
   dateOfBirth: z.coerce.date().optional(),
   guardianName: z.string().optional(),
