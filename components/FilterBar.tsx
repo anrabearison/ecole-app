@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Search, CheckCircle2, XCircle } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface FilterBarProps {
   showStatusFilter?: boolean
@@ -14,10 +14,11 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  
+
   const [searchValue, setSearchValue] = useState(searchParams.get("search") || "")
   const [debouncedSearch, setDebouncedSearch] = useState(searchValue)
   const [statusValue, setStatusValue] = useState<string | null>(searchParams.get("active"))
+  const isInitialMount = useRef(true)
 
   // Initialize state from URL params on mount only
   useEffect(() => {
@@ -26,6 +27,7 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
     setSearchValue(initialSearch)
     setDebouncedSearch(initialSearch)
     setStatusValue(initialStatus)
+    isInitialMount.current = false
   }, []) // Only run on mount
 
   // Debounce search
@@ -38,28 +40,30 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
 
   // Update URL when debounced search or status changes
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
-    
+    // Skip if this is the initial render (state was just set from URL)
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
+    }
+
+    const params = new URLSearchParams()
+
     // Update search
     if (debouncedSearch) {
       params.set("search", debouncedSearch)
-    } else {
-      params.delete("search")
     }
-    
+
     // Update status
     if (statusValue !== null) {
       params.set("active", statusValue)
-    } else {
-      params.delete("active")
     }
-    
+
     // Reset page to 1 when filters change
     params.delete("page")
-    
+
     const query = params.toString()
     router.push(query ? `${pathname}?${query}` : pathname)
-  }, [debouncedSearch, statusValue, searchParams, router, pathname])
+  }, [debouncedSearch, statusValue, router, pathname])
 
   const handleStatusChange = (newStatus: string | null) => {
     setStatusValue(newStatus)

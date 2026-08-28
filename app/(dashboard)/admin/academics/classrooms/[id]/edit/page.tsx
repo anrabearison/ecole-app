@@ -29,6 +29,9 @@ export default function EditClassroomPage() {
     formState: { errors }
   } = useForm<ClassroomUpdateInput>({
     resolver: zodResolver(classroomUpdateSchema),
+    defaultValues: {
+      homeroomTeacherIds: [],
+    }
   })
 
   const schoolGradeId = useWatch({ control, name: "schoolGradeId" })
@@ -50,7 +53,7 @@ export default function EditClassroomPage() {
           setValue("section", classroom.section)
           setValue("schoolYear", classroom.schoolYear)
           setValue("passingThreshold", classroom.passingThreshold)
-          setValue("homeroomTeacherId", classroom.homeroomTeacherId || undefined)
+          setValue("homeroomTeacherIds", classroom.homeroomTeachers.map((ht) => ht.teacher.id))
         }
 
         if (gradesResult.success) {
@@ -110,7 +113,11 @@ export default function EditClassroomPage() {
     setError(null)
 
     try {
-      const result = await updateClassroom(id!, data)
+      const cleanedData = {
+        ...data,
+        homeroomTeacherIds: data.homeroomTeacherIds || [],
+      }
+      const result = await updateClassroom(id!, cleanedData)
 
       if (result.success) {
         router.push(`/admin/academics/classrooms/${id}`)
@@ -226,23 +233,31 @@ export default function EditClassroomPage() {
           </div>
 
           <div>
-            <label htmlFor="homeroomTeacherId" className="block text-sm font-medium text-gray-700 mb-2">
-              Professeur principal (optionnel)
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Professeurs principaux (optionnel)
             </label>
-            <select
-              {...register("homeroomTeacherId")}
-              id="homeroomTeacherId"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="">Aucun</option>
-              {teachers.map((teacher) => (
-                <option key={teacher.id} value={teacher.id}>
-                  {teacher.firstName} {teacher.lastName}
-                </option>
-              ))}
-            </select>
-            {errors.homeroomTeacherId && (
-              <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherId.message}</p>
+            <p className="text-xs text-gray-500 mb-2">Sélectionnez un ou plusieurs enseignants responsables</p>
+            <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+              {teachers.length === 0 ? (
+                <p className="text-sm text-gray-500">Aucun enseignant disponible</p>
+              ) : (
+                teachers.map((teacher) => (
+                  <label key={teacher.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
+                    <input
+                      type="checkbox"
+                      {...register("homeroomTeacherIds")}
+                      value={teacher.id}
+                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {teacher.firstName} {teacher.lastName}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
+            {errors.homeroomTeacherIds && (
+              <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherIds.message}</p>
             )}
           </div>
 

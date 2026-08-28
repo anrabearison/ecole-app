@@ -28,11 +28,12 @@ export default function NewClassroomPage() {
     handleSubmit,
     setValue,
     formState: { errors }
-  } = useForm({
+  } = useForm<ClassroomInput>({
     resolver: zodResolver(classroomSchema),
     defaultValues: {
       schoolYear: `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
       passingThreshold: 10,
+      homeroomTeacherIds: [],
     }
   })
 
@@ -101,7 +102,8 @@ export default function NewClassroomPage() {
     try {
       const cleanedData = {
         ...data,
-        trackId: (!data.trackId || data.trackId === "$undefined") ? undefined : data.trackId
+        trackId: (!data.trackId || data.trackId === "$undefined") ? undefined : data.trackId,
+        homeroomTeacherIds: data.homeroomTeacherIds || [],
       }
       const result = await createClassroom(cleanedData as ClassroomInput)
 
@@ -248,28 +250,36 @@ export default function NewClassroomPage() {
             <h2 className="text-lg font-semibold text-gray-900">Encadrement & Évaluation</h2>
           </div>
           <div className="p-6 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div>
-                <Label htmlFor="homeroomTeacherId" className="font-medium text-gray-700">
-                  Professeur principal <span className="text-gray-400 font-normal">(Optionnel)</span>
-                </Label>
-                <select
-                  {...register("homeroomTeacherId")}
-                  id="homeroomTeacherId"
-                  className="mt-1.5 block w-full rounded-md border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2.5 border bg-white"
-                >
-                  <option value="">Aucun professeur principal assigné</option>
-                  {teachers.map((teacher) => (
-                    <option key={teacher.id} value={teacher.id}>
-                      {teacher.firstName} {teacher.lastName}
-                    </option>
-                  ))}
-                </select>
-                {errors.homeroomTeacherId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherId.message}</p>
+            <div>
+              <Label className="font-medium text-gray-700">
+                Professeurs principaux <span className="text-gray-400 font-normal">(Optionnel)</span>
+              </Label>
+              <p className="text-xs text-gray-500 mt-1 mb-3">Sélectionnez un ou plusieurs enseignants responsables de cette classe</p>
+              <div className="mt-2 space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                {teachers.length === 0 ? (
+                  <p className="text-sm text-gray-500">Aucun enseignant disponible</p>
+                ) : (
+                  teachers.map((teacher) => (
+                    <label key={teacher.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
+                      <input
+                        type="checkbox"
+                        {...register("homeroomTeacherIds")}
+                        value={teacher.id}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        {teacher.firstName} {teacher.lastName}
+                      </span>
+                    </label>
+                  ))
                 )}
               </div>
+              {errors.homeroomTeacherIds && (
+                <p className="mt-1 text-sm text-red-600">{errors.homeroomTeacherIds.message}</p>
+              )}
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="passingThreshold" className="font-medium text-gray-700">
                   Seuil de passage (Moyenne minimale / 20)

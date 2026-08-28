@@ -3,12 +3,14 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
+import { FilterBar } from "@/components/FilterBar"
 import { Plus, Eye, Edit, Trash2 } from "lucide-react"
 
-export default async function PeriodsPage({ searchParams }: { searchParams?: { page?: string } }) {
+export default async function PeriodsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
+  const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
-  const result = await listPeriods({ page, pageSize: 20 })
+  const result = await listPeriods({ search, page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -40,6 +42,14 @@ export default async function PeriodsPage({ searchParams }: { searchParams?: { p
             <span>Nouvelle période</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+        <FilterBar
+          searchPlaceholder="Rechercher une période..."
+          standalone={true}
+        />
       </div>
 
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">

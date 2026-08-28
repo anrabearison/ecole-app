@@ -3,14 +3,16 @@ import { listSubjects, deleteSubject } from "@/lib/actions/subject"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { PaginationClient } from "@/components/PaginationClient"
+import { FilterBar } from "@/components/FilterBar"
 import { Plus, Eye, Edit, Trash2 } from "lucide-react"
 
 export const dynamic = "force-dynamic"
 
-export default async function SubjectsPage({ searchParams }: { searchParams?: { page?: string } }) {
+export default async function SubjectsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
+  const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
-  const result = await listSubjects({ page, pageSize: 20 })
+  const result = await listSubjects({ search, page, pageSize: 20 })
 
   if (!result.success) {
     return (
@@ -32,7 +34,7 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Matières</h1>
           <p className="text-gray-600 mt-1 text-sm sm:text-base">
-            {subjects.length} matière(s) configurée(s)
+            {pagination ? `${pagination.total} matière(s) configurée(s)` : "Liste des matières"}
           </p>
         </div>
         <Link href="/admin/academics/subjects/new" className="self-start sm:self-auto">
@@ -41,6 +43,14 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
             <span>Nouvelle matière</span>
           </Button>
         </Link>
+      </div>
+
+      {/* Search Bar */}
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+        <FilterBar
+          searchPlaceholder="Rechercher une matière..."
+          standalone={true}
+        />
       </div>
 
       {/* Table */}

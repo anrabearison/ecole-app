@@ -455,9 +455,13 @@ async function main() {
 
   // Set homeroom teacher on sixieme1 classroom
   if (mainTeacherId) {
-    await prisma.classroom.update({
-      where: { id: sixieme1.id },
-      data: { homeroomTeacherId: mainTeacherId }
+    await prisma.classroomHomeroomTeacher.create({
+      data: {
+        classroomId: sixieme1.id,
+        teacherId: mainTeacherId,
+        schoolId: school.id,
+        isPrimary: true
+      }
     })
   }
 
