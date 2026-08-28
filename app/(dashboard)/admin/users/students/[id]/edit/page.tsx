@@ -63,7 +63,7 @@ export default function EditStudentPage() {
   // Populate form when student data is loaded
   useEffect(() => {
     if (student) {
-      setValue("firstName", student.firstName)
+      setValue("firstName", student.firstName || "")
       setValue("lastName", student.lastName)
       setValue("email", student.user.email || "")
       setValue("classroomId", student.classroom?.id)
@@ -71,7 +71,7 @@ export default function EditStudentPage() {
       setValue("guardianName", student.guardianName ?? "")
       setValue("guardianPhone", student.guardianPhone ?? "")
       setValue("registrationNumber", student.registrationNumber)
-      setValue("sex", student.sex as "MALE" | "FEMALE")
+      if (student.sex) setValue("sex", student.sex as "MALE" | "FEMALE")
       setValue("status", student.status as "PASSING" | "REPEATING" | "TRIPLING")
       setValue("placeOfBirth", student.placeOfBirth ?? "")
     }
@@ -172,7 +172,7 @@ export default function EditStudentPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="firstName" className="font-medium text-gray-700">
-                  Prénom <span className="text-red-500">*</span>
+                  Prénom <span className="text-gray-400 font-normal">(Optionnel)</span>
                 </Label>
                 <Input id="firstName" {...register("firstName")} className="mt-1.5" />
                 {errors.firstName && <p className="text-sm text-red-600 mt-1">{errors.firstName.message}</p>}

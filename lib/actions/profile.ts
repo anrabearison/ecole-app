@@ -20,7 +20,7 @@ export type UserProfileData = {
   schoolName?: string
   teacher?: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
     phone: string | null
     contractType: string | null
@@ -29,13 +29,13 @@ export type UserProfileData = {
   } | null
   student?: {
     id: string
-    firstName: string
+    firstName: string | null
     lastName: string
     registrationNumber: string
     guardianName: string | null
     guardianPhone: string | null
     status: string
-    sex: string
+    sex: string | null
     classroomName?: string
   } | null
 }

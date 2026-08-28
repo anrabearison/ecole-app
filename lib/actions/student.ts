@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs"
 
 type StudentWithRelations = {
   id: string
-  firstName: string
+  firstName: string | null
   lastName: string
   dateOfBirth: Date | null
   guardianName: string | null
@@ -17,7 +17,7 @@ type StudentWithRelations = {
   registrationNumber: string
   status: string
   placeOfBirth: string | null
-  sex: string
+  sex: string | null
   user: {
     id: string
     email: string | null
@@ -37,7 +37,7 @@ type StudentWithRelations = {
       isPrimary: boolean
       teacher: {
         id: string
-        firstName: string
+        firstName: string | null
         lastName: string
       }
     }>
@@ -361,6 +361,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
   }
 
   const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+  const cleanFirstName = data.firstName && data.firstName.trim() !== "" ? data.firstName.trim() : null
 
   try {
     // Check if email already exists (only if email is provided)
@@ -416,8 +417,12 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
 
       const student = await tx.student.create({
         data: {
-          userId: user.id,
-          firstName: data.firstName,
+          user: {
+            connect: {
+              id: user.id,
+            },
+          },
+          firstName: cleanFirstName,
           lastName: data.lastName,
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,
@@ -426,7 +431,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           status: data.status,
           placeOfBirth: data.placeOfBirth,
           sex: data.sex,
-          schoolId: session.user.schoolId,
+          school: { connect: { id: session.user.schoolId! } },
           classroomId: data.classroomId,
         },
         include: {
@@ -471,7 +476,14 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
     return { success: true, data: { student: result, temporaryPassword: tempPassword } }
   } catch (error: any) {
     console.error("Error creating student:", error)
-    return { success: false, error: "Erreur lors de la création de l'élève" }
+    // Surface Prisma-specific error codes for better UX
+    if (error?.code === "P2002") {
+      const field = error?.meta?.target?.[0]
+      if (field === "registrationNumber") return { success: false, error: "Ce numéro matricule est déjà utilisé." }
+      if (field === "email") return { success: false, error: "Cette adresse email est déjà utilisée." }
+      return { success: false, error: "Une contrainte d'unicité a été violée." }
+    }
+    return { success: false, error: error?.message ?? "Erreur lors de la création de l'élève" }
   }
 }
 
@@ -497,6 +509,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
   }
 
   const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
+  const cleanFirstName = data.firstName !== undefined ? (data.firstName && data.firstName.trim() !== "" ? data.firstName.trim() : null) : undefined
 
   try {
     // Verify student belongs to the school
@@ -563,7 +576,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
       const student = await tx.student.update({
         where: { id },
         data: {
-          firstName: data.firstName,
+          firstName: cleanFirstName !== undefined ? cleanFirstName : existingStudent.firstName,
           lastName: data.lastName,
           dateOfBirth: data.dateOfBirth,
           guardianName: data.guardianName,

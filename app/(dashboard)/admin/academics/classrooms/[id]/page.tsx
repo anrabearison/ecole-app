@@ -137,7 +137,7 @@ export default async function ClassroomDetailPage({
                 {classroom.homeroomTeachers.map((ht) => (
                   <p key={ht.id} className="text-sm font-medium text-gray-900">
                     {ht.isPrimary && <span className="text-indigo-600 mr-1">★</span>}
-                    {ht.teacher.firstName} {ht.teacher.lastName}
+                    {ht.teacher.firstName ? `${ht.teacher.firstName} ${ht.teacher.lastName}` : ht.teacher.lastName}
                   </p>
                 ))}
               </div>

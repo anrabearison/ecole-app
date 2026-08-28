@@ -20,7 +20,7 @@ type ClassroomOption = {
 
 type TeacherOption = {
   id: string
-  firstName: string
+  firstName: string | null
   lastName: string
 }
 
@@ -107,7 +107,7 @@ export default function AdminSchedulePage() {
       }
       case "teacher": {
         const teacher = item as TeacherOption
-        return `${teacher.firstName} ${teacher.lastName}`
+        return teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName
       }
       case "room": {
         const room = item as RoomOption

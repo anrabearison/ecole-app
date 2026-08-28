@@ -66,7 +66,7 @@ export default function NewTeacherPage() {
       setTemporaryPassword(result.data.temporaryPassword)
       setTeacherInfo({
         email: data.email || undefined,
-        name: `${data.firstName} ${data.lastName}`,
+        name: data.firstName ? `${data.firstName} ${data.lastName}` : data.lastName,
         cin: data.nationalIdNumber,
       })
       setShowPasswordModal(true)
@@ -118,7 +118,7 @@ export default function NewTeacherPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <Label htmlFor="firstName" className="font-medium text-gray-700">
-                  Prénom <span className="text-red-500">*</span>
+                  Prénom <span className="text-gray-400 font-normal">(Optionnel)</span>
                 </Label>
                 <Input
                   id="firstName"

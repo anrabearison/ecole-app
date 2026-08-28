@@ -91,7 +91,7 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                 <tr key={teacher.id} className="hover:bg-gray-50/80 transition-colors">
                   <td className="px-4 py-4 sm:px-6">
                     <div className="text-sm font-semibold text-gray-900">
-                      {teacher.lastName} {teacher.firstName}
+                      {teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName}
                     </div>
                     <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
                       {teacher.user.email || "—"}

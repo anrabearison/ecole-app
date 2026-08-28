@@ -84,7 +84,7 @@ export default async function StudentDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {student.firstName} {student.lastName}
+              {student.firstName ? `${student.firstName} ${student.lastName}` : student.lastName}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Matricule : {student.registrationNumber}
@@ -130,11 +130,11 @@ export default async function StudentDetailPage({
         <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
             {[
-              { label: "Prénom", value: student.firstName },
+              { label: "Prénom", value: student.firstName || "—" },
               { label: "Nom", value: student.lastName },
               { label: "Email", value: student.user.email || "—" },
               { label: "Numéro matricule", value: student.registrationNumber },
-              { label: "Sexe", value: student.sex === "MALE" ? "Masculin" : "Féminin" },
+              { label: "Sexe", value: student.sex === "MALE" ? "Masculin" : student.sex === "FEMALE" ? "Féminin" : "—" },
               {
                 label: "Statut scolaire",
                 value: student.status === "PASSING" ? "Passant" : student.status === "REPEATING" ? "Redoublant" : "Triplant",
@@ -206,7 +206,7 @@ export default async function StudentDetailPage({
                 {student.classroom.homeroomTeachers.map((ht) => (
                   <p key={ht.id} className="text-sm font-medium text-gray-900">
                     {ht.isPrimary && <span className="text-indigo-600 mr-1">★</span>}
-                    {ht.teacher.firstName} {ht.teacher.lastName}
+                    {ht.teacher.firstName ? `${ht.teacher.firstName} ${ht.teacher.lastName}` : ht.teacher.lastName}
                   </p>
                 ))}
               </div>

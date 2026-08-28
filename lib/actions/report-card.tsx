@@ -103,7 +103,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       schoolAddress: student.school.address || undefined,
       schoolYear: period.schoolYear,
       periodName: period.name,
-      studentFirstName: student.firstName,
+      studentFirstName: student.firstName || "",
       studentLastName: student.lastName,
       className,
       subjects: subjectAveragesResult.data.map((sa) => ({
@@ -120,7 +120,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     // Generate PDF
     const pdfStream = await generateReportCardPdfBuffer(reportCardData)
 
-    const fileName = `Bulletin_${student.lastName}_${student.firstName}_${period.name.replace(/\s+/g, "_")}.pdf`
+    const fileName = `Bulletin_${student.lastName}_${student.firstName || ""}_${period.name.replace(/\s+/g, "_")}.pdf`
 
     return { success: true, data: { pdfBuffer: pdfStream as Buffer, fileName } }
   } catch (error: any) {

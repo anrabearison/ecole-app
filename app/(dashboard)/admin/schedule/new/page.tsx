@@ -16,7 +16,7 @@ export default function NewScheduleSlotPage() {
   const [success, setSuccess] = useState(false)
   const [classrooms, setClassrooms] = useState<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>([])
   const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
-  const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string; lastName: string }; subject: { id: string; name: string } }>>([])
+  const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>>([])
   const [noAssignmentsMessage, setNoAssignmentsMessage] = useState<string | null>(null)
 
   const {
@@ -205,7 +205,7 @@ export default function NewScheduleSlotPage() {
             <option value="">Sélectionner un enseignant</option>
             {availableTeachers.map((teacher) => (
               <option key={teacher.id} value={teacher.id}>
-                {teacher.firstName} {teacher.lastName}
+                {teacher.firstName ? `${teacher.firstName} ${teacher.lastName}` : teacher.lastName}
               </option>
             ))}
           </select>
