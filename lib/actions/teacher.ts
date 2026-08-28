@@ -82,7 +82,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 }
 
-export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
+export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -101,6 +101,7 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
     const search = opts?.search?.trim()
     const page = opts?.page && opts.page > 0 ? opts.page : 1
     const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+    const active = opts?.active
 
     const where: any = { schoolId: session.user.schoolId }
 
@@ -111,6 +112,14 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
         { nationalIdNumber: { contains: search, mode: "insensitive" } },
         { user: { email: { contains: search, mode: "insensitive" } } },
       ]
+    }
+
+    if (active !== undefined) {
+      if (where.user) {
+        where.user.active = active
+      } else {
+        where.user = { active }
+      }
     }
 
     const [teachers, total] = await Promise.all([

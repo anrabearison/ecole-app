@@ -6,17 +6,18 @@ import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
 import { Plus, Search, Eye } from "lucide-react"
 
-export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
+export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
+  const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listTeachers({ search, page, pageSize: 20 })
+  const result = await listTeachers({ search, page, pageSize: 20, active })
 
   if (!result.success) {
     return (
@@ -47,10 +48,10 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
         </Link>
       </div>
 
-      {/* Search Bar */}
+      {/* Search Bar & Filters */}
       <form method="get" action="/admin/users/teachers">
-        <div className="flex gap-2">
-          <div className="relative flex-1 max-w-sm">
+        <div className="flex flex-wrap gap-2">
+          <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               name="search"
@@ -59,8 +60,17 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
               className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             />
           </div>
+          <select
+            name="active"
+            defaultValue={active === undefined ? "" : active ? "true" : "false"}
+            className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          >
+            <option value="">Tous les statuts</option>
+            <option value="true">Actif</option>
+            <option value="false">Inactif</option>
+          </select>
           <input type="hidden" name="page" value="1" />
-          <Button type="submit" variant="outline">Rechercher</Button>
+          <Button type="submit" variant="outline">Filtrer</Button>
         </div>
       </form>
 
