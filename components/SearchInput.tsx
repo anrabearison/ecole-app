@@ -15,6 +15,13 @@ export function SearchInput({ placeholder = "Rechercher..." }: SearchInputProps)
   const [inputValue, setInputValue] = useState(searchParams.get("search") || "")
   const [debouncedValue, setDebouncedValue] = useState(inputValue)
 
+  // Sync with URL params only on mount
+  useEffect(() => {
+    const initialValue = searchParams.get("search") || ""
+    setInputValue(initialValue)
+    setDebouncedValue(initialValue)
+  }, []) // Empty dependency array = only run on mount
+
   // Debounce effect
   useEffect(() => {
     const timer = setTimeout(() => {

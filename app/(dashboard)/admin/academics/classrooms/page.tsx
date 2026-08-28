@@ -2,7 +2,7 @@ import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { SearchInput } from "@/components/SearchInput"
+import { FilterBar } from "@/components/FilterBar"
 import { Plus, Users, Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
@@ -56,9 +56,10 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
       </div>
 
       {/* Search Bar */}
-      <div className="flex gap-2">
-        <SearchInput
-          placeholder="Rechercher une classe..."
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+        <FilterBar
+          searchPlaceholder="Rechercher une classe..."
+          standalone={true}
         />
       </div>
 

@@ -4,8 +4,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { SearchInput } from "@/components/SearchInput"
-import { Plus, Eye, CheckCircle2, XCircle } from "lucide-react"
+import { FilterBar } from "@/components/FilterBar"
+import { Plus, Eye } from "lucide-react"
 
 export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
   const session = await auth()
@@ -50,59 +50,10 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
       </div>
 
       {/* Search Bar & Filters */}
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Search Section */}
-          <SearchInput
-            placeholder="Rechercher par nom, CIN ou email..."
-          />
-
-          {/* Status Filter Section */}
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-gray-700">Statut :</span>
-            <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-              <Link
-                href={`/admin/users/teachers`}
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  active === undefined
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                Tous
-              </Link>
-              <Link
-                href={`/admin/users/teachers?active=true`}
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  active === true
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Actif
-              </Link>
-              <Link
-                href={`/admin/users/teachers?active=false`}
-                className={`px-3 py-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  active === false
-                    ? 'bg-red-600 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                Inactif
-              </Link>
-            </div>
-
-            {(search || active !== undefined) && (
-              <Link href="/admin/users/teachers" className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
-                ✕ Réinitialiser
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
+      <FilterBar
+        showStatusFilter={true}
+        searchPlaceholder="Rechercher par nom, CIN ou email..."
+      />
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
