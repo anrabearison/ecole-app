@@ -197,12 +197,19 @@ export default async function StudentDetailPage({
                 : "Non assigné"}
             </p>
           </div>
-          {student.classroom?.homeroomTeacher && (
+          {student.classroom?.homeroomTeachers && student.classroom.homeroomTeachers.length > 0 && (
             <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Professeur principal</p>
-              <p className="text-base font-medium text-gray-900 mt-0.5">
-                {student.classroom.homeroomTeacher.firstName} {student.classroom.homeroomTeacher.lastName}
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Professeurs principaux ({student.classroom.homeroomTeachers.length})
               </p>
+              <div className="mt-1 space-y-1">
+                {student.classroom.homeroomTeachers.map((ht) => (
+                  <p key={ht.id} className="text-sm font-medium text-gray-900">
+                    {ht.isPrimary && <span className="text-indigo-600 mr-1">★</span>}
+                    {ht.teacher.firstName} {ht.teacher.lastName}
+                  </p>
+                ))}
+              </div>
             </div>
           )}
           <div>

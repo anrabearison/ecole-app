@@ -88,7 +88,6 @@ type ClassroomWithRelations = {
   passingThreshold: number
   schoolGradeId: string
   trackId: string | null
-  homeroomTeacherId: string | null
   schoolGrade: {
     id: string
     name: string
@@ -98,11 +97,15 @@ type ClassroomWithRelations = {
     id: string
     name: string
   } | null
-  homeroomTeacher: {
+  homeroomTeachers: Array<{
     id: string
-    firstName: string
-    lastName: string
-  } | null
+    isPrimary: boolean
+    teacher: {
+      id: string
+      firstName: string
+      lastName: string
+    }
+  }>
   _count: {
     students: number
   }
@@ -136,11 +139,18 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
             name: true,
           },
         },
-        homeroomTeacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+        homeroomTeachers: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+          orderBy: {
+            isPrimary: 'desc', // Primary teachers first
           },
         },
         _count: {
@@ -212,11 +222,18 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
               name: true,
             },
           },
-          homeroomTeacher: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
+          homeroomTeachers: {
+            include: {
+              teacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: {
+              isPrimary: 'desc',
             },
           },
           _count: {
@@ -298,14 +315,17 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
       }
     }
 
-    // If homeroomTeacherId is provided, verify it belongs to the same school
-    if (data.homeroomTeacherId) {
-      const teacher = await prisma.teacher.findUnique({
-        where: { id: data.homeroomTeacherId },
+    // If homeroomTeacherIds are provided, verify they belong to the same school
+    if (data.homeroomTeacherIds && data.homeroomTeacherIds.length > 0) {
+      const teachers = await prisma.teacher.findMany({
+        where: {
+          id: { in: data.homeroomTeacherIds },
+          schoolId: session.user.schoolId,
+        },
       })
 
-      if (!teacher || teacher.schoolId !== session.user.schoolId) {
-        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+      if (teachers.length !== data.homeroomTeacherIds.length) {
+        return { success: false, error: "Un ou plusieurs enseignants sélectionnés n'appartiennent pas à cette école" }
       }
     }
 
@@ -330,8 +350,16 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
         section: data.section,
         schoolYear: data.schoolYear,
         passingThreshold: data.passingThreshold,
-        homeroomTeacherId: data.homeroomTeacherId,
-        schoolId: session.user.schoolId,
+        schoolId: session.user.schoolId!,
+        homeroomTeachers: data.homeroomTeacherIds && data.homeroomTeacherIds.length > 0
+          ? {
+              create: data.homeroomTeacherIds.map((teacherId, index) => ({
+                teacher: { connect: { id: teacherId } },
+                school: { connect: { id: session.user.schoolId! } },
+                isPrimary: index === 0, // First teacher is primary
+              })),
+            }
+          : undefined,
       },
       include: {
         schoolGrade: {
@@ -347,11 +375,18 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
             name: true,
           },
         },
-        homeroomTeacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
+        homeroomTeachers: {
+          include: {
+            teacher: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+          orderBy: {
+            isPrimary: 'desc',
           },
         },
         _count: {
@@ -435,50 +470,97 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
       }
     }
 
-    // If homeroomTeacherId is being updated, verify it belongs to the same school
-    if (data.homeroomTeacherId) {
-      const teacher = await prisma.teacher.findUnique({
-        where: { id: data.homeroomTeacherId },
-      })
+    // If homeroomTeacherIds are being updated, verify they belong to the same school
+    if (data.homeroomTeacherIds !== undefined) {
+      if (data.homeroomTeacherIds.length > 0) {
+        const teachers = await prisma.teacher.findMany({
+          where: {
+            id: { in: data.homeroomTeacherIds },
+            schoolId: session.user.schoolId,
+          },
+        })
 
-      if (!teacher || teacher.schoolId !== session.user.schoolId) {
-        return { success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" }
+        if (teachers.length !== data.homeroomTeacherIds.length) {
+          return { success: false, error: "Un ou plusieurs enseignants sélectionnés n'appartiennent pas à cette école" }
+        }
       }
     }
 
-    const classroom = await prisma.classroom.update({
-      where: { id },
-      data: {
-        ...validation.data,
-        homeroomTeacherId: data.homeroomTeacherId,
-      },
-      include: {
-        schoolGrade: {
-          select: {
-            id: true,
-            name: true,
-            cycle: true,
+    // Use transaction to ensure all operations succeed or fail together
+    const classroom = await prisma.$transaction(async (tx) => {
+      // If homeroomTeacherIds are being updated, handle them first
+      if (data.homeroomTeacherIds !== undefined) {
+        // Delete existing homeroom teachers
+        await tx.classroomHomeroomTeacher.deleteMany({
+          where: { classroomId: id },
+        })
+
+        // Create new homeroom teachers if provided
+        if (data.homeroomTeacherIds.length > 0) {
+          await tx.classroomHomeroomTeacher.createMany({
+            data: data.homeroomTeacherIds.map((teacherId, index) => ({
+              classroomId: id,
+              teacherId,
+              schoolId: session.user.schoolId!,
+              isPrimary: index === 0,
+            })),
+          })
+        }
+      }
+
+      // Update classroom basic fields
+      // Only include fields that are actually updateable (exclude homeroomTeacherIds)
+      const { homeroomTeacherIds, ...updateData } = validation.data
+
+      await tx.classroom.update({
+        where: { id },
+        data: updateData,
+      })
+
+      // Re-fetch with includes to get updated homeroomTeachers
+      const updatedClassroom = await tx.classroom.findUnique({
+        where: { id },
+        include: {
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
+            },
+          },
+          track: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          homeroomTeachers: {
+            include: {
+              teacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+            orderBy: {
+              isPrimary: 'desc',
+            },
+          },
+          _count: {
+            select: {
+              students: true,
+            },
           },
         },
-        track: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        homeroomTeacher: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        _count: {
-          select: {
-            students: true,
-          },
-        },
-      },
+      })
+
+      if (!updatedClassroom) {
+        throw new Error("Classroom not found after update")
+      }
+
+      return updatedClassroom
     })
 
     return { success: true, data: classroom }

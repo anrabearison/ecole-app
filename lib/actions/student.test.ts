@@ -27,10 +27,10 @@ describe("Student Server Actions", () => {
   describe("listStudents", () => {
     it("should return students filtered by schoolId with pagination metadata", async () => {
       mockSession()
-      
+
       const mockData = [
-        { 
-          id: "s1", 
+        {
+          id: "s1",
           firstName: "Jean",
           lastName: "Rakoto",
           user: { id: "u1", email: "jean@test.com", active: true },
@@ -39,7 +39,7 @@ describe("Student Server Actions", () => {
           createdAt: new Date()
         }
       ]
-      
+
       vi.mocked(prisma.student.findMany).mockResolvedValue(mockData as any)
       vi.mocked(prisma.student.count).mockResolvedValue(1)
 
@@ -50,8 +50,8 @@ describe("Student Server Actions", () => {
           where: { schoolId: mockSchoolId }
         })
       )
-      expect(result).toEqual({ 
-        success: true, 
+      expect(result).toEqual({
+        success: true,
         data: mockData,
         pagination: {
           total: 1,
@@ -60,6 +60,21 @@ describe("Student Server Actions", () => {
           totalPages: 1
         }
       })
+    })
+
+    it("should filter students by active status", async () => {
+      mockSession()
+
+      vi.mocked(prisma.student.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.student.count).mockResolvedValue(0)
+
+      await listStudents({ active: true })
+
+      expect(prisma.student.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { schoolId: mockSchoolId, user: { active: true } }
+        })
+      )
     })
   })
 

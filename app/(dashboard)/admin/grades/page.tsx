@@ -5,7 +5,9 @@ import { listSubjects } from "@/lib/actions/subject"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { GradeFilters } from "@/components/grade-filters"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Award, CheckCircle2, AlertCircle } from "lucide-react"
+import { Award, CheckCircle2, AlertCircle, Eye, Edit, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 export default async function AdminGradesPage({
   searchParams,
@@ -109,6 +111,9 @@ export default async function AdminGradesPage({
                 <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Date
                 </th>
+                <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -163,12 +168,22 @@ export default async function AdminGradesPage({
                     <td className="hidden sm:table-cell px-4 py-4 sm:px-6 text-sm text-gray-500">
                       {new Date(grade.date).toLocaleDateString('fr-FR')}
                     </td>
+                    <td className="px-4 py-4 sm:px-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/admin/grades/${grade.id}`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">Voir</span>
+                          </Button>
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
               {grades.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     Aucune note trouvée avec les filtres sélectionnés.
                   </td>
                 </tr>

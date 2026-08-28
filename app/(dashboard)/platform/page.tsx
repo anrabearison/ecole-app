@@ -2,6 +2,8 @@ import { listSchools } from "@/lib/actions/school"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
+import { FilterBar } from "@/components/FilterBar"
+import { Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function PlatformPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
@@ -28,12 +30,15 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
           <h1 className="text-2xl font-bold">Écoles</h1>
           <p className="text-gray-600">Gestion des écoles (plateforme)</p>
         </div>
-        <div className="flex gap-4">
-          <form method="get" className="flex items-center" action="/platform">
-            <input name="search" placeholder="Rechercher une école" className="border rounded px-3 py-2 mr-2" />
-            <input type="hidden" name="page" value="1" />
-            <Button type="submit">Rechercher</Button>
-          </form>
+        <div className="flex flex-col lg:flex-row gap-4 items-start">
+          <div className="flex-1">
+            <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+              <FilterBar
+                searchPlaceholder="Rechercher une école"
+                standalone={true}
+              />
+            </div>
+          </div>
           <Link href="/platform/schools/new">
             <Button>Nouvelle école</Button>
           </Link>
@@ -62,6 +67,9 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Créée le
               </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -87,11 +95,21 @@ export default async function PlatformPage({ searchParams }: { searchParams?: { 
                     {new Date(school.createdAt).toLocaleDateString("fr-FR")}
                   </div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Link href={`/platform/schools/${school.id}`}>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        <span className="hidden sm:inline">Voir</span>
+                      </Button>
+                    </Link>
+                  </div>
+                </td>
               </tr>
             ))}
             {schools.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                   Aucune école trouvée
                 </td>
               </tr>

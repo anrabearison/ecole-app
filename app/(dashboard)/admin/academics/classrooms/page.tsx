@@ -2,7 +2,8 @@ import { listClassrooms } from "@/lib/actions/classroom"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus, Search, Users } from "lucide-react"
+import { FilterBar } from "@/components/FilterBar"
+import { Plus, Users, Eye, Edit, Trash2 } from "lucide-react"
 
 export default async function ClassroomsPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
   const params = await searchParams
@@ -55,21 +56,12 @@ export default async function ClassroomsPage({ searchParams }: { searchParams?: 
       </div>
 
       {/* Search Bar */}
-      <form method="get" action="/admin/academics/classrooms">
-        <div className="flex gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              name="search"
-              defaultValue={search || ""}
-              placeholder="Rechercher une classe..."
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-          <input type="hidden" name="page" value="1" />
-          <Button type="submit" variant="outline">Rechercher</Button>
-        </div>
-      </form>
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
+        <FilterBar
+          searchPlaceholder="Rechercher une classe..."
+          standalone={true}
+        />
+      </div>
 
       {/* Tree View */}
       <div className="space-y-6">

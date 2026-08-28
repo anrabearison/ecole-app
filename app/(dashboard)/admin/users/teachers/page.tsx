@@ -4,19 +4,21 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus, Search } from "lucide-react"
+import { FilterBar } from "@/components/FilterBar"
+import { Plus, Eye } from "lucide-react"
 
-export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string } }) {
+export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
+  const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listTeachers({ search, page, pageSize: 20 })
+  const result = await listTeachers({ search, page, pageSize: 20, active })
 
   if (!result.success) {
     return (
@@ -47,22 +49,11 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
         </Link>
       </div>
 
-      {/* Search Bar */}
-      <form method="get" action="/admin/users/teachers">
-        <div className="flex gap-2">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              name="search"
-              defaultValue={search || ""}
-              placeholder="Rechercher un enseignant..."
-              className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
-          </div>
-          <input type="hidden" name="page" value="1" />
-          <Button type="submit" variant="outline">Rechercher</Button>
-        </div>
-      </form>
+      {/* Search Bar & Filters */}
+      <FilterBar
+        showStatusFilter={true}
+        searchPlaceholder="Rechercher par nom, CIN ou email..."
+      />
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
@@ -128,7 +119,10 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                   </td>
                   <td className="px-4 py-4 sm:px-6 text-right">
                     <Link href={`/admin/users/teachers/${teacher.id}`}>
-                      <Button variant="outline" size="sm">Voir</Button>
+                      <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        <span className="hidden sm:inline">Voir</span>
+                      </Button>
                     </Link>
                   </td>
                 </tr>

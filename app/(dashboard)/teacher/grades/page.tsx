@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { GradeFilters } from "@/components/grade-filters"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Plus, CheckCircle2, AlertCircle } from "lucide-react"
+import { Plus, CheckCircle2, AlertCircle, Eye, Edit, Trash2 } from "lucide-react"
 
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
@@ -119,6 +119,9 @@ export default async function TeacherGradesPage({
                 <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Date
                 </th>
+                <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -168,12 +171,28 @@ export default async function TeacherGradesPage({
                     <td className="hidden sm:table-cell px-4 py-4 sm:px-6 text-sm text-gray-500">
                       {new Date(grade.date).toLocaleDateString('fr-FR')}
                     </td>
+                    <td className="px-4 py-4 sm:px-6 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link href={`/teacher/grades/${grade.id}`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            <span className="hidden sm:inline">Voir</span>
+                          </Button>
+                        </Link>
+                        <Link href={`/teacher/grades/${grade.id}/edit`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Edit className="h-4 w-4" />
+                            <span className="hidden sm:inline">Modifier</span>
+                          </Button>
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
                 )
               })}
               {grades.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     Aucune note saisie avec les filtres sélectionnés.
                   </td>
                 </tr>

@@ -90,6 +90,7 @@ model School {
   reportCardComments  ReportCardComment[]
   deliberations       Deliberation[]
   subjectCoefficients SubjectCoefficient[]
+  classroomHomeroomTeachers ClassroomHomeroomTeacher[]
 }
 
 // ============================================================
@@ -165,9 +166,6 @@ model Classroom {
   trackId String? // null if the level has no track (before Première)
   track   Track?  @relation(fields: [trackId], references: [id])
 
-  homeroomTeacherId String? // optional homeroom teacher (professeur principal)
-  homeroomTeacher   Teacher? @relation("HomeroomTeacher", fields: [homeroomTeacherId], references: [id])
-
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
@@ -176,8 +174,31 @@ model Classroom {
   teacherSubjects TeacherSubject[]
   grades          Grade[]
   scheduleSlots   ScheduleSlot[]
+  homeroomTeachers ClassroomHomeroomTeacher[]
 
   @@unique([schoolGradeId, trackId, section, schoolYear])
+}
+
+// Junction table for classroom homeroom teachers (professeurs principaux)
+// Allows multiple homeroom teachers per classroom
+model ClassroomHomeroomTeacher {
+  id        String @id @default(cuid())
+  isPrimary Boolean @default(false) // marks the primary homeroom teacher
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([classroomId, teacherId])
+  @@index([classroomId])
+  @@index([teacherId])
 }
 
 // ============================================================
@@ -256,7 +277,7 @@ model Teacher {
   subjects           TeacherSubject[]
   grades             Grade[] // grades this teacher has personally entered
   scheduleSlots      ScheduleSlot[]
-  homeroomClassrooms Classroom[] @relation("HomeroomTeacher")
+  homeroomClassrooms ClassroomHomeroomTeacher[]
   createdAt          DateTime @default(now())
 
   @@unique([nationalIdNumber, schoolId])

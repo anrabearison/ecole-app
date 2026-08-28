@@ -126,14 +126,21 @@ export default async function ClassroomDetailPage({
             <p className="text-base font-semibold text-gray-900 mt-1">{classroom._count.students}</p>
           </div>
         </div>
-        {classroom.homeroomTeacher && (
+        {classroom.homeroomTeachers.length > 0 && (
           <div className="col-span-2 bg-white rounded-xl border border-gray-200 shadow-xs p-4 flex items-start gap-3">
             <BookOpen className="w-4 h-4 text-indigo-500 mt-1" />
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Professeur principal</p>
-              <p className="text-base font-semibold text-gray-900 mt-1">
-                {classroom.homeroomTeacher.firstName} {classroom.homeroomTeacher.lastName}
+            <div className="flex-1">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Professeurs principaux ({classroom.homeroomTeachers.length})
               </p>
+              <div className="mt-2 space-y-1">
+                {classroom.homeroomTeachers.map((ht) => (
+                  <p key={ht.id} className="text-sm font-medium text-gray-900">
+                    {ht.isPrimary && <span className="text-indigo-600 mr-1">★</span>}
+                    {ht.teacher.firstName} {ht.teacher.lastName}
+                  </p>
+                ))}
+              </div>
             </div>
           </div>
         )}
