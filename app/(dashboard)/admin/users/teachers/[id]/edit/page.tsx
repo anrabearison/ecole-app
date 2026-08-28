@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams, useRouter } from "next/navigation"
@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { Skeleton } from "@/components/Skeleton"
 import { useToast } from "@/components/Toast"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, User, Briefcase, KeyRound, AlertTriangle } from "lucide-react"
 
 export default function EditTeacherPage() {
@@ -20,8 +21,22 @@ export default function EditTeacherPage() {
   const params = useParams()
   const id = params.id as string | undefined
   const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const { showToast } = useToast()
+  const queryClient = useQueryClient()
+
+  // Fetch teacher data using TanStack Query
+  const { data: teacher, isLoading: isLoadingTeacher, isError: isTeacherError } = useQuery({
+    queryKey: ["teacher", id],
+    queryFn: async () => {
+      if (!id) throw new Error("ID manquant")
+      const result = await getTeacherById(id)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
+    enabled: !!id,
+  })
+
+  const isLoading = isLoadingTeacher
 
   const {
     register,
@@ -36,38 +51,41 @@ export default function EditTeacherPage() {
   const selectedSex = watch("sex")
   const selectedContract = watch("contractType")
 
+  // Populate form when teacher data is loaded
   useEffect(() => {
-    if (!id) return
-
-    async function load() {
-      if (!id) return
-      const result = await getTeacherById(id)
-
-      if (result.success) {
-        const teacher = result.data
-        setValue("firstName", teacher.firstName)
-        setValue("lastName", teacher.lastName)
-        setValue("email", teacher.user.email || "")
-        setValue("phone", teacher.phone ?? "")
-        setValue("contractType", (teacher.contractType as "FONCTIONNAIRE" | "ENF" | undefined) ?? undefined)
-        setValue("registrationNumber", teacher.registrationNumber ?? "")
-        setValue("nationalIdNumber", teacher.nationalIdNumber)
-        setValue("sex", teacher.sex as "MALE" | "FEMALE")
-      } else {
-        setError(result.error)
-      }
-
-      setIsLoading(false)
+    if (teacher) {
+      setValue("firstName", teacher.firstName)
+      setValue("lastName", teacher.lastName)
+      setValue("email", teacher.user.email || "")
+      setValue("phone", teacher.phone ?? "")
+      setValue("contractType", (teacher.contractType as "FONCTIONNAIRE" | "ENF" | undefined) ?? undefined)
+      setValue("registrationNumber", teacher.registrationNumber ?? "")
+      setValue("nationalIdNumber", teacher.nationalIdNumber)
+      setValue("sex", teacher.sex as "MALE" | "FEMALE")
     }
+  }, [teacher, setValue])
 
-    load()
-  }, [id, setValue])
+  // Update teacher using TanStack Query mutation
+  const updateTeacherMutation = useMutation({
+    mutationFn: (data: TeacherUpdateInput) => {
+      if (!id) throw new Error("ID manquant")
+      return updateTeacher(id, data)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teacher", id] })
+      showToast('success', 'Enseignant modifié avec succès')
+      router.push(`/admin/users/teachers/${id}`)
+    },
+    onError: (error: Error) => {
+      setError(error.message)
+      showToast('error', error.message)
+    },
+  })
 
   async function onSubmit(data: TeacherFormInput) {
     if (!id) return
 
     setError(null)
-    setIsLoading(true)
 
     const cleanEmail = data.email && data.email.trim() !== "" ? data.email.trim() : undefined
     const payload: TeacherUpdateInput = {
@@ -77,16 +95,7 @@ export default function EditTeacherPage() {
       contractType: data.contractType || undefined,
       registrationNumber: data.registrationNumber || undefined,
     }
-    const result = await updateTeacher(id, payload)
-
-    if (result.success) {
-      showToast('success', 'Enseignant modifié avec succès')
-      router.push(`/admin/users/teachers/${id}`)
-    } else {
-      setError(result.error)
-      showToast('error', result.error)
-      setIsLoading(false)
-    }
+    updateTeacherMutation.mutate(payload)
   }
 
   if (!id) {
@@ -108,6 +117,16 @@ export default function EditTeacherPage() {
             <Skeleton className="h-10 w-full" />
           </div>
           <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+    )
+  }
+
+  if (isTeacherError) {
+    return (
+      <div className="p-8 max-w-4xl mx-auto">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          Erreur lors du chargement de l'enseignant
         </div>
       </div>
     )
