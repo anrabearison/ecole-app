@@ -32,6 +32,9 @@ export default function RootLayout({
         <SessionProvider>
           {children}
         </SessionProvider>
+        <footer className="mt-auto py-4 text-center text-sm text-gray-500 border-t border-gray-200">
+          © {new Date().getFullYear()} Andakilasy - Tous droits réservés
+        </footer>
       </body>
     </html>
   );
