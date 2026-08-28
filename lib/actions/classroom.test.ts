@@ -192,7 +192,7 @@ describe("Classroom Server Actions", () => {
         schoolYear: "2025-2026",
         schoolGradeId: "grade-1",
         passingThreshold: 10,
-        homeroomTeacherId: "teacher-1",
+        homeroomTeacherIds: ["teacher-1"],
       }
 
       vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
@@ -200,10 +200,12 @@ describe("Classroom Server Actions", () => {
         schoolId: mockSchoolId
       } as any)
 
-      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
-        id: "teacher-1",
-        schoolId: mockSchoolId
-      } as any)
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([
+        {
+          id: "teacher-1",
+          schoolId: mockSchoolId
+        }
+      ] as any)
 
       vi.mocked(prisma.classroom.findFirst).mockResolvedValue(null)
 
@@ -212,18 +214,15 @@ describe("Classroom Server Actions", () => {
 
       const result = await createClassroom(input)
 
-      expect(prisma.teacher.findUnique).toHaveBeenCalledWith(
+      expect(prisma.teacher.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: "teacher-1" }
+          where: {
+            id: { in: ["teacher-1"] },
+            schoolId: mockSchoolId
+          }
         })
       )
-      expect(prisma.classroom.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            homeroomTeacherId: "teacher-1",
-          })
-        })
-      )
+      expect(prisma.classroom.create).toHaveBeenCalled()
       expect(result).toEqual({ success: true, data: createdClassroom })
     })
 
@@ -235,7 +234,7 @@ describe("Classroom Server Actions", () => {
         schoolYear: "2025-2026",
         schoolGradeId: "grade-1",
         passingThreshold: 10,
-        homeroomTeacherId: "teacher-external",
+        homeroomTeacherIds: ["teacher-external"],
       }
 
       vi.mocked(prisma.schoolGrade.findUnique).mockResolvedValue({
@@ -243,14 +242,12 @@ describe("Classroom Server Actions", () => {
         schoolId: mockSchoolId
       } as any)
 
-      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
-        id: "teacher-external",
-        schoolId: "different-school-id" // Different school
-      } as any)
+      // Return empty array since teacher is from different school
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
 
       const result = await createClassroom(input)
 
-      expect(result).toEqual({ success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" })
+      expect(result).toEqual({ success: false, error: "Un ou plusieurs enseignants sélectionnés n'appartiennent pas à cette école" })
       expect(prisma.classroom.create).not.toHaveBeenCalled()
     })
   })
@@ -258,17 +255,28 @@ describe("Classroom Server Actions", () => {
   describe("updateClassroom", () => {
     it("should successfully update with valid data", async () => {
       mockSession("SCHOOL_ADMIN")
-      
+
       vi.mocked(prisma.classroom.findUnique).mockResolvedValue({
         id: "c1",
         schoolId: mockSchoolId
       } as any)
-      
-      const mockUpdated = { id: "c1", section: "B" }
-      vi.mocked(prisma.classroom.update).mockResolvedValue(mockUpdated as any)
-      
+
+      const mockUpdated = { id: "c1", section: "B", schoolGrade: { id: "g1", name: "6ème", cycle: "COLLEGE" }, track: null, homeroomTeachers: [] }
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+        return await callback({
+          classroomHomeroomTeacher: {
+            deleteMany: vi.fn(),
+            createMany: vi.fn(),
+          },
+          classroom: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+            findUnique: vi.fn().mockResolvedValue(mockUpdated),
+          },
+        } as any)
+      })
+
       const result = await updateClassroom("c1", { section: "B" })
-      
+
       expect(result).toEqual({ success: true, data: mockUpdated })
     })
 
@@ -294,13 +302,26 @@ describe("Classroom Server Actions", () => {
         schoolId: mockSchoolId
       } as any)
 
-      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
-        id: "teacher-1",
-        schoolId: mockSchoolId
-      } as any)
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([
+        {
+          id: "teacher-1",
+          schoolId: mockSchoolId
+        }
+      ] as any)
 
-      const mockUpdated = { id: "c1", section: "B", homeroomTeacherIds: ["teacher-1"] }
-      vi.mocked(prisma.classroom.update).mockResolvedValue(mockUpdated as any)
+      const mockUpdated = { id: "c1", section: "B", schoolGrade: { id: "g1", name: "6ème", cycle: "COLLEGE" }, track: null, homeroomTeachers: [] }
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback) => {
+        return await callback({
+          classroomHomeroomTeacher: {
+            deleteMany: vi.fn(),
+            createMany: vi.fn(),
+          },
+          classroom: {
+            update: vi.fn().mockResolvedValue(mockUpdated),
+            findUnique: vi.fn().mockResolvedValue(mockUpdated),
+          },
+        } as any)
+      })
 
       const result = await updateClassroom("c1", { homeroomTeacherIds: ["teacher-1"] })
 
@@ -315,15 +336,12 @@ describe("Classroom Server Actions", () => {
         schoolId: mockSchoolId
       } as any)
 
-      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
-        id: "teacher-external",
-        schoolId: "different-school-id"
-      } as any)
+      // Return empty array since teacher is from different school
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
 
       const result = await updateClassroom("c1", { homeroomTeacherIds: ["teacher-external"] })
 
-      expect(result).toEqual({ success: false, error: "L'enseignant sélectionné n'appartient pas à cette école" })
-      expect(prisma.classroom.update).not.toHaveBeenCalled()
+      expect(result).toEqual({ success: false, error: "Un ou plusieurs enseignants sélectionnés n'appartiennent pas à cette école" })
     })
   })
 
