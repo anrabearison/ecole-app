@@ -6,20 +6,21 @@ import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
 import { FilterBar } from "@/components/FilterBar"
 import { EmptyState } from "@/components/EmptyState"
-import { Eye, Plus } from "lucide-react"
+import { Eye, Plus, ArrowUpDown } from "lucide-react"
 
-export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
+export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string; sortBy?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
   const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
+  const sortBy = params?.sortBy || "name"
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listStudents({ search, page, pageSize: 20, active })
+  const result = await listStudents({ search, page, pageSize: 20, active, sortBy })
 
   if (!result.success) {
     return (
@@ -55,6 +56,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
       <FilterBar
         showStatusFilter={true}
         searchPlaceholder="Rechercher par nom ou email..."
+        preserveParams={["sortBy"]}
       />
 
       {/* Table */}
@@ -64,7 +66,18 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
             <thead className="bg-gray-50/50">
               <tr>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
-                  Nom
+                  <Link 
+                    href={`/admin/users/students?${new URLSearchParams({
+                      ...(search && { search }),
+                      ...(active !== undefined && { active: active.toString() }),
+                      page: "1",
+                      sortBy: sortBy === 'name' ? 'name_desc' : 'name'
+                    }).toString()}`}
+                    className="flex items-center gap-1 hover:text-gray-700 transition-colors group"
+                  >
+                    Nom
+                    <ArrowUpDown className={`w-3 h-3 ${sortBy === 'name' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'} ${sortBy === 'name_desc' ? 'rotate-180' : ''}`} />
+                  </Link>
                 </th>
                 <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Email
