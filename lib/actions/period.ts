@@ -139,3 +139,70 @@ export async function deletePeriod(formData: FormData): Promise<ActionResult<Per
     return { success: false, error: "Erreur lors de la suppression de la période" }
   }
 }
+
+export async function getPeriodById(id: string): Promise<ActionResult<PeriodWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "period", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  try {
+    const period = await prisma.period.findUnique({
+      where: { id },
+    })
+
+    if (!period) {
+      return { success: false, error: "Période non trouvée" }
+    }
+
+    if (period.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Forbidden" }
+    }
+
+    return { success: true, data: period as PeriodWithRelations }
+  } catch (error: any) {
+    console.error("Error getting period by id:", error)
+    return { success: false, error: "Erreur lors de la récupération de la période" }
+  }
+}
+
+export async function updatePeriod(id: string, data: PeriodInput): Promise<ActionResult<PeriodWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "update", "period")) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  const validation = periodSchema.safeParse(data)
+
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+
+  try {
+    const period = await prisma.period.update({
+      where: { id, schoolId: session.user.schoolId! },
+      data: validation.data,
+    })
+
+    return { success: true, data: period as PeriodWithRelations }
+  } catch (error: any) {
+    console.error("Error updating period:", error)
+    
+    // Handle unique constraint violation
+    if (error.code === 'P2002') {
+      return { success: false, error: "Une période avec ce nom existe déjà pour cette année scolaire" }
+    }
+    
+    return { success: false, error: "Erreur lors de la modification de la période" }
+  }
+}
