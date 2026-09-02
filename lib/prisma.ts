@@ -28,12 +28,16 @@ function createPrismaClient() {
   const connectionString = cleanConnectionString(rawUrl)
   const pool = new Pool({
     connectionString,
-    max: 50, // Increase max connections
-    idleTimeoutMillis: 30000, // Close idle connections after 30s
-    connectionTimeoutMillis: 10000, // Connection timeout
+    max: 200, // Increase max connections significantly to avoid pool exhaustion
+    idleTimeoutMillis: 60000, // Close idle connections after 60s
+    connectionTimeoutMillis: 20000, // Increase connection timeout
+    allowExitOnIdle: true, // Allow pool to exit when all connections are idle
   })
   const adapter = new PrismaPg(pool)
-  return new PrismaClient({ adapter })
+  return new PrismaClient({ 
+    adapter,
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  })
 }
 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient()
