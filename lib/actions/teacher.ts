@@ -214,7 +214,7 @@ export async function createTeacher(data: TeacherInput): Promise<ActionResult<Te
           email: cleanEmail || null,
           passwordHash,
           role: "TEACHER",
-          schoolId: session.user.schoolId,
+          school: { connect: { id: session.user.schoolId! } },
           active: true,
         },
       })

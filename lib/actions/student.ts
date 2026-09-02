@@ -410,7 +410,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           email: cleanEmail || null,
           passwordHash,
           role: "STUDENT",
-          schoolId: session.user.schoolId,
+          school: { connect: { id: session.user.schoolId! } },
           active: true,
         },
       })
@@ -463,7 +463,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
             studentId: student.id,
             classroom: { connect: { id: classroom.id } },
             schoolYear: classroom.schoolYear,
-            schoolId: session.user.schoolId,
+            school: { connect: { id: session.user.schoolId! } },
           },
         })
       }
@@ -628,7 +628,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
               studentId: id,
               classroom: { connect: { id: classroom.id } },
               schoolYear: classroom.schoolYear,
-              schoolId: session.user.schoolId,
+              school: { connect: { id: session.user.schoolId! } },
             },
           })
         }

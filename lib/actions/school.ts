@@ -146,7 +146,7 @@ export async function createSchool(data: SchoolInput): Promise<ActionResult<{ sc
           email: validation.data.adminEmail || null,
           passwordHash,
           role: "SCHOOL_ADMIN",
-          schoolId: school.id,
+          school: { connect: { id: school.id } },
         },
       })
 
