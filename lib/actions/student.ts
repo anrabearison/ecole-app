@@ -399,8 +399,8 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
       }
     }
 
-    // Generate temporary password (8 characters)
-    const tempPassword = Math.random().toString(36).slice(-8)
+    // Use default temporary password
+    const tempPassword = "Init12345"
     const passwordHash = await bcrypt.hash(tempPassword, 10)
 
     // Create User and Student in a transaction
