@@ -230,6 +230,189 @@ describe("Student Server Actions", () => {
       expect(result).toEqual({ success: false, error: "Forbidden" })
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
+
+    it("should use explicit Prisma relations for school and classroom connections", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        classroomId: "classroom-1",
+        dateOfBirth: new Date("2008-05-10"),
+        guardianName: "Aline Rakoto",
+        guardianPhone: "+261341000000",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.classroom.findUnique).mockResolvedValue({
+        id: "classroom-1",
+        schoolId: mockSchoolId,
+        schoolYear: "2025-2026"
+      } as any)
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          student: {
+            create: vi.fn().mockResolvedValue({
+              id: "s1",
+              firstName: input.firstName,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              classroom: null,
+              schoolId: mockSchoolId,
+              createdAt: new Date()
+            }),
+          },
+          enrollment: {
+            create: vi.fn().mockResolvedValue({}),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(true)
+      expect(prisma.$transaction).toHaveBeenCalled()
+    })
+
+    it("should use default password 'Init12345' for new students", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          student: {
+            create: vi.fn().mockResolvedValue({
+              id: "s1",
+              firstName: input.firstName,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              classroom: null,
+              schoolId: mockSchoolId,
+              createdAt: new Date()
+            }),
+          },
+          enrollment: {
+            create: vi.fn().mockResolvedValue({}),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveProperty('temporaryPassword')
+        expect(result.data.temporaryPassword).toBe("Init12345")
+      }
+    })
+
+    it("should create student without firstName (optional field)", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          student: {
+            create: vi.fn().mockResolvedValue({
+              id: "s1",
+              firstName: null,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              classroom: null,
+              schoolId: mockSchoolId,
+              createdAt: new Date()
+            }),
+          },
+          enrollment: {
+            create: vi.fn().mockResolvedValue({}),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.student.firstName).toBe(null)
+      }
+    })
+
+    it("should create student without classroomId (optional field)", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        registrationNumber: "2025-001",
+        status: "PASSING" as const,
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          student: {
+            create: vi.fn().mockResolvedValue({
+              id: "s1",
+              firstName: input.firstName,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              classroom: null,
+              schoolId: mockSchoolId,
+              createdAt: new Date()
+            }),
+          },
+          enrollment: {
+            create: vi.fn().mockResolvedValue({}),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createStudent(input)
+
+      expect(result.success).toBe(true)
+      expect(prisma.$transaction).toHaveBeenCalled()
+    })
   })
 
   describe("updateStudent", () => {

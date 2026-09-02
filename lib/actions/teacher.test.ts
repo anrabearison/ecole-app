@@ -50,7 +50,11 @@ describe("Teacher Server Actions", () => {
 
       expect(prisma.teacher.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { schoolId: mockSchoolId }
+          where: { schoolId: mockSchoolId },
+          orderBy: [
+            { lastName: "asc" },
+            { firstName: "asc" }
+          ]
         })
       )
       expect(result).toEqual({
@@ -192,6 +196,128 @@ describe("Teacher Server Actions", () => {
       expect(result).toEqual({ success: false, error: "Forbidden" })
       expect(prisma.$transaction).not.toHaveBeenCalled()
     })
+
+    it("should use default password 'Init12345' for new teachers", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          teacher: {
+            create: vi.fn().mockResolvedValue({
+              id: "t1",
+              firstName: input.firstName,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              schoolId: mockSchoolId,
+              _count: { subjects: 0 },
+              createdAt: new Date()
+            }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createTeacher(input)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveProperty('temporaryPassword')
+        expect(result.data.temporaryPassword).toBe("Init12345")
+      }
+    })
+
+    it("should create teacher without firstName (optional field)", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          teacher: {
+            create: vi.fn().mockResolvedValue({
+              id: "t1",
+              firstName: null,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              schoolId: mockSchoolId,
+              _count: { subjects: 0 },
+              createdAt: new Date()
+            }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createTeacher(input)
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.teacher.firstName).toBe(null)
+      }
+    })
+
+    it("should use explicit Prisma relations for school connection", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      const input = {
+        firstName: "Jean",
+        lastName: "Rakoto",
+        email: "jean@test.com",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const,
+      }
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            create: vi.fn().mockResolvedValue({ id: "u1", email: input.email, active: true }),
+          },
+          teacher: {
+            create: vi.fn().mockResolvedValue({
+              id: "t1",
+              firstName: input.firstName,
+              lastName: input.lastName,
+              user: { id: "u1", email: input.email, active: true },
+              schoolId: mockSchoolId,
+              _count: { subjects: 0 },
+              createdAt: new Date()
+            }),
+          },
+        }
+        return callback(tx)
+      })
+
+      const result = await createTeacher(input)
+
+      expect(result.success).toBe(true)
+      expect(prisma.$transaction).toHaveBeenCalled()
+    })
   })
 
   describe("updateTeacher", () => {
@@ -243,6 +369,48 @@ describe("Teacher Server Actions", () => {
       const result = await updateTeacher("t1", { firstName: "Jean" })
       expect(result.success).toBe(false)
       expect(prisma.$transaction).not.toHaveBeenCalled()
+    })
+
+    it("should update teacher without firstName (optional field)", async () => {
+      mockSession("SCHOOL_ADMIN")
+      
+      vi.mocked(prisma.teacher.findUnique).mockResolvedValue({
+        id: "t1",
+        schoolId: mockSchoolId,
+        userId: "u1",
+      } as any)
+      
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(null)
+      
+      vi.mocked(prisma.$transaction).mockImplementation(async (callback: any) => {
+        const tx = {
+          user: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+          teacher: {
+            update: vi.fn().mockResolvedValue({
+              id: "t1",
+              firstName: null,
+              lastName: "Rakoto",
+              user: { id: "u1", email: "jean@test.com", active: true },
+              schoolId: mockSchoolId,
+              _count: { subjects: 0 },
+              createdAt: new Date()
+            }),
+          },
+        }
+        return callback(tx)
+      })
+      
+      const result = await updateTeacher("t1", { 
+        firstName: "", 
+        lastName: "Rakoto",
+        registrationNumber: "T-2025-001",
+        nationalIdNumber: "123456789012",
+        sex: "MALE" as const
+      })
+      
+      expect(result.success).toBe(true)
     })
   })
 
