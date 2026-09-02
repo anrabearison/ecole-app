@@ -91,6 +91,12 @@ export default async function PeriodsPage({ searchParams }: { searchParams?: { s
                           <span className="hidden sm:inline">Voir</span>
                         </Button>
                       </Link>
+                      <Link href={`/admin/academics/periods/${period.id}/edit`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Edit className="h-4 w-4" />
+                          <span className="hidden sm:inline">Modifier</span>
+                        </Button>
+                      </Link>
                       <form action={deletePeriod as any}>
                         <input type="hidden" name="id" value={period.id} />
                         <ConfirmActionButton
