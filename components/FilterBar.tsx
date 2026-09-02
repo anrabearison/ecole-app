@@ -8,9 +8,10 @@ interface FilterBarProps {
   showStatusFilter?: boolean
   searchPlaceholder?: string
   standalone?: boolean // If true, return just the search input without container
+  preserveParams?: string[] // Additional params to preserve (e.g., 'sortBy')
 }
 
-export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Rechercher...", standalone = false }: FilterBarProps) {
+export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Rechercher...", standalone = false, preserveParams = [] }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -58,12 +59,20 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
       params.set("active", statusValue)
     }
 
+    // Preserve additional params
+    preserveParams.forEach(param => {
+      const value = searchParams.get(param)
+      if (value) {
+        params.set(param, value)
+      }
+    })
+
     // Reset page to 1 when filters change
     params.delete("page")
 
     const query = params.toString()
     router.push(query ? `${pathname}?${query}` : pathname)
-  }, [debouncedSearch, statusValue, router, pathname])
+  }, [debouncedSearch, statusValue, router, pathname, searchParams, preserveParams])
 
   const handleStatusChange = (newStatus: string | null) => {
     setStatusValue(newStatus)
@@ -151,6 +160,16 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
                 setSearchValue("")
                 setDebouncedSearch("")
                 setStatusValue(null)
+                // Preserve additional params when resetting
+                const params = new URLSearchParams()
+                preserveParams.forEach(param => {
+                  const value = searchParams.get(param)
+                  if (value) {
+                    params.set(param, value)
+                  }
+                })
+                const query = params.toString()
+                router.push(query ? `${pathname}?${query}` : pathname)
               }}
               className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
             >

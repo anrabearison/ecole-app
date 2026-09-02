@@ -235,7 +235,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; sortBy?: string }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -255,6 +255,10 @@ export async function listStudents(opts?: { search?: string; page?: number; page
     const page = opts?.page && opts.page > 0 ? opts.page : 1
     const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
     const active = opts?.active
+    const sortBy = opts?.sortBy || "name" // "name" or "name_desc"
+    const orderBy = sortBy === "name_desc" 
+      ? [{ lastName: "desc" as const }, { firstName: "desc" as const }]
+      : [{ lastName: "asc" as const }, { firstName: "asc" as const }]
 
     const where: any = { schoolId: session.user.schoolId }
 
@@ -311,10 +315,7 @@ export async function listStudents(opts?: { search?: string; page?: number; page
             },
           },
         },
-        orderBy: [
-          { lastName: "asc" },
-          { firstName: "asc" },
-        ],
+        orderBy,
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

@@ -47,7 +47,11 @@ describe("Student Server Actions", () => {
 
       expect(prisma.student.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { schoolId: mockSchoolId }
+          where: { schoolId: mockSchoolId },
+          orderBy: [
+            { lastName: "asc" },
+            { firstName: "asc" }
+          ]
         })
       )
       expect(result).toEqual({
