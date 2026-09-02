@@ -432,7 +432,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
           placeOfBirth: data.placeOfBirth,
           sex: data.sex,
           school: { connect: { id: session.user.schoolId! } },
-          classroomId: data.classroomId,
+          classroom: data.classroomId ? { connect: { id: data.classroomId } } : undefined,
         },
         include: {
           user: {
@@ -461,7 +461,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
         await tx.enrollment.create({
           data: {
             studentId: student.id,
-            classroomId: classroom.id,
+            classroom: { connect: { id: classroom.id } },
             schoolYear: classroom.schoolYear,
             schoolId: session.user.schoolId,
           },
@@ -585,7 +585,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
           status: data.status,
           placeOfBirth: data.placeOfBirth,
           sex: data.sex,
-          classroomId: data.classroomId,
+          classroom: data.classroomId ? { connect: { id: data.classroomId } } : (data.classroomId === null ? { disconnect: true } : undefined),
         },
         include: {
           user: {
@@ -626,7 +626,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
           await tx.enrollment.create({
             data: {
               studentId: id,
-              classroomId: classroom.id,
+              classroom: { connect: { id: classroom.id } },
               schoolYear: classroom.schoolYear,
               schoolId: session.user.schoolId,
             },
