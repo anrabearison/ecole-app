@@ -79,13 +79,17 @@ export default function EditStudentPage() {
 
   // Update student using TanStack Query mutation
   const updateStudentMutation = useMutation({
-    mutationFn: (data: StudentInput) => {
+    mutationFn: async (data: StudentInput) => {
       if (!id) throw new Error("ID manquant")
-      return updateStudent(id, data)
+      const result = await updateStudent(id, data)
+      if (!result.success) throw new Error(result.error)
+      return result.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["student", id] })
+      queryClient.invalidateQueries({ queryKey: ["students"] })
       showToast('success', 'Élève modifié avec succès')
+      router.refresh()
       router.push(`/admin/users/students/${id}`)
     },
     onError: (error: Error) => {
