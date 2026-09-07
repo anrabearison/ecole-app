@@ -247,7 +247,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; sortBy?: string }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; sortBy?: string; classroomId?: string }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -267,12 +267,21 @@ export async function listStudents(opts?: { search?: string; page?: number; page
     const page = opts?.page && opts.page > 0 ? opts.page : 1
     const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
     const active = opts?.active
+    const classroomId = opts?.classroomId
     const sortBy = opts?.sortBy || "name" // "name" or "name_desc"
     const orderBy = sortBy === "name_desc" 
       ? [{ lastName: "desc" as const }, { firstName: "desc" as const }]
       : [{ lastName: "asc" as const }, { firstName: "asc" as const }]
 
     const where: any = { schoolId: session.user.schoolId }
+
+    if (classroomId) {
+      if (classroomId === "unassigned") {
+        where.classroomId = null
+      } else {
+        where.classroomId = classroomId
+      }
+    }
 
     if (search) {
       where.OR = [
