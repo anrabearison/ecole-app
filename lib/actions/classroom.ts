@@ -92,6 +92,7 @@ type ClassroomWithRelations = {
     id: string
     name: string
     cycle: string
+    order?: number
   }
   track: {
     id: string
@@ -149,9 +150,6 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
               },
             },
           },
-          orderBy: {
-            isPrimary: 'desc', // Primary teachers first
-          },
         },
         _count: {
           select: {
@@ -160,6 +158,10 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
         },
       },
     })
+
+    if (classroom?.homeroomTeachers) {
+      classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+    }
 
     if (!classroom) {
       return { success: false, error: "Classroom not found" }
@@ -233,9 +235,6 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
                 },
               },
             },
-            orderBy: {
-              isPrimary: 'desc',
-            },
           },
           _count: {
             select: {
@@ -254,18 +253,29 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
     ])
 
     // Sort in memory by schoolGrade.order since relation orderBy is not supported by the pg adapter
-    const sorted = classrooms.sort((a: any, b: any) => {
+    const sortedClassrooms = (classrooms as ClassroomWithRelations[]).sort((a, b) => {
       if (a.schoolYear !== b.schoolYear) {
         return b.schoolYear.localeCompare(a.schoolYear)
       }
-      return a.schoolGrade.order - b.schoolGrade.order
+      const orderA = a.schoolGrade?.order ?? 0
+      const orderB = b.schoolGrade?.order ?? 0
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      return a.section.localeCompare(b.section)
+    })
+
+    sortedClassrooms.forEach((c: any) => {
+      if (c.homeroomTeachers) {
+        c.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+      }
     })
 
     const totalPages = Math.ceil(total / pageSize)
 
     return { 
       success: true, 
-      data: sorted,
+      data: sortedClassrooms,
       pagination: {
         total,
         page,
@@ -275,7 +285,7 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
     }
   } catch (error: any) {
     console.error("Error listing classrooms:", error)
-    return { success: false, error: "Erreur lors du chargement des classes" }
+    return { success: false, error: error?.message || "Erreur lors du chargement des classes" }
   }
 }
 
@@ -394,9 +404,6 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
               },
             },
           },
-          orderBy: {
-            isPrimary: 'desc',
-          },
         },
         _count: {
           select: {
@@ -405,6 +412,10 @@ export async function createClassroom(data: ClassroomInput): Promise<ActionResul
         },
       },
     })
+
+    if ((classroom as any)?.homeroomTeachers) {
+      (classroom as any).homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+    }
 
     return { success: true, data: classroom }
   } catch (error: any) {
@@ -553,9 +564,6 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
                 },
               },
             },
-            orderBy: {
-              isPrimary: 'desc',
-            },
           },
           _count: {
             select: {
@@ -564,6 +572,10 @@ export async function updateClassroom(id: string, data: ClassroomUpdateInput): P
           },
         },
       })
+
+      if (updatedClassroom?.homeroomTeachers) {
+        updatedClassroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+      }
 
       if (!updatedClassroom) {
         throw new Error("Classroom not found after update")

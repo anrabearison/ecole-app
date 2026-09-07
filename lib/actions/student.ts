@@ -161,14 +161,15 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
                   },
                 },
               },
-              orderBy: {
-                isPrimary: 'desc',
-              },
             },
           },
         },
       },
     })
+
+    if (student?.classroom?.homeroomTeachers) {
+      student.classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+    }
 
     if (!student) {
       return { success: false, error: "Student not found" }
@@ -226,14 +227,17 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
                   },
                 },
               },
-              orderBy: {
-                isPrimary: 'desc',
-              },
             },
           },
         },
       },
       orderBy: [{ schoolYear: "desc" }],
+    })
+
+    enrollments.forEach((e: any) => {
+      if (e.classroom?.homeroomTeachers) {
+        e.classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+      }
     })
 
     return { success: true, data: enrollments as EnrollmentWithRelations[] }
@@ -316,9 +320,6 @@ export async function listStudents(opts?: { search?: string; page?: number; page
                     },
                   },
                 },
-                orderBy: {
-                  isPrimary: 'desc',
-                },
               },
             },
           },
@@ -329,6 +330,12 @@ export async function listStudents(opts?: { search?: string; page?: number; page
       }),
       prisma.student.count({ where })
     ])
+
+    students.forEach((s: any) => {
+      if (s.classroom?.homeroomTeachers) {
+        s.classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
+      }
+    })
 
     const totalPages = Math.ceil(total / pageSize)
 
@@ -344,7 +351,7 @@ export async function listStudents(opts?: { search?: string; page?: number; page
     }
   } catch (error: any) {
     console.error("Error listing students:", error)
-    return { success: false, error: "Erreur lors du chargement des élèves" }
+    return { success: false, error: error?.message || "Erreur lors du chargement des élèves" }
   }
 }
 
