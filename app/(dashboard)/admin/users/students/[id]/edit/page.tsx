@@ -25,7 +25,7 @@ export default function EditStudentPage() {
   const queryClient = useQueryClient()
 
   // Fetch student data using TanStack Query
-  const { data: student, isLoading: isLoadingStudent, isError: isStudentError } = useQuery({
+  const { data: student, isLoading: isLoadingStudent, isError: isStudentError, error: studentQueryError } = useQuery({
     queryKey: ["student", id],
     queryFn: async () => {
       if (!id) throw new Error("ID manquant")
@@ -138,10 +138,16 @@ export default function EditStudentPage() {
 
   if (isStudentError) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          Erreur lors du chargement de l'élève
+      <div className="p-8 max-w-4xl mx-auto space-y-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{studentQueryError?.message || "Erreur lors du chargement de l'élève"}</span>
         </div>
+        <Link href="/admin/users/students">
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Retour à la liste des élèves</span>
+          </Button>
+        </Link>
       </div>
     )
   }
