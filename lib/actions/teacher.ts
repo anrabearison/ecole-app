@@ -82,7 +82,62 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 }
 
-export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
+export async function getClassroomsForTeacherFilter(): Promise<ActionResult<Array<{ id: string; name: string; schoolYear: string }>>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    // Fetch only classrooms that have at least one teacher assignment
+    const classrooms = await prisma.classroom.findMany({
+      where: {
+        schoolId: session.user.schoolId,
+        teacherSubjects: { some: {} },
+      },
+      select: {
+        id: true,
+        section: true,
+        schoolYear: true,
+        schoolGrade: {
+          select: { name: true, order: true },
+        },
+      },
+      orderBy: [
+        { schoolYear: "desc" },
+        { section: "asc" },
+      ],
+    })
+
+    // Sort in memory by schoolGrade.order
+    classrooms.sort((a: any, b: any) => {
+      if (a.schoolYear !== b.schoolYear) return b.schoolYear.localeCompare(a.schoolYear)
+      const orderA = a.schoolGrade?.order ?? 0
+      const orderB = b.schoolGrade?.order ?? 0
+      if (orderA !== orderB) return orderA - orderB
+      return a.section.localeCompare(b.section)
+    })
+
+    return {
+      success: true,
+      data: classrooms.map((c: any) => ({
+        id: c.id,
+        name: `${c.schoolGrade.name} ${c.section}`,
+        schoolYear: c.schoolYear,
+      })),
+    }
+  } catch (error: any) {
+    console.error("Error fetching classrooms for teacher filter:", error)
+    return { success: false, error: "Erreur lors du chargement des classes" }
+  }
+}
+
+export async function listTeachers(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; classroomId?: string }): Promise<PaginatedActionResult<TeacherWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -102,8 +157,14 @@ export async function listTeachers(opts?: { search?: string; page?: number; page
     const page = opts?.page && opts.page > 0 ? opts.page : 1
     const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
     const active = opts?.active
+    const classroomId = opts?.classroomId
 
     const where: any = { schoolId: session.user.schoolId }
+
+    // Filter teachers who teach in the specified classroom (via TeacherSubject)
+    if (classroomId) {
+      where.subjects = { some: { classroomId } }
+    }
 
     if (search) {
       where.OR = [

@@ -10,6 +10,8 @@ interface FilterBarProps {
   standalone?: boolean // If true, return just the search input without container
   preserveParams?: string[] // Additional params to preserve (e.g., 'sortBy')
   classrooms?: Array<{ id: string; name: string; schoolYear?: string }>
+  classroomFilterLabel?: string // Label for the classroom filter (default: "Classe")
+  showUnassigned?: boolean // Show "Non assigné" option in classroom filter (default: true)
 }
 
 export function FilterBar({
@@ -18,6 +20,8 @@ export function FilterBar({
   standalone = false,
   preserveParams = [],
   classrooms,
+  classroomFilterLabel = "Classe",
+  showUnassigned = true,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -146,15 +150,15 @@ export function FilterBar({
         {/* Filters Section */}
         <div className="flex flex-wrap items-center gap-4">
           {classrooms && classrooms.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">Classe :</span>
+                      <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">{classroomFilterLabel} :</span>
               <select
                 value={classroomValue}
                 onChange={(e) => setClassroomValue(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
               >
                 <option value="">Toutes les classes</option>
-                <option value="unassigned">Non assigné</option>
+                {showUnassigned && <option value="unassigned">Non assigné</option>}
                 {classrooms.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name} {c.schoolYear ? `(${c.schoolYear})` : ""}

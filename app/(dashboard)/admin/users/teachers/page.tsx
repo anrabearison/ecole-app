@@ -1,4 +1,4 @@
-import { listTeachers } from "@/lib/actions/teacher"
+import { listTeachers, getClassroomsForTeacherFilter } from "@/lib/actions/teacher"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -8,18 +8,22 @@ import { FilterBar } from "@/components/FilterBar"
 import { EmptyState } from "@/components/EmptyState"
 import { Plus, Eye } from "lucide-react"
 
-export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string } }) {
+export default async function TeachersPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string; classroomId?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
   const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
+  const classroomId = typeof params?.classroomId === 'string' ? params.classroomId : undefined
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listTeachers({ search, page, pageSize: 20, active })
+  const [result, classroomsRes] = await Promise.all([
+    listTeachers({ search, page, pageSize: 20, active, classroomId }),
+    getClassroomsForTeacherFilter(),
+  ])
 
   if (!result.success) {
     return (
@@ -30,8 +34,9 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
   }
 
   const teachers = result.data
+  const classrooms = classroomsRes.success ? classroomsRes.data : []
   const pagination = result.pagination
-  const hasActiveFilters = !!search || active !== undefined
+  const hasActiveFilters = !!search || active !== undefined || !!classroomId
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
@@ -55,6 +60,9 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
       <FilterBar
         showStatusFilter={true}
         searchPlaceholder="Rechercher par nom, CIN ou email..."
+        classrooms={classrooms}
+        classroomFilterLabel="Enseigne en"
+        showUnassigned={false}
       />
 
       {/* Table */}

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { listTeachers, createTeacher, updateTeacher, deleteTeacher } from "./teacher"
+import { listTeachers, createTeacher, updateTeacher, deleteTeacher, getClassroomsForTeacherFilter } from "./teacher"
 import { prisma } from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 
@@ -24,6 +24,9 @@ describe("Teacher Server Actions", () => {
     vi.clearAllMocks()
   })
 
+  // ============================================================
+  // listTeachers — existing tests (non-regression)
+  // ============================================================
   describe("listTeachers", () => {
     it("should return teachers filtered by schoolId", async () => {
       mockSession()
@@ -83,8 +86,287 @@ describe("Teacher Server Actions", () => {
         })
       )
     })
+
+    it("should return Unauthorized when not authenticated", async () => {
+      vi.mocked(auth).mockResolvedValue(null as any)
+
+      const result = await listTeachers()
+
+      expect(result).toEqual({ success: false, error: "Unauthorized" })
+      expect(prisma.teacher.findMany).not.toHaveBeenCalled()
+    })
+
+    it("should return Forbidden for STUDENT role", async () => {
+      mockSession("STUDENT")
+
+      const result = await listTeachers()
+
+      expect(result).toEqual({ success: false, error: "Forbidden" })
+      expect(prisma.teacher.findMany).not.toHaveBeenCalled()
+    })
+
+    it("should return error when schoolId is missing", async () => {
+      mockSession("SCHOOL_ADMIN", null)
+
+      const result = await listTeachers()
+
+      expect(result).toEqual({ success: false, error: "School ID is required" })
+      expect(prisma.teacher.findMany).not.toHaveBeenCalled()
+    })
+
+    // ---------------------------------------------------------------
+    // NEW: classroomId filter
+    // ---------------------------------------------------------------
+    it("should filter teachers by classroomId via subjects relation", async () => {
+      mockSession()
+
+      const classroomId = "classroom-abc"
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      await listTeachers({ classroomId })
+
+      expect(prisma.teacher.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            schoolId: mockSchoolId,
+            subjects: { some: { classroomId } },
+          }
+        })
+      )
+    })
+
+    it("should NOT include subjects filter when classroomId is undefined", async () => {
+      mockSession()
+
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      await listTeachers()
+
+      expect(prisma.teacher.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { schoolId: mockSchoolId }
+        })
+      )
+
+      const callArg = vi.mocked(prisma.teacher.findMany).mock.calls[0][0] as any
+      expect(callArg?.where?.subjects).toBeUndefined()
+    })
+
+    it("should combine classroomId filter with active status filter", async () => {
+      mockSession()
+
+      const classroomId = "classroom-xyz"
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      await listTeachers({ classroomId, active: false })
+
+      expect(prisma.teacher.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            schoolId: mockSchoolId,
+            subjects: { some: { classroomId } },
+            user: { active: false },
+          }
+        })
+      )
+    })
+
+    it("should combine classroomId filter with search filter", async () => {
+      mockSession()
+
+      const classroomId = "classroom-xyz"
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      await listTeachers({ classroomId, search: "Rakoto" })
+
+      const callArg = vi.mocked(prisma.teacher.findMany).mock.calls[0][0] as any
+      expect(callArg.where.subjects).toEqual({ some: { classroomId } })
+      expect(callArg.where.OR).toBeDefined()
+    })
+
+    it("should return correct pagination data with classroomId filter", async () => {
+      mockSession()
+
+      const classroomId = "classroom-abc"
+      const mockData = [
+        {
+          id: "t1", firstName: "Jean", lastName: "Rakoto",
+          user: { id: "u1", email: "jean@test.com", active: true },
+          schoolId: mockSchoolId, _count: { subjects: 1 },
+          nationalIdNumber: "123456789012", sex: "MALE", createdAt: new Date()
+        }
+      ]
+
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(1)
+
+      const result = await listTeachers({ classroomId, page: 1, pageSize: 10 })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.pagination).toEqual({
+          total: 1,
+          page: 1,
+          pageSize: 10,
+          totalPages: 1,
+        })
+        expect(result.data).toHaveLength(1)
+      }
+    })
+
+    it("should return empty list when no teachers match the classroom filter", async () => {
+      mockSession()
+
+      vi.mocked(prisma.teacher.findMany).mockResolvedValue([] as any)
+      vi.mocked(prisma.teacher.count).mockResolvedValue(0)
+
+      const result = await listTeachers({ classroomId: "classroom-empty" })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(0)
+        expect(result.pagination?.total).toBe(0)
+        expect(result.pagination?.totalPages).toBe(0)
+      }
+    })
   })
 
+  // ============================================================
+  // getClassroomsForTeacherFilter — new feature tests
+  // ============================================================
+  describe("getClassroomsForTeacherFilter", () => {
+    it("should return classrooms with teacher assignments, sorted by schoolGrade.order", async () => {
+      mockSession()
+
+      // Prisma returns them un-sorted (simulating DB order)
+      vi.mocked(prisma.classroom.findMany).mockResolvedValue([
+        { id: "c3", section: "A", schoolYear: "2023-2024", schoolGrade: { name: "6ème", order: 1 } },
+        { id: "c2", section: "B", schoolYear: "2024-2025", schoolGrade: { name: "5ème", order: 2 } },
+        { id: "c1", section: "A", schoolYear: "2024-2025", schoolGrade: { name: "6ème", order: 1 } },
+      ] as any)
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // 2024-2025 classrooms should come before 2023-2024
+        expect(result.data[0].schoolYear).toBe("2024-2025")
+        // Within 2024-2025: order 1 (6ème A) before order 2 (5ème B)
+        expect(result.data[0].name).toBe("6ème A")
+        expect(result.data[1].name).toBe("5ème B")
+        expect(result.data[2].schoolYear).toBe("2023-2024")
+      }
+    })
+
+    it("should query only classrooms with at least one teacher assignment", async () => {
+      mockSession()
+
+      vi.mocked(prisma.classroom.findMany).mockResolvedValue([])
+
+      await getClassroomsForTeacherFilter()
+
+      expect(prisma.classroom.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            schoolId: mockSchoolId,
+            teacherSubjects: { some: {} },
+          }
+        })
+      )
+    })
+
+    it("should format classroom names as 'gradeName section'", async () => {
+      mockSession()
+
+      vi.mocked(prisma.classroom.findMany).mockResolvedValue([
+        {
+          id: "c1", section: "1", schoolYear: "2024-2025",
+          schoolGrade: { name: "Terminale", order: 7 },
+        }
+      ] as any)
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data[0]).toEqual({
+          id: "c1",
+          name: "Terminale 1",
+          schoolYear: "2024-2025",
+        })
+      }
+    })
+
+    it("should return empty array when no classrooms have teacher assignments", async () => {
+      mockSession()
+
+      vi.mocked(prisma.classroom.findMany).mockResolvedValue([])
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toEqual([])
+      }
+    })
+
+    it("should return Unauthorized when not authenticated", async () => {
+      vi.mocked(auth).mockResolvedValue(null as any)
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result).toEqual({ success: false, error: "Unauthorized" })
+      expect(prisma.classroom.findMany).not.toHaveBeenCalled()
+    })
+
+    it("should return error when schoolId is missing", async () => {
+      mockSession("SCHOOL_ADMIN", null)
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result).toEqual({ success: false, error: "School ID is required" })
+      expect(prisma.classroom.findMany).not.toHaveBeenCalled()
+    })
+
+    it("should return error message when Prisma throws", async () => {
+      mockSession()
+
+      vi.mocked(prisma.classroom.findMany).mockRejectedValue(new Error("DB connection failed"))
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toBe("Erreur lors du chargement des classes")
+      }
+    })
+
+    it("should sort classrooms with equal grade order alphabetically by section", async () => {
+      mockSession()
+
+      // Two sections of the same grade
+      vi.mocked(prisma.classroom.findMany).mockResolvedValue([
+        { id: "c2", section: "B", schoolYear: "2024-2025", schoolGrade: { name: "6ème", order: 1 } },
+        { id: "c1", section: "A", schoolYear: "2024-2025", schoolGrade: { name: "6ème", order: 1 } },
+      ] as any)
+
+      const result = await getClassroomsForTeacherFilter()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data[0].name).toBe("6ème A")
+        expect(result.data[1].name).toBe("6ème B")
+      }
+    })
+  })
+
+  // ============================================================
+  // createTeacher — existing tests (non-regression)
+  // ============================================================
   describe("createTeacher", () => {
     it("should create a teacher with valid data", async () => {
       mockSession("SCHOOL_ADMIN")
@@ -320,6 +602,9 @@ describe("Teacher Server Actions", () => {
     })
   })
 
+  // ============================================================
+  // updateTeacher — existing tests (non-regression)
+  // ============================================================
   describe("updateTeacher", () => {
     it("should successfully update with valid data", async () => {
       mockSession("SCHOOL_ADMIN")
@@ -414,6 +699,9 @@ describe("Teacher Server Actions", () => {
     })
   })
 
+  // ============================================================
+  // deleteTeacher — existing tests (non-regression)
+  // ============================================================
   describe("deleteTeacher", () => {
     it("should successfully deactivate (not delete) a teacher", async () => {
       mockSession("SCHOOL_ADMIN")
