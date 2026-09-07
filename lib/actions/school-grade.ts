@@ -49,9 +49,6 @@ export async function listSchoolGrades(): Promise<ActionResult<SchoolGradeWithRe
             id: true,
             name: true,
           },
-          orderBy: {
-            name: "asc",
-          },
         },
         classrooms: {
           select: {
@@ -65,6 +62,12 @@ export async function listSchoolGrades(): Promise<ActionResult<SchoolGradeWithRe
         { cycle: "asc" },
         { order: "asc" },
       ],
+    })
+
+    grades.forEach((g: any) => {
+      if (g.tracks) {
+        g.tracks.sort((a: any, b: any) => a.name.localeCompare(b.name))
+      }
     })
 
     return { success: true, data: grades as SchoolGradeWithRelations[] }

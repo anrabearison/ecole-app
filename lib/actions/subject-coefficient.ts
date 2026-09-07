@@ -233,7 +233,7 @@ export async function getCoefficientsMatrix(): Promise<
     const [grades, subjects, coefficients] = await Promise.all([
       prisma.schoolGrade.findMany({
         where: { schoolId },
-        include: { tracks: { orderBy: { name: "asc" } } },
+        include: { tracks: true },
         orderBy: { order: "asc" },
       }),
       prisma.subject.findMany({
@@ -261,7 +261,7 @@ export async function getCoefficientsMatrix(): Promise<
           name: g.name,
           cycle: g.cycle,
           order: g.order,
-          tracks: g.tracks,
+          tracks: [...g.tracks].sort((a, b) => a.name.localeCompare(b.name)),
         })),
         subjects: subjects.map((s: { id: string; name: string; coefficient: number }) => ({
           id: s.id,
