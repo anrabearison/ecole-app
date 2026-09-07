@@ -461,7 +461,7 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
       if (classroom) {
         await tx.enrollment.create({
           data: {
-            studentId: student.id,
+            student: { connect: { id: student.id } },
             classroom: { connect: { id: classroom.id } },
             schoolYear: classroom.schoolYear,
             school: { connect: { id: session.user.schoolId! } },
@@ -626,7 +626,7 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
         if (!existingEnrollment) {
           await tx.enrollment.create({
             data: {
-              studentId: id,
+              student: { connect: { id } },
               classroom: { connect: { id: classroom.id } },
               schoolYear: classroom.schoolYear,
               school: { connect: { id: session.user.schoolId! } },

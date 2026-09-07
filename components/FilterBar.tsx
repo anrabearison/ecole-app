@@ -16,20 +16,19 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
-  const [searchValue, setSearchValue] = useState(searchParams.get("search") || "")
-  const [debouncedSearch, setDebouncedSearch] = useState(searchValue)
-  const [statusValue, setStatusValue] = useState<string | null>(searchParams.get("active"))
-  const isInitialMount = useRef(true)
+  const urlSearch = searchParams.get("search") || ""
+  const urlStatus = searchParams.get("active")
 
-  // Initialize state from URL params on mount only
+  const [searchValue, setSearchValue] = useState(urlSearch)
+  const [debouncedSearch, setDebouncedSearch] = useState(urlSearch)
+  const [statusValue, setStatusValue] = useState<string | null>(urlStatus)
+
+  // Sync state with URL params when they change externally
   useEffect(() => {
-    const initialSearch = searchParams.get("search") || ""
-    const initialStatus = searchParams.get("active")
-    setSearchValue(initialSearch)
-    setDebouncedSearch(initialSearch)
-    setStatusValue(initialStatus)
-    isInitialMount.current = false
-  }, []) // Only run on mount
+    setSearchValue(urlSearch)
+    setDebouncedSearch(urlSearch)
+    setStatusValue(urlStatus)
+  }, [urlSearch, urlStatus])
 
   // Debounce search
   useEffect(() => {
@@ -41,37 +40,45 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
 
   // Update URL when debounced search or status changes
   useEffect(() => {
-    // Skip if this is the initial render (state was just set from URL)
-    if (isInitialMount.current) {
-      isInitialMount.current = false
-      return
-    }
+    const currentSearch = searchParams.get("search") || ""
+    const currentActive = searchParams.get("active")
 
-    const params = new URLSearchParams()
+    // Only navigate if local state differs from current URL parameters
+    if (debouncedSearch !== currentSearch || (statusValue ?? null) !== currentActive) {
+      const params = new URLSearchParams(searchParams.toString())
 
-    // Update search
-    if (debouncedSearch) {
-      params.set("search", debouncedSearch)
-    }
-
-    // Update status
-    if (statusValue !== null) {
-      params.set("active", statusValue)
-    }
-
-    // Preserve additional params
-    preserveParams.forEach(param => {
-      const value = searchParams.get(param)
-      if (value) {
-        params.set(param, value)
+      if (debouncedSearch) {
+        params.set("search", debouncedSearch)
+      } else {
+        params.delete("search")
       }
-    })
 
-    // Reset page to 1 when filters change
-    params.delete("page")
+      if (statusValue !== null) {
+        params.set("active", statusValue)
+      } else {
+        params.delete("active")
+      }
 
-    const query = params.toString()
-    router.push(query ? `${pathname}?${query}` : pathname)
+      // Preserve additional params
+      preserveParams.forEach(param => {
+        const value = searchParams.get(param)
+        if (value) {
+          params.set(param, value)
+        }
+      })
+
+      // Reset page to 1 when filters change
+      params.delete("page")
+
+      const query = params.toString()
+      const newPath = query ? `${pathname}?${query}` : pathname
+      const currentQuery = searchParams.toString()
+      const currentPath = currentQuery ? `${pathname}?${currentQuery}` : pathname
+
+      if (newPath !== currentPath) {
+        router.push(newPath)
+      }
+    }
   }, [debouncedSearch, statusValue, router, pathname, searchParams, preserveParams])
 
   const handleStatusChange = (newStatus: string | null) => {
