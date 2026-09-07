@@ -214,6 +214,7 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
               id: true,
               name: true,
               cycle: true,
+              order: true,
             },
           },
           track: {
@@ -243,7 +244,7 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
           },
         },
         orderBy: [
-          { schoolGrade: { order: "asc" } },
+          { schoolYear: "desc" },
           { section: "asc" },
         ],
         skip: (page - 1) * pageSize,
@@ -252,11 +253,19 @@ export async function listClassrooms(opts?: { search?: string; page?: number; pa
       prisma.classroom.count({ where })
     ])
 
+    // Sort in memory by schoolGrade.order since relation orderBy is not supported by the pg adapter
+    const sorted = classrooms.sort((a: any, b: any) => {
+      if (a.schoolYear !== b.schoolYear) {
+        return b.schoolYear.localeCompare(a.schoolYear)
+      }
+      return a.schoolGrade.order - b.schoolGrade.order
+    })
+
     const totalPages = Math.ceil(total / pageSize)
 
     return { 
       success: true, 
-      data: classrooms,
+      data: sorted,
       pagination: {
         total,
         page,
