@@ -21,27 +21,8 @@ export default async function TeacherDetailPage({
   const { tab = "info", error } = await searchParams
   const activeTab = tab === "subjects" || tab === "grades" || tab === "schedule" ? tab : "info"
 
-  const [teacherResult, subjectsResult, subjectsListResult, classroomsResult, gradesResult, scheduleResult] = await Promise.all([
-    getTeacherById(id),
-    listTeacherSubjects(id),
-    getSubjects(),
-    getClassrooms(),
-    listGradesForAdmin({ teacherId: id }),
-    listScheduleSlotsByTeacher(id),
-  ])
-
+  const teacherResult = await getTeacherById(id)
   const teacher = teacherResult.success ? teacherResult.data : null
-  const teacherSubjects = subjectsResult.success ? subjectsResult.data : []
-  const subjects = subjectsListResult.success ? subjectsListResult.data : []
-  const classrooms = classroomsResult.success ? classroomsResult.data : []
-  const grades = gradesResult.success ? gradesResult.data : []
-  const scheduleSlots = scheduleResult.success ? scheduleResult.data : []
-
-  async function handleDelete() {
-    "use server"
-    const result = await deleteTeacher(id)
-    if (result.success) redirect("/admin/users/teachers")
-  }
 
   if (!teacherResult.success || !teacher) {
     const errorMsg = !teacherResult.success ? teacherResult.error : "Enseignant non trouvé"
@@ -71,6 +52,26 @@ export default async function TeacherDetailPage({
         </div>
       </div>
     )
+  }
+
+  const [subjectsResult, subjectsListResult, classroomsResult, gradesResult, scheduleResult] = await Promise.all([
+    listTeacherSubjects(id),
+    getSubjects(),
+    getClassrooms(),
+    listGradesForAdmin({ teacherId: id }),
+    listScheduleSlotsByTeacher(id),
+  ])
+
+  const teacherSubjects = subjectsResult.success ? subjectsResult.data : []
+  const subjects = subjectsListResult.success ? subjectsListResult.data : []
+  const classrooms = classroomsResult.success ? classroomsResult.data : []
+  const grades = gradesResult.success ? gradesResult.data : []
+  const scheduleSlots = scheduleResult.success ? scheduleResult.data : []
+
+  async function handleDelete() {
+    "use server"
+    const result = await deleteTeacher(id)
+    if (result.success) redirect("/admin/users/teachers")
   }
 
   return (

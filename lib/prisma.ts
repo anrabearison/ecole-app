@@ -24,14 +24,14 @@ function cleanConnectionString(url: string): string {
 }
 
 function createPrismaClient() {
-  const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL!
+  const rawUrl = process.env.DATABASE_URL || process.env.DIRECT_URL!
   const connectionString = cleanConnectionString(rawUrl)
   const pool = new Pool({
     connectionString,
-    max: 200, // Increase max connections significantly to avoid pool exhaustion
-    idleTimeoutMillis: 60000, // Close idle connections after 60s
-    connectionTimeoutMillis: 20000, // Increase connection timeout
-    allowExitOnIdle: true, // Allow pool to exit when all connections are idle
+    max: 10, // Serverless pool size to prevent EMAXCONNSESSION errors on Supabase
+    idleTimeoutMillis: 30000, // Close idle connections after 30s
+    connectionTimeoutMillis: 10000, // Timeout for acquiring connection
+    allowExitOnIdle: true, // Allow pool to exit when idle
   })
   const adapter = new PrismaPg(pool)
   return new PrismaClient({ 

@@ -19,13 +19,44 @@ export default async function StudentDetailPage({
   const { tab = "info", periodId } = await searchParams
   const activeTab = tab === "schooling" || tab === "grades" || tab === "schedule" ? tab : "info"
 
-  const [studentResult, enrollmentsResult, periodsResult] = await Promise.all([
-    getStudentById(id),
+  const studentResult = await getStudentById(id)
+  const student = studentResult.success ? studentResult.data : null
+
+  if (!studentResult.success || !student) {
+    const errorMsg = !studentResult.success ? studentResult.error : "Élève non trouvé"
+    const isNotFound = errorMsg.toLowerCase().includes("not found") || errorMsg.toLowerCase().includes("non trouvé")
+
+    return (
+      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-4">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 sm:p-8 text-center space-y-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {isNotFound ? "Élève introuvable" : "Erreur de chargement"}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1 font-mono text-xs break-all bg-gray-50 p-2 rounded border border-gray-200">
+              {isNotFound
+                ? "L'élève demandé n'existe pas ou n'appartient pas à votre établissement."
+                : errorMsg}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Link href="/admin/users/students">
+              <Button variant="outline">Retour à la liste des élèves</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const [enrollmentsResult, periodsResult] = await Promise.all([
     getStudentEnrollments(id),
     listPeriods(),
   ])
 
-  const student = studentResult.success ? studentResult.data : null
   const enrollments = enrollmentsResult.success ? enrollmentsResult.data : []
   const periods = periodsResult.success ? periodsResult.data : []
   const selectedPeriodId = periodId || periods[0]?.id || ""
@@ -60,36 +91,6 @@ export default async function StudentDetailPage({
     acc[subjectName].push(grade)
     return acc
   }, {})
-
-  if (!studentResult.success || !student) {
-    const errorMsg = !studentResult.success ? studentResult.error : "Élève non trouvé"
-    const isNotFound = errorMsg.toLowerCase().includes("not found") || errorMsg.toLowerCase().includes("non trouvé")
-
-    return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-4">
-        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 sm:p-8 text-center space-y-4">
-          <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
-            <AlertCircle className="w-6 h-6" />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">
-              {isNotFound ? "Élève introuvable" : "Erreur de chargement"}
-            </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {isNotFound
-                ? "L'élève demandé n'existe pas ou n'appartient pas à votre établissement."
-                : errorMsg}
-            </p>
-          </div>
-          <div className="flex items-center justify-center gap-3 pt-2">
-            <Link href="/admin/users/students">
-              <Button variant="outline">Retour à la liste des élèves</Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    )
-  }
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
