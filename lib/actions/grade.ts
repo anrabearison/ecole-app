@@ -119,14 +119,20 @@ export async function listGradesForTeacher(filters?: {
         },
         orderBy: [
           { date: "desc" },
-          { subject: { name: "asc" } },
-          { student: { lastName: "asc" } },
         ],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       prisma.grade.count({ where })
     ])
+
+    grades.sort((a, b) => {
+      const dateComp = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateComp !== 0) return dateComp
+      const subjectComp = (a.subject?.name || "").localeCompare(b.subject?.name || "")
+      if (subjectComp !== 0) return subjectComp
+      return (a.student?.lastName || "").localeCompare(b.student?.lastName || "")
+    })
 
     const totalPages = Math.ceil(total / pageSize)
 
@@ -216,7 +222,6 @@ export async function listGradesForStudent(filters?: {
           },
         },
         orderBy: [
-          { subject: { name: "asc" } },
           { date: "desc" },
         ],
         skip: (page - 1) * pageSize,
@@ -224,6 +229,12 @@ export async function listGradesForStudent(filters?: {
       }),
       prisma.grade.count({ where })
     ])
+
+    grades.sort((a, b) => {
+      const subjectComp = (a.subject?.name || "").localeCompare(b.subject?.name || "")
+      if (subjectComp !== 0) return subjectComp
+      return new Date(b.date).getTime() - new Date(a.date).getTime()
+    })
 
     const totalPages = Math.ceil(total / pageSize)
 
@@ -333,14 +344,20 @@ export async function listGradesForAdmin(filters?: {
         },
         orderBy: [
           { date: "desc" },
-          { subject: { name: "asc" } },
-          { student: { lastName: "asc" } },
         ],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
       prisma.grade.count({ where })
     ])
+
+    grades.sort((a, b) => {
+      const dateComp = new Date(b.date).getTime() - new Date(a.date).getTime()
+      if (dateComp !== 0) return dateComp
+      const subjectComp = (a.subject?.name || "").localeCompare(b.subject?.name || "")
+      if (subjectComp !== 0) return subjectComp
+      return (a.student?.lastName || "").localeCompare(b.student?.lastName || "")
+    })
 
     const totalPages = Math.ceil(total / pageSize)
 

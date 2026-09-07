@@ -86,16 +86,24 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
         schoolGrade: {
           select: {
             name: true,
+            order: true,
           },
         },
       },
       orderBy: [
         { schoolYear: "desc" },
-        { schoolGrade: { order: "asc" } },
+        { section: "asc" },
       ],
     })
 
-    const result = classrooms.map((c: any) => ({
+    const sorted = classrooms.sort((a: any, b: any) => {
+      if (a.schoolYear !== b.schoolYear) {
+        return b.schoolYear.localeCompare(a.schoolYear)
+      }
+      return a.schoolGrade.order - b.schoolGrade.order
+    })
+
+    const result = sorted.map((c: any) => ({
       id: c.id,
       name: `${c.schoolGrade.name} ${c.section}`,
       schoolYear: c.schoolYear,

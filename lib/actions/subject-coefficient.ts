@@ -110,10 +110,13 @@ export async function listCoefficientsForGrade(
         schoolGrade: { select: { id: true, name: true, cycle: true } },
         track: { select: { id: true, name: true } },
       },
-      orderBy: [{ subject: { name: "asc" } }],
     })
 
-    return { success: true, data: coefficients as SubjectCoefficientWithRelations[] }
+    const sortedCoefficients = (coefficients as SubjectCoefficientWithRelations[]).sort((a, b) =>
+      (a.subject?.name || "").localeCompare(b.subject?.name || "")
+    )
+
+    return { success: true, data: sortedCoefficients }
   } catch (error) {
     console.error("Error listing coefficients:", error)
     return { success: false, error: "Erreur lors de la récupération des coefficients" }

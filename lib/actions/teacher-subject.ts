@@ -83,10 +83,12 @@ export async function listTeacherSubjects(teacherId?: string): Promise<ActionRes
           },
         },
       },
-      orderBy: [
-        { subject: { name: "asc" } },
-        { classroom: { schoolYear: "desc" } },
-      ],
+    })
+
+    teacherSubjects.sort((a, b) => {
+      const subjectComp = a.subject.name.localeCompare(b.subject.name)
+      if (subjectComp !== 0) return subjectComp
+      return b.classroom.schoolYear.localeCompare(a.classroom.schoolYear)
     })
 
     return { success: true, data: teacherSubjects }
@@ -293,16 +295,24 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
         schoolGrade: {
           select: {
             name: true,
+            order: true,
           },
         },
       },
       orderBy: [
         { schoolYear: "desc" },
-        { schoolGrade: { order: "asc" } },
+        { section: "asc" },
       ],
     })
 
-    const result = classrooms.map((c: any) => ({
+    const sorted = classrooms.sort((a: any, b: any) => {
+      if (a.schoolYear !== b.schoolYear) {
+        return b.schoolYear.localeCompare(a.schoolYear)
+      }
+      return a.schoolGrade.order - b.schoolGrade.order
+    })
+
+    const result = sorted.map((c: any) => ({
       id: c.id,
       name: `${c.schoolGrade.name} ${c.section}`,
       schoolYear: c.schoolYear,
@@ -362,10 +372,12 @@ export async function listTeacherSubjectsByClassroom(classroomId: string): Promi
           },
         },
       },
-      orderBy: [
-        { subject: { name: "asc" } },
-        { teacher: { lastName: "asc" } },
-      ],
+    })
+
+    teacherSubjects.sort((a, b) => {
+      const subjectComp = a.subject.name.localeCompare(b.subject.name)
+      if (subjectComp !== 0) return subjectComp
+      return a.teacher.lastName.localeCompare(b.teacher.lastName)
     })
 
     return { success: true, data: teacherSubjects }
