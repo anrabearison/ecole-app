@@ -12,40 +12,50 @@ export function SearchInput({ placeholder = "Rechercher..." }: SearchInputProps)
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [inputValue, setInputValue] = useState(searchParams.get("search") || "")
-  const [debouncedValue, setDebouncedValue] = useState(inputValue)
+  const urlSearch = searchParams.get("search") || ""
+  const [inputValue, setInputValue] = useState(urlSearch)
+  const [debouncedValue, setDebouncedValue] = useState(urlSearch)
 
-  // Sync with URL params only on mount
+  // Sync with URL params when they change externally
   useEffect(() => {
-    const initialValue = searchParams.get("search") || ""
-    setInputValue(initialValue)
-    setDebouncedValue(initialValue)
-  }, []) // Empty dependency array = only run on mount
+    setInputValue(urlSearch)
+    setDebouncedValue(urlSearch)
+  }, [urlSearch])
 
   // Debounce effect
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedValue(inputValue)
-    }, 300) // 300ms debounce
+    }, 300)
 
     return () => clearTimeout(timer)
   }, [inputValue])
 
   // Update URL when debounced value changes
   useEffect(() => {
-    const params = new URLSearchParams(searchParams.toString())
+    const currentSearch = searchParams.get("search") || ""
 
-    if (debouncedValue) {
-      params.set("search", debouncedValue)
-    } else {
-      params.delete("search")
+    if (debouncedValue !== currentSearch) {
+      const params = new URLSearchParams(searchParams.toString())
+
+      if (debouncedValue) {
+        params.set("search", debouncedValue)
+      } else {
+        params.delete("search")
+      }
+
+      // Reset page to 1 when search changes
+      params.delete("page")
+
+      const query = params.toString()
+      const newPath = query ? `${pathname}?${query}` : pathname
+      const currentQuery = searchParams.toString()
+      const currentPath = currentQuery ? `${pathname}?${currentQuery}` : pathname
+
+      if (newPath !== currentPath) {
+        router.push(newPath)
+      }
     }
-
-    // Reset page to 1 when search changes
-    params.delete("page")
-
-    const query = params.toString()
-    router.push(query ? `${pathname}?${query}` : pathname)
   }, [debouncedValue, searchParams, router, pathname])
 
   return (
