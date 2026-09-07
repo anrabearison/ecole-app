@@ -45,12 +45,12 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
     return { success: false, error: "Forbidden" }
   }
 
-  if (!session.user.schoolId) {
+  if (!session.user.schoolId && session.user.role !== "PLATFORM_SUPER_ADMIN") {
     return { success: false, error: "School ID is required" }
   }
 
   try {
-    const teacher = await prisma.teacher.findUnique({
+    let teacher = await prisma.teacher.findUnique({
       where: { id },
       include: {
         user: {
@@ -69,10 +69,30 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
     })
 
     if (!teacher) {
+      teacher = await prisma.teacher.findUnique({
+        where: { userId: id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
+          },
+          _count: {
+            select: {
+              subjects: true,
+            },
+          },
+        },
+      })
+    }
+
+    if (!teacher) {
       return { success: false, error: "Teacher not found" }
     }
 
-    if (teacher.schoolId !== session.user.schoolId) {
+    if (session.user.role !== "PLATFORM_SUPER_ADMIN" && teacher.schoolId !== session.user.schoolId) {
       return { success: false, error: "Forbidden" }
     }
 

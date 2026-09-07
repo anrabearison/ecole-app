@@ -61,11 +61,32 @@ export default async function StudentDetailPage({
     return acc
   }, {})
 
-  if (!student) {
+  if (!studentResult.success || !student) {
+    const errorMsg = !studentResult.success ? studentResult.error : "Élève non trouvé"
+    const isNotFound = errorMsg.toLowerCase().includes("not found") || errorMsg.toLowerCase().includes("non trouvé")
+
     return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <p className="text-gray-600">Élève non trouvé</p>
-        <Link href="/admin/users/students"><Button className="mt-4">Retour</Button></Link>
+      <div className="px-4 py-6 sm:px-6 lg:px-8 max-w-2xl mx-auto space-y-4">
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6 sm:p-8 text-center space-y-4">
+          <div className="mx-auto w-12 h-12 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              {isNotFound ? "Élève introuvable" : "Erreur de chargement"}
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {isNotFound
+                ? "L'élève demandé n'existe pas ou n'appartient pas à votre établissement."
+                : errorMsg}
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3 pt-2">
+            <Link href="/admin/users/students">
+              <Button variant="outline">Retour à la liste des élèves</Button>
+            </Link>
+          </div>
+        </div>
       </div>
     )
   }
