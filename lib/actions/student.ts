@@ -133,7 +133,7 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
     return { success: false, error: "Forbidden" }
   }
 
-  if (!session.user.schoolId) {
+  if (!session.user.schoolId && session.user.role !== "PLATFORM_SUPER_ADMIN") {
     return { success: false, error: "School ID is required" }
   }
 
@@ -181,7 +181,7 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
       return { success: false, error: "Student not found" }
     }
 
-    if (student.schoolId !== session.user.schoolId) {
+    if (session.user.role !== "PLATFORM_SUPER_ADMIN" && student.schoolId !== session.user.schoolId) {
       return { success: false, error: "Forbidden" }
     }
 
@@ -203,7 +203,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
     return { success: false, error: "Forbidden" }
   }
 
-  if (!session.user.schoolId) {
+  if (!session.user.schoolId && session.user.role !== "PLATFORM_SUPER_ADMIN") {
     return { success: false, error: "School ID is required" }
   }
 
@@ -211,7 +211,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
     const enrollments = await prisma.enrollment.findMany({
       where: {
         studentId,
-        schoolId: session.user.schoolId,
+        ...(session.user.role !== "PLATFORM_SUPER_ADMIN" && session.user.schoolId ? { schoolId: session.user.schoolId } : {}),
       },
       include: {
         classroom: {

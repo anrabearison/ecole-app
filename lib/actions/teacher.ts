@@ -45,7 +45,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
     return { success: false, error: "Forbidden" }
   }
 
-  if (!session.user.schoolId) {
+  if (!session.user.schoolId && session.user.role !== "PLATFORM_SUPER_ADMIN") {
     return { success: false, error: "School ID is required" }
   }
 
@@ -72,7 +72,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
       return { success: false, error: "Teacher not found" }
     }
 
-    if (teacher.schoolId !== session.user.schoolId) {
+    if (session.user.role !== "PLATFORM_SUPER_ADMIN" && teacher.schoolId !== session.user.schoolId) {
       return { success: false, error: "Forbidden" }
     }
 
