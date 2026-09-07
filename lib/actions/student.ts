@@ -3,6 +3,7 @@
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
+import { revalidatePath } from "next/cache"
 import { studentSchema, studentUpdateSchema, type StudentInput, type StudentUpdateInput } from "@/lib/validations/student"
 import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
@@ -501,6 +502,8 @@ export async function createStudent(data: StudentInput): Promise<ActionResult<St
       return student
     })
 
+    revalidatePath("/admin/users/students")
+
     // Return the temporary password once in the response for display to the admin
     // The password is never stored in clear text or logged
     return { success: true, data: { student: result, temporaryPassword: tempPassword } }
@@ -667,6 +670,9 @@ export async function updateStudent(id: string, data: StudentUpdateInput): Promi
       return student
     })
 
+    revalidatePath("/admin/users/students")
+    revalidatePath(`/admin/users/students/${id}`)
+
     return { success: true, data: result }
   } catch (error: any) {
     console.error("Error updating student:", error)
@@ -707,6 +713,9 @@ export async function deleteStudent(id: string): Promise<ActionResult<void>> {
       where: { id: student.userId },
       data: { active: false },
     })
+
+    revalidatePath("/admin/users/students")
+    revalidatePath(`/admin/users/students/${id}`)
 
     return { success: true, data: undefined }
   } catch (error: any) {

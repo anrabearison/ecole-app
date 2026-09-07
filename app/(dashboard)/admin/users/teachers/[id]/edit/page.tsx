@@ -67,13 +67,17 @@ export default function EditTeacherPage() {
 
   // Update teacher using TanStack Query mutation
   const updateTeacherMutation = useMutation({
-    mutationFn: (data: TeacherUpdateInput) => {
+    mutationFn: async (data: TeacherUpdateInput) => {
       if (!id) throw new Error("ID manquant")
-      return updateTeacher(id, data)
+      const result = await updateTeacher(id, data)
+      if (!result.success) throw new Error(result.error)
+      return result.data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teacher", id] })
+      queryClient.invalidateQueries({ queryKey: ["teachers"] })
       showToast('success', 'Enseignant modifié avec succès')
+      router.refresh()
       router.push(`/admin/users/teachers/${id}`)
     },
     onError: (error: Error) => {

@@ -31,3 +31,9 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: prismaMock,
 }))
+
+// Mock Next.js cache helpers (revalidatePath, revalidateTag) for unit tests
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+  revalidateTag: vi.fn(),
+}))
