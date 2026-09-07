@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { PaginationClient } from "@/components/PaginationClient"
 import { FilterBar } from "@/components/FilterBar"
 import { EmptyState } from "@/components/EmptyState"
-import { Eye, Plus, ArrowUpDown } from "lucide-react"
+import { Eye, Pencil, Plus, ArrowUpDown } from "lucide-react"
 
 export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string; sortBy?: string; classroomId?: string } }) {
   const session = await auth()
@@ -138,12 +138,20 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                     </span>
                   </td>
                   <td className="px-4 py-4 sm:px-6 text-right">
-                    <Link href={`/admin/users/students/${student.id}`}>
-                      <Button variant="outline" size="sm" className="flex items-center gap-2">
-                        <Eye className="h-4 w-4" />
-                        <span className="hidden sm:inline">Voir</span>
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      <Link href={`/admin/users/students/${student.id}`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                          <Eye className="h-4 w-4 text-gray-500" />
+                          <span className="hidden sm:inline">Voir</span>
+                        </Button>
+                      </Link>
+                      <Link href={`/admin/users/students/${student.id}/edit`}>
+                        <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                          <Pencil className="h-4 w-4 text-indigo-600" />
+                          <span className="hidden sm:inline">Modifier</span>
+                        </Button>
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}
