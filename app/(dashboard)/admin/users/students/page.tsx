@@ -1,4 +1,4 @@
-import { listStudents } from "@/lib/actions/student"
+import { listStudents, getClassrooms } from "@/lib/actions/student"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -8,19 +8,23 @@ import { FilterBar } from "@/components/FilterBar"
 import { EmptyState } from "@/components/EmptyState"
 import { Eye, Plus, ArrowUpDown } from "lucide-react"
 
-export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string; sortBy?: string } }) {
+export default async function StudentsPage({ searchParams }: { searchParams?: { search?: string; page?: string; active?: string; sortBy?: string; classroomId?: string } }) {
   const session = await auth()
   const params = await searchParams
   const search = typeof params?.search === 'string' ? params.search : undefined
   const page = parseInt(params?.page || '1', 10) || 1
   const active = params?.active === 'true' ? true : params?.active === 'false' ? false : undefined
+  const classroomId = typeof params?.classroomId === 'string' ? params.classroomId : undefined
   const sortBy = params?.sortBy || "name"
 
   if (!session?.user) {
     redirect("/login")
   }
 
-  const result = await listStudents({ search, page, pageSize: 20, active, sortBy })
+  const [result, classroomsRes] = await Promise.all([
+    listStudents({ search, page, pageSize: 20, active, sortBy, classroomId }),
+    getClassrooms(),
+  ])
 
   if (!result.success) {
     return (
@@ -31,8 +35,9 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
   }
 
   const students = result.data
+  const classrooms = classroomsRes.success ? classroomsRes.data : []
   const pagination = result.pagination
-  const hasActiveFilters = !!search || active !== undefined
+  const hasActiveFilters = !!search || active !== undefined || !!classroomId
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6">
@@ -57,6 +62,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
         showStatusFilter={true}
         searchPlaceholder="Rechercher par nom ou email..."
         preserveParams={["sortBy"]}
+        classrooms={classrooms}
       />
 
       {/* Table */}
@@ -70,6 +76,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
                     href={`/admin/users/students?${new URLSearchParams({
                       ...(search && { search }),
                       ...(active !== undefined && { active: active.toString() }),
+                      ...(classroomId && { classroomId }),
                       page: "1",
                       sortBy: sortBy === 'name' ? 'name_desc' : 'name'
                     }).toString()}`}

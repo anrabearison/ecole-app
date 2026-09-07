@@ -25,7 +25,7 @@ export default function EditTeacherPage() {
   const queryClient = useQueryClient()
 
   // Fetch teacher data using TanStack Query
-  const { data: teacher, isLoading: isLoadingTeacher, isError: isTeacherError } = useQuery({
+  const { data: teacher, isLoading: isLoadingTeacher, isError: isTeacherError, error: teacherQueryError } = useQuery({
     queryKey: ["teacher", id],
     queryFn: async () => {
       if (!id) throw new Error("ID manquant")
@@ -124,10 +124,16 @@ export default function EditTeacherPage() {
 
   if (isTeacherError) {
     return (
-      <div className="p-8 max-w-4xl mx-auto">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          Erreur lors du chargement de l'enseignant
+      <div className="p-8 max-w-4xl mx-auto space-y-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between">
+          <span>{teacherQueryError?.message || "Erreur lors du chargement de l'enseignant"}</span>
         </div>
+        <Link href="/admin/users/teachers">
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Retour à la liste des enseignants</span>
+          </Button>
+        </Link>
       </div>
     )
   }

@@ -9,26 +9,40 @@ interface FilterBarProps {
   searchPlaceholder?: string
   standalone?: boolean // If true, return just the search input without container
   preserveParams?: string[] // Additional params to preserve (e.g., 'sortBy')
+  classrooms?: Array<{ id: string; name: string; schoolYear?: string }>
+  classroomFilterLabel?: string // Label for the classroom filter (default: "Classe")
+  showUnassigned?: boolean // Show "Non assigné" option in classroom filter (default: true)
 }
 
-export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Rechercher...", standalone = false, preserveParams = [] }: FilterBarProps) {
+export function FilterBar({
+  showStatusFilter = false,
+  searchPlaceholder = "Rechercher...",
+  standalone = false,
+  preserveParams = [],
+  classrooms,
+  classroomFilterLabel = "Classe",
+  showUnassigned = true,
+}: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
   const urlSearch = searchParams.get("search") || ""
   const urlStatus = searchParams.get("active")
+  const urlClassroom = searchParams.get("classroomId") || ""
 
   const [searchValue, setSearchValue] = useState(urlSearch)
   const [debouncedSearch, setDebouncedSearch] = useState(urlSearch)
   const [statusValue, setStatusValue] = useState<string | null>(urlStatus)
+  const [classroomValue, setClassroomValue] = useState<string>(urlClassroom)
 
   // Sync state with URL params when they change externally
   useEffect(() => {
     setSearchValue(urlSearch)
     setDebouncedSearch(urlSearch)
     setStatusValue(urlStatus)
-  }, [urlSearch, urlStatus])
+    setClassroomValue(urlClassroom)
+  }, [urlSearch, urlStatus, urlClassroom])
 
   // Debounce search
   useEffect(() => {
@@ -38,13 +52,18 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
     return () => clearTimeout(timer)
   }, [searchValue])
 
-  // Update URL when debounced search or status changes
+  // Update URL when debounced search, status or classroom changes
   useEffect(() => {
     const currentSearch = searchParams.get("search") || ""
     const currentActive = searchParams.get("active")
+    const currentClassroom = searchParams.get("classroomId") || ""
 
     // Only navigate if local state differs from current URL parameters
-    if (debouncedSearch !== currentSearch || (statusValue ?? null) !== currentActive) {
+    if (
+      debouncedSearch !== currentSearch ||
+      (statusValue ?? null) !== currentActive ||
+      classroomValue !== currentClassroom
+    ) {
       const params = new URLSearchParams(searchParams.toString())
 
       if (debouncedSearch) {
@@ -59,8 +78,14 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
         params.delete("active")
       }
 
+      if (classroomValue) {
+        params.set("classroomId", classroomValue)
+      } else {
+        params.delete("classroomId")
+      }
+
       // Preserve additional params
-      preserveParams.forEach(param => {
+      preserveParams.forEach((param) => {
         const value = searchParams.get(param)
         if (value) {
           params.set(param, value)
@@ -79,13 +104,17 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
         router.push(newPath)
       }
     }
-  }, [debouncedSearch, statusValue, router, pathname, searchParams, preserveParams])
+  }, [debouncedSearch, statusValue, classroomValue, router, pathname, searchParams, preserveParams])
 
   const handleStatusChange = (newStatus: string | null) => {
     setStatusValue(newStatus)
   }
 
-  const hasActiveFilters = searchParams.get("search") || searchParams.get("active")
+  const hasActiveFilters = !!(
+    searchParams.get("search") ||
+    searchParams.get("active") ||
+    searchParams.get("classroomId")
+  )
 
   // Standalone mode: return just the search input without container
   if (standalone) {
@@ -105,7 +134,7 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
 
   return (
     <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4">
-      <div className="flex flex-col lg:flex-row gap-4 items-start">
+      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
         {/* Search Section */}
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -120,6 +149,25 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
 
         {/* Filters Section */}
         <div className="flex flex-wrap items-center gap-4">
+          {classrooms && classrooms.length > 0 && (
+                      <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">{classroomFilterLabel} :</span>
+              <select
+                value={classroomValue}
+                onChange={(e) => setClassroomValue(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent cursor-pointer"
+              >
+                <option value="">Toutes les classes</option>
+                {showUnassigned && <option value="unassigned">Non assigné</option>}
+                {classrooms.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.schoolYear ? `(${c.schoolYear})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {showStatusFilter && (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm font-medium text-gray-700">Statut :</span>
@@ -167,9 +215,10 @@ export function FilterBar({ showStatusFilter = false, searchPlaceholder = "Reche
                 setSearchValue("")
                 setDebouncedSearch("")
                 setStatusValue(null)
+                setClassroomValue("")
                 // Preserve additional params when resetting
                 const params = new URLSearchParams()
-                preserveParams.forEach(param => {
+                preserveParams.forEach((param) => {
                   const value = searchParams.get(param)
                   if (value) {
                     params.set(param, value)

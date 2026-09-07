@@ -100,19 +100,24 @@ export async function getClassrooms(): Promise<ActionResult<Array<{ id: string; 
       if (a.schoolYear !== b.schoolYear) {
         return b.schoolYear.localeCompare(a.schoolYear)
       }
-      return a.schoolGrade.order - b.schoolGrade.order
+      const orderA = a.schoolGrade?.order ?? 0
+      const orderB = b.schoolGrade?.order ?? 0
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      return (a.section || "").localeCompare(b.section || "")
     })
 
     const result = sorted.map((c: any) => ({
       id: c.id,
-      name: `${c.schoolGrade.name} ${c.section}`,
+      name: c.schoolGrade ? `${c.schoolGrade.name} ${c.section}` : c.section,
       schoolYear: c.schoolYear,
     }))
 
     return { success: true, data: result }
   } catch (error: any) {
     console.error("Error fetching classrooms:", error)
-    return { success: false, error: "Erreur lors du chargement des classes" }
+    return { success: false, error: error?.message || "Erreur lors du chargement des classes" }
   }
 }
 
@@ -182,7 +187,7 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
     return { success: true, data: student }
   } catch (error: any) {
     console.error("Error getting student by id:", error)
-    return { success: false, error: "Erreur lors de la récupération de l'élève" }
+    return { success: false, error: error?.message || "Erreur lors de la récupération de l'élève" }
   }
 }
 
@@ -247,7 +252,7 @@ export async function getStudentEnrollments(studentId: string): Promise<ActionRe
   }
 }
 
-export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; sortBy?: string }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
+export async function listStudents(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; sortBy?: string; classroomId?: string }): Promise<PaginatedActionResult<StudentWithRelations[]>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -267,12 +272,21 @@ export async function listStudents(opts?: { search?: string; page?: number; page
     const page = opts?.page && opts.page > 0 ? opts.page : 1
     const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
     const active = opts?.active
+    const classroomId = opts?.classroomId
     const sortBy = opts?.sortBy || "name" // "name" or "name_desc"
     const orderBy = sortBy === "name_desc" 
       ? [{ lastName: "desc" as const }, { firstName: "desc" as const }]
       : [{ lastName: "asc" as const }, { firstName: "asc" as const }]
 
     const where: any = { schoolId: session.user.schoolId }
+
+    if (classroomId) {
+      if (classroomId === "unassigned") {
+        where.classroomId = null
+      } else {
+        where.classroomId = classroomId
+      }
+    }
 
     if (search) {
       where.OR = [

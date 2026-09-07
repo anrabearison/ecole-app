@@ -165,7 +165,7 @@ export async function calculateGeneralAverage(
     }
 
     // Group by subject
-    const uniqueSubjectIds = [...new Set(grades.map((g) => g.subject.id))]
+    const uniqueSubjectIds = [...new Set(grades.filter((g) => g.subject?.id).map((g) => g.subject.id))]
 
     // Resolve effective coefficient for each subject (with fallback chain)
     const subjectCoefficients = new Map<string, number>()
@@ -348,7 +348,7 @@ export async function getStudentSubjectAverages(
 
     // Get unique subjects
     const uniqueSubjects = Array.from(
-      new Map(grades.map((g) => [g.subject.id, g.subject])).values()
+      new Map(grades.filter((g) => g.subject?.id).map((g) => [g.subject.id, g.subject])).values()
     )
 
     // Calculate average and resolve effective coefficient for each subject
