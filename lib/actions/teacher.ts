@@ -50,7 +50,7 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
   }
 
   try {
-    const teacher = await prisma.teacher.findUnique({
+    let teacher = await prisma.teacher.findUnique({
       where: { id },
       include: {
         user: {
@@ -67,6 +67,26 @@ export async function getTeacherById(id: string): Promise<ActionResult<TeacherWi
         },
       },
     })
+
+    if (!teacher) {
+      teacher = await prisma.teacher.findUnique({
+        where: { userId: id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
+          },
+          _count: {
+            select: {
+              subjects: true,
+            },
+          },
+        },
+      })
+    }
 
     if (!teacher) {
       return { success: false, error: "Teacher not found" }

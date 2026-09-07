@@ -138,7 +138,7 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
   }
 
   try {
-    const student = await prisma.student.findUnique({
+    let student = await prisma.student.findUnique({
       where: { id },
       include: {
         user: {
@@ -172,6 +172,43 @@ export async function getStudentById(id: string): Promise<ActionResult<StudentWi
         },
       },
     })
+
+    if (!student) {
+      student = await prisma.student.findUnique({
+        where: { userId: id },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              active: true,
+            },
+          },
+          classroom: {
+            include: {
+              schoolGrade: {
+                select: {
+                  id: true,
+                  name: true,
+                  cycle: true,
+                },
+              },
+              homeroomTeachers: {
+                include: {
+                  teacher: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+    }
 
     if (student?.classroom?.homeroomTeachers) {
       student.classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
