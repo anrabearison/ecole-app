@@ -128,12 +128,16 @@ export default async function AdminGradesPage({
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
                         {grade.classroom.schoolGrade.name} {grade.classroom.section}
+                        {grade.period?.name ? ` • ${grade.period.name}` : ""}
                       </div>
                     </td>
                     <td className="px-4 py-4 sm:px-6">
                       <div className="text-sm font-medium text-gray-700">{grade.subject.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5 lg:hidden">
-                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
+                      <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
+                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'} • {new Date(grade.date).toLocaleDateString('fr-FR')}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5 md:hidden">
+                        Par {grade.teacher.lastName} {grade.teacher.firstName}
                       </div>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-4 sm:px-6">
