@@ -146,11 +146,12 @@ describe("permissions", () => {
       expect(can(role, "delete", "schedule", { teacherId })).toBe(false)
     })
 
-    it("should have view access to classrooms and subjects", () => {
+    it("should have view access to classrooms, subjects and periods", () => {
       const role: Role = "TEACHER"
       
       expect(can(role, "view", "classroom")).toBe(true)
       expect(can(role, "view", "subject")).toBe(true)
+      expect(can(role, "view", "period")).toBe(true)
       
       // Cannot modify
       expect(can(role, "create", "classroom")).toBe(false)
@@ -160,6 +161,10 @@ describe("permissions", () => {
       expect(can(role, "create", "subject")).toBe(false)
       expect(can(role, "update", "subject")).toBe(false)
       expect(can(role, "delete", "subject")).toBe(false)
+
+      expect(can(role, "create", "period")).toBe(false)
+      expect(can(role, "update", "period")).toBe(false)
+      expect(can(role, "delete", "period")).toBe(false)
     })
 
     it("should have view access to students", () => {
@@ -202,6 +207,15 @@ describe("permissions", () => {
       expect(can(role, "create", "schedule", { classroomId })).toBe(false)
       expect(can(role, "update", "schedule", { classroomId })).toBe(false)
       expect(can(role, "delete", "schedule", { classroomId })).toBe(false)
+    })
+
+    it("should have view access to periods", () => {
+      const role: Role = "STUDENT"
+      
+      expect(can(role, "view", "period")).toBe(true)
+      expect(can(role, "create", "period")).toBe(false)
+      expect(can(role, "update", "period")).toBe(false)
+      expect(can(role, "delete", "period")).toBe(false)
     })
 
     it("should not have access to other resources", () => {
