@@ -16,11 +16,15 @@ import { PrismaClient } from "@prisma/client"
 import { PrismaPg } from "@prisma/adapter-pg"
 import "dotenv/config"
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set")
+// Use DIRECT_URL (port 5432) to bypass PgBouncer — Prisma's prepared statements
+// are incompatible with PgBouncer in transaction/session mode.
+const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL
+
+if (!connectionString) {
+  throw new Error("DIRECT_URL or DATABASE_URL environment variable must be set")
 }
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
+const adapter = new PrismaPg({ connectionString })
 const prisma = new PrismaClient({ adapter } as any)
 
 function toDateKey(date: Date): string {
@@ -30,7 +34,7 @@ function toDateKey(date: Date): string {
 
 async function main() {
   console.log("🚀 Démarrage de la migration Grade → Assessment + Grade")
-  console.log("   DATABASE_URL:", process.env.DATABASE_URL?.replace(/:\/\/.*@/, "://<credentials>@"))
+  console.log("   Connection :", connectionString.replace(/:\/\/[^@]+@/, "://<credentials>@"))
   console.log("")
 
   // 1. Count existing assessments to detect re-run
@@ -39,11 +43,25 @@ async function main() {
   const existingAssessmentCount = Number(existingAssessmentRaw[0]?.count ?? 0)
   console.log(`ℹ️  Assessments existants en base : ${existingAssessmentCount}`)
 
-  // 2. Fetch all Grade rows that still have no assessmentId
-  const grades = await prisma.grade.findMany({
-    where: { assessmentId: null } as any,
-    orderBy: { createdAt: "asc" },
-  })
+  // 2. Fetch all Grade rows that still have no assessmentId (raw SQL — assessmentId is
+  //    non-nullable in the Prisma schema, so the generated client rejects null filters)
+  const grades = await prisma.$queryRaw<
+    Array<{
+      id: string
+      value: number
+      comment: string | null
+      studentId: string
+      classroomId: string
+      subjectId: string
+      teacherId: string
+      periodId: string
+      schoolId: string
+      type: string
+      date: Date
+      createdAt: Date
+      assessmentId: string | null
+    }>
+  >`SELECT * FROM "Grade" WHERE "assessmentId" IS NULL ORDER BY "createdAt" ASC`
 
   console.log(`📊 Notes sans Assessment à migrer : ${grades.length}`)
 
@@ -139,10 +157,11 @@ async function main() {
   console.log(`📝 Notes mises à jour  : ${gradesUpdated}`)
   console.log("")
 
-  // 5. Final verification
-  const remaining = await prisma.grade.count({
-    where: { assessmentId: null } as any,
-  })
+  // 5. Final verification (raw SQL for same reason as above)
+  const remainingRows = await prisma.$queryRaw<[{ count: bigint }]>`
+    SELECT COUNT(*) as count FROM "Grade" WHERE "assessmentId" IS NULL
+  `
+  const remaining = Number(remainingRows[0]?.count ?? 0)
 
   if (remaining > 0) {
     console.error(`❌ ERREUR : ${remaining} note(s) n'ont toujours pas d'assessmentId après migration !`)
