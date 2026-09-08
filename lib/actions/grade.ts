@@ -542,22 +542,25 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
         },
       })
 
-      const rawGrades = await Promise.all(
-        validation.data.entries.map((entry) =>
-          tx.grade.create({
-            data: {
-              studentId: entry.studentId,
-              value: entry.value,
-              comment: entry.comment || null,
-              assessmentId: assessment.id,
-            },
-            include: assessmentInclude,
-          })
-        )
-      )
+      const rawGrades: any[] = []
+      for (const entry of validation.data.entries) {
+        const grade = await tx.grade.create({
+          data: {
+            studentId: entry.studentId,
+            value: entry.value,
+            comment: entry.comment || null,
+            assessmentId: assessment.id,
+          },
+          include: assessmentInclude,
+        })
+        rawGrades.push(grade)
+      }
 
       return rawGrades.map(mapGradeToRelations)
     })
+
+    revalidatePath("/teacher/grades")
+    revalidatePath("/admin/grades")
 
     return { success: true, data: result }
   } catch (error: any) {
