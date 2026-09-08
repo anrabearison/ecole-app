@@ -77,9 +77,8 @@ export default async function RoomsPage({ searchParams }: { searchParams?: { sea
                     <td className="px-4 py-4 sm:px-6 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/admin/academics/rooms/${room.id}`}>
-                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" title="Voir les détails">
                             <Eye className="h-4 w-4" />
-                            <span className="hidden sm:inline">Voir</span>
                           </Button>
                         </Link>
                         <form action={async () => {
@@ -92,10 +91,9 @@ export default async function RoomsPage({ searchParams }: { searchParams?: { sea
                             cancelLabel="Annuler"
                             destructive
                             size="sm"
-                            className="flex items-center gap-2"
+                            title="Supprimer la salle"
                           >
                             <Trash2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">Supprimer</span>
                           </ConfirmActionButton>
                         </form>
                       </div>

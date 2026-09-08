@@ -141,15 +141,13 @@ export default async function TeachersPage({ searchParams }: { searchParams?: { 
                   <td className="px-4 py-4 sm:px-6 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Link href={`/admin/users/teachers/${teacher.id}`}>
-                        <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" title="Voir les détails">
                           <Eye className="h-4 w-4 text-gray-500" />
-                          <span className="hidden sm:inline">Voir</span>
                         </Button>
                       </Link>
                       <Link href={`/admin/users/teachers/${teacher.id}/edit`}>
-                        <Button variant="outline" size="sm" className="flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" title="Modifier l'enseignant">
                           <Pencil className="h-4 w-4 text-indigo-600" />
-                          <span className="hidden sm:inline">Modifier</span>
                         </Button>
                       </Link>
                     </div>
