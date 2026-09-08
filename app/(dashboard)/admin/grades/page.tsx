@@ -195,7 +195,7 @@ export default async function AdminGradesPage({
               })}
               {grades.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     Aucune note trouvée avec les filtres sélectionnés.
                   </td>
                 </tr>
