@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { gradeSchema, gradeUpdateSchema, bulkGradeCreateSchema, type GradeInput, type GradeUpdateInput, type BulkGradeCreateInput } from "@/lib/validations/grade"
 import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
+import { revalidatePath } from "next/cache"
 
 type GradeWithRelations = {
   id: string
@@ -614,6 +615,122 @@ export async function deleteGrade(id: string): Promise<ActionResult<void>> {
   } catch (error: any) {
     console.error("Error deleting grade:", error)
     return { success: false, error: "Erreur lors de la suppression de la note" }
+  }
+}
+
+export async function getGradeById(id: string): Promise<ActionResult<GradeWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "grade", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const grade = await prisma.grade.findUnique({
+      where: { id, schoolId: session.user.schoolId },
+      include: {
+        student: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        subject: {
+          select: { id: true, name: true },
+        },
+        teacher: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+        classroom: {
+          include: {
+            schoolGrade: {
+              select: { id: true, name: true, cycle: true },
+            },
+          },
+        },
+      },
+    })
+
+    if (!grade) {
+      return { success: false, error: "Note non trouvée" }
+    }
+
+    return { success: true, data: grade }
+  } catch (error: any) {
+    console.error("Error fetching grade by id:", error)
+    return { success: false, error: "Erreur lors du chargement de la note" }
+  }
+}
+
+export async function updateGradeForAdmin(id: string, data: GradeUpdateInput): Promise<ActionResult<GradeWithRelations>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  // Only SCHOOL_ADMIN and PLATFORM_ADMIN can use this
+  if (!can(session.user.role, "view", "grade", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  // Teachers cannot use this endpoint (use updateGrade instead)
+  if (session.user.role === "TEACHER") {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  const existingGrade = await prisma.grade.findUnique({
+    where: { id, schoolId: session.user.schoolId },
+  })
+
+  if (!existingGrade) {
+    return { success: false, error: "Note non trouvée" }
+  }
+
+  const validation = gradeUpdateSchema.safeParse(data)
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+
+  try {
+    const grade = await prisma.grade.update({
+      where: { id },
+      data: {
+        ...(validation.data.value !== undefined && { value: validation.data.value }),
+        ...(validation.data.type !== undefined && { type: validation.data.type }),
+        ...(validation.data.date !== undefined && {
+          date: typeof validation.data.date === "string" ? new Date(validation.data.date) : validation.data.date,
+        }),
+        ...(validation.data.comment !== undefined && { comment: validation.data.comment }),
+      },
+      include: {
+        student: { select: { id: true, firstName: true, lastName: true } },
+        subject: { select: { id: true, name: true } },
+        teacher: { select: { id: true, firstName: true, lastName: true } },
+        classroom: {
+          include: {
+            schoolGrade: { select: { id: true, name: true, cycle: true } },
+          },
+        },
+      },
+    })
+
+    revalidatePath("/admin/grades")
+    revalidatePath(`/admin/grades/${id}`)
+
+    return { success: true, data: grade }
+  } catch (error: any) {
+    console.error("Error updating grade for admin:", error)
+    return { success: false, error: "Erreur lors de la mise à jour de la note" }
   }
 }
 

@@ -5,7 +5,7 @@ import { listSubjects } from "@/lib/actions/subject"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { GradeFilters } from "@/components/grade-filters"
 import { PaginationClient } from "@/components/PaginationClient"
-import { Award, CheckCircle2, AlertCircle, Eye, Edit, Trash2 } from "lucide-react"
+import { Award, CheckCircle2, AlertCircle, Eye, Edit, Trash2, Pencil } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -174,6 +174,12 @@ export default async function AdminGradesPage({
                           <Button variant="outline" size="sm" className="flex items-center gap-2">
                             <Eye className="h-4 w-4" />
                             <span className="hidden sm:inline">Voir</span>
+                          </Button>
+                        </Link>
+                        <Link href={`/admin/grades/${grade.id}/edit`}>
+                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                            <Pencil className="h-4 w-4" />
+                            <span className="hidden sm:inline">Modifier</span>
                           </Button>
                         </Link>
                       </div>

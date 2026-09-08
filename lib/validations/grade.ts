@@ -16,6 +16,20 @@ export const gradeUpdateSchema = gradeSchema.partial()
 
 export type GradeUpdateInput = z.infer<typeof gradeUpdateSchema>
 
+export const singleGradeSchema = z.object({
+  studentId: z.string().min(1, "L'élève est requis"),
+  subjectId: z.string().min(1, "La matière est requise"),
+  classroomId: z.string().min(1, "La classe est requise"),
+  teacherId: z.string().min(1, "L'enseignant est requis"),
+  periodId: z.string().min(1, "La période est requise"),
+  type: z.enum(["EXAM", "DAILY"]),
+  value: z.number().min(0, "La note doit être >= 0").max(20, "La note doit être <= 20"),
+  date: z.string().or(z.date()),
+  comment: z.string().optional(),
+})
+
+export type SingleGradeInput = z.infer<typeof singleGradeSchema>
+
 export const bulkGradeEntrySchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
   value: z.number().min(0).max(20, "Grade must be between 0 and 20"),
