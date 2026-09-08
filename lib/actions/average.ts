@@ -66,11 +66,18 @@ export async function calculateSubjectAverage(
     const grades = await prisma.grade.findMany({
       where: {
         studentId,
-        subjectId,
-        periodId,
-        schoolId: session.user.schoolId,
+        assessment: {
+          subjectId,
+          periodId,
+          schoolId: session.user.schoolId,
+        },
       },
-      select: { type: true, value: true },
+      select: {
+        value: true,
+        assessment: {
+          select: { type: true },
+        },
+      },
     })
 
     if (grades.length === 0) {
@@ -84,7 +91,7 @@ export async function calculateSubjectAverage(
     let dailyCount = 0
 
     for (const grade of grades) {
-      if (grade.type === "EXAM") {
+      if (grade.assessment.type === "EXAM") {
         examSum += grade.value
         examCount++
       } else {
@@ -150,12 +157,18 @@ export async function calculateGeneralAverage(
     const grades = await prisma.grade.findMany({
       where: {
         studentId,
-        periodId,
-        schoolId: session.user.schoolId,
+        assessment: {
+          periodId,
+          schoolId: session.user.schoolId,
+        },
       },
       include: {
-        subject: {
-          select: { id: true, name: true, coefficient: true },
+        assessment: {
+          include: {
+            subject: {
+              select: { id: true, name: true, coefficient: true },
+            },
+          },
         },
       },
     })
@@ -165,7 +178,7 @@ export async function calculateGeneralAverage(
     }
 
     // Group by subject
-    const uniqueSubjectIds = [...new Set(grades.filter((g) => g.subject?.id).map((g) => g.subject.id))]
+    const uniqueSubjectIds = [...new Set(grades.filter((g) => g.assessment?.subject?.id).map((g) => g.assessment.subject.id))]
 
     // Resolve effective coefficient for each subject (with fallback chain)
     const subjectCoefficients = new Map<string, number>()
@@ -184,8 +197,8 @@ export async function calculateGeneralAverage(
     } else {
       // Fallback: use Subject.coefficient when classroom/grade is not resolved
       for (const grade of grades) {
-        if (!subjectCoefficients.has(grade.subject.id)) {
-          subjectCoefficients.set(grade.subject.id, grade.subject.coefficient)
+        if (!subjectCoefficients.has(grade.assessment.subject.id)) {
+          subjectCoefficients.set(grade.assessment.subject.id, grade.assessment.subject.coefficient)
         }
       }
     }
@@ -332,12 +345,18 @@ export async function getStudentSubjectAverages(
     const grades = await prisma.grade.findMany({
       where: {
         studentId,
-        periodId,
-        schoolId: session.user.schoolId,
+        assessment: {
+          periodId,
+          schoolId: session.user.schoolId,
+        },
       },
       include: {
-        subject: {
-          select: { id: true, name: true, coefficient: true },
+        assessment: {
+          include: {
+            subject: {
+              select: { id: true, name: true, coefficient: true },
+            },
+          },
         },
       },
     })
@@ -348,7 +367,7 @@ export async function getStudentSubjectAverages(
 
     // Get unique subjects
     const uniqueSubjects = Array.from(
-      new Map(grades.filter((g) => g.subject?.id).map((g) => [g.subject.id, g.subject])).values()
+      new Map(grades.filter((g) => g.assessment?.subject?.id).map((g) => [g.assessment.subject.id, g.assessment.subject])).values()
     )
 
     // Calculate average and resolve effective coefficient for each subject

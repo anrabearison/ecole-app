@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button"
 export default async function AdminGradesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ classroomId?: string; subjectId?: string; teacherId?: string; periodId?: string; type?: string; startDate?: string; endDate?: string; page?: string }>
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; teacherId?: string; periodId?: string; type?: string; date?: string; page?: string }>
 }) {
   const params = await searchParams
   const [gradesResult, classroomsResult, subjectsResult, teachersResult, periodsResult] = await Promise.all([
@@ -22,8 +22,7 @@ export default async function AdminGradesPage({
       teacherId: params.teacherId || undefined,
       periodId: params.periodId || undefined,
       type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
-      startDate: params.startDate || undefined,
-      endDate: params.endDate || undefined,
+      date: params.date || undefined,
       page: parseInt(params.page || '1', 10) || 1,
       pageSize: 20,
     }),
@@ -70,8 +69,7 @@ export default async function AdminGradesPage({
           teacherId: params.teacherId || undefined,
           periodId: params.periodId || undefined,
           type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
-          startDate: params.startDate || undefined,
-          endDate: params.endDate || undefined,
+          date: params.date || undefined,
         }}
         classrooms={classrooms.map((classroom) => ({
           id: classroom.id,
@@ -101,6 +99,9 @@ export default async function AdminGradesPage({
                 </th>
                 <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Enseignant
+                </th>
+                <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Période
                 </th>
                 <th className="hidden lg:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Type
@@ -145,6 +146,11 @@ export default async function AdminGradesPage({
                       <div className="text-sm text-gray-600">
                         {grade.teacher.lastName} {grade.teacher.firstName}
                       </div>
+                    </td>
+                    <td className="hidden lg:table-cell px-4 py-4 sm:px-6">
+                      <span className="text-sm font-medium text-gray-700">
+                        {grade.period?.name || "-"}
+                      </span>
                     </td>
                     <td className="hidden lg:table-cell px-4 py-4 sm:px-6">
                       <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${

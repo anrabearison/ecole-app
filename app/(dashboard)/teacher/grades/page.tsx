@@ -13,7 +13,7 @@ import { redirect } from "next/navigation"
 export default async function TeacherGradesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string; page?: string }>
+  searchParams: Promise<{ classroomId?: string; subjectId?: string; periodId?: string; type?: string; date?: string; page?: string }>
 }) {
   const session = await auth()
   if (!session?.user) {
@@ -27,6 +27,7 @@ export default async function TeacherGradesPage({
       subjectId: params.subjectId || undefined,
       type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
       periodId: params.periodId || undefined,
+      date: params.date || undefined,
       page: parseInt(params.page || '1', 10) || 1,
       pageSize: 20,
     }),
@@ -87,6 +88,7 @@ export default async function TeacherGradesPage({
           subjectId: params.subjectId || undefined,
           periodId: params.periodId || undefined,
           type: (params.type as "EXAM" | "DAILY" | undefined) || undefined,
+          date: params.date || undefined,
         }}
         classrooms={Array.from(classroomMap.values())}
         subjects={Array.from(subjectMap.values())}
@@ -109,6 +111,9 @@ export default async function TeacherGradesPage({
                 </th>
                 <th className="hidden sm:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Classe
+                </th>
+                <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  Période
                 </th>
                 <th className="hidden md:table-cell px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   Type
@@ -148,6 +153,11 @@ export default async function TeacherGradesPage({
                         {grade.classroom.schoolGrade.name} {grade.classroom.section}
                       </div>
                       <div className="text-xs text-gray-400">{grade.classroom.schoolYear}</div>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-4 sm:px-6">
+                      <span className="text-sm font-medium text-gray-700">
+                        {grade.period?.name || "-"}
+                      </span>
                     </td>
                     <td className="hidden md:table-cell px-4 py-4 sm:px-6">
                       <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${
@@ -192,7 +202,7 @@ export default async function TeacherGradesPage({
               })}
               {grades.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     Aucune note saisie avec les filtres sélectionnés.
                   </td>
                 </tr>

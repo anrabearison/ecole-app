@@ -44,10 +44,10 @@ describe("average actions", () => {
       })
       
       vi.mocked(prisma.grade.findMany as any).mockResolvedValue([
-        { type: "EXAM", value: 16 },
-        { type: "EXAM", value: 14 },
-        { type: "DAILY", value: 12 },
-        { type: "DAILY", value: 18 },
+        { value: 16, assessment: { type: "EXAM" } },
+        { value: 14, assessment: { type: "EXAM" } },
+        { value: 12, assessment: { type: "DAILY" } },
+        { value: 18, assessment: { type: "DAILY" } },
       ])
       
       const result = await calculateSubjectAverage(mockStudentId, mockSubjectId, mockPeriodId)
@@ -88,8 +88,8 @@ describe("average actions", () => {
       })
       
       vi.mocked(prisma.grade.findMany as any).mockResolvedValue([
-        { type: "EXAM", value: 16 },
-        { type: "EXAM", value: 14 },
+        { value: 16, assessment: { type: "EXAM" } },
+        { value: 14, assessment: { type: "EXAM" } },
       ])
       
       const result = await calculateSubjectAverage(mockStudentId, mockSubjectId, mockPeriodId)
