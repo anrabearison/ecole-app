@@ -527,9 +527,10 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
 
     const date = typeof data.date === "string" ? new Date(data.date) : data.date
 
-    // Create assessment event + grades in a transaction
-    const result = await prisma.$transaction(async (tx: any) => {
-      const assessment = await tx.assessment.create({
+    // 1. Create assessment record
+    let assessment: any
+    try {
+      assessment = await prisma.assessment.create({
         data: {
           classroomId: data.classroomId,
           subjectId: data.subjectId,
@@ -541,23 +542,34 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
           title: data.title || null,
         },
       })
+    } catch (err: any) {
+      console.error("Error creating assessment record:", err)
+      return { success: false, error: err?.message ? `Erreur lors de la création de l'évaluation: ${err.message}` : "Erreur lors de la création de l'évaluation" }
+    }
 
-      const rawGrades: any[] = []
-      for (const entry of validation.data.entries) {
-        const grade = await tx.grade.create({
-          data: {
-            studentId: entry.studentId,
-            value: entry.value,
-            comment: entry.comment || null,
-            assessmentId: assessment.id,
-          },
-          include: assessmentInclude,
-        })
-        rawGrades.push(grade)
-      }
+    // 2. Insert all grade entries in bulk
+    try {
+      await prisma.grade.createMany({
+        data: validation.data.entries.map((entry) => ({
+          studentId: entry.studentId,
+          value: entry.value,
+          comment: entry.comment || null,
+          assessmentId: assessment.id,
+        })),
+      })
+    } catch (err: any) {
+      console.error("Error inserting grade entries:", err)
+      await prisma.assessment.delete({ where: { id: assessment.id } }).catch(() => {})
+      return { success: false, error: err?.message ? `Erreur lors de l'enregistrement des notes: ${err.message}` : "Erreur lors de l'enregistrement des notes" }
+    }
 
-      return rawGrades.map(mapGradeToRelations)
+    // 3. Fetch created grades with full relation data
+    const rawGrades = await prisma.grade.findMany({
+      where: { assessmentId: assessment.id },
+      include: assessmentInclude,
     })
+
+    const result = rawGrades.map(mapGradeToRelations)
 
     revalidatePath("/teacher/grades")
     revalidatePath("/admin/grades")
@@ -565,7 +577,7 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
     return { success: true, data: result }
   } catch (error: any) {
     console.error("Error creating grades:", error)
-    return { success: false, error: "Erreur lors de la création des notes" }
+    return { success: false, error: error?.message ? `Erreur lors de la création des notes: ${error.message}` : "Erreur lors de la création des notes" }
   }
 }
 
@@ -720,7 +732,7 @@ export async function getGradeById(id: string): Promise<ActionResult<GradeWithRe
 
     if (session.user.role === "TEACHER") {
       permissionContext.teacherId = session.user.teacherId || undefined
-      permissionContext.ownerId = rawGrade.assessment.teacher?.id
+      permissionContext.ownerId = rawGrade.assessment.teacher?.id || rawGrade.assessment.teacherId
     }
 
     if (!can(session.user.role, "view", "grade", permissionContext)) {

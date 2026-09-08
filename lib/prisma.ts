@@ -24,7 +24,7 @@ function cleanConnectionString(url: string): string {
 }
 
 function createPrismaClient() {
-  const rawUrl = process.env.DIRECT_URL || process.env.DATABASE_URL!
+  const rawUrl = process.env.DATABASE_URL || process.env.DIRECT_URL!
   const connectionString = cleanConnectionString(rawUrl)
   const pool = new Pool({
     connectionString,
