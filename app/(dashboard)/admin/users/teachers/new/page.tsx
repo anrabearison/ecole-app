@@ -87,7 +87,6 @@ export default function NewTeacherPage() {
     setTemporaryPassword(null)
     setTeacherInfo(null)
     router.push("/admin/users/teachers")
-    router.refresh()
   }
 
   return (

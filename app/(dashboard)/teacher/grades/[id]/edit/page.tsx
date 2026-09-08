@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { getGradeById, updateGradeForAdmin } from "@/lib/actions/grade"
+import { getGradeById, updateGrade } from "@/lib/actions/grade"
 import { gradeUpdateSchema, type GradeUpdateInput } from "@/lib/validations/grade"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ import { useToast } from "@/components/Toast"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, BookOpen, AlertCircle } from "lucide-react"
 
-export default function EditGradePage() {
+export default function TeacherEditGradePage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string | undefined
@@ -54,11 +54,11 @@ export default function EditGradePage() {
     }
   }, [grade, setValue])
 
-  // Update mutation
+  // Update mutation using teacher action
   const updateMutation = useMutation({
     mutationFn: async (data: GradeUpdateInput) => {
       if (!id) throw new Error("ID manquant")
-      const result = await updateGradeForAdmin(id, data)
+      const result = await updateGrade(id, data)
       if (!result.success) throw new Error(result.error)
       return result.data
     },
@@ -66,10 +66,11 @@ export default function EditGradePage() {
       queryClient.invalidateQueries({ queryKey: ["grade", id] })
       queryClient.invalidateQueries({ queryKey: ["grades"] })
       showToast("success", "Note mise à jour avec succès")
-      router.push(`/admin/grades/${id}`)
+      router.push(`/teacher/grades/${id}`)
     },
     onError: (err: Error) => {
       setFormError(err.message)
+      showToast("error", err.message)
     },
   })
 
@@ -106,8 +107,8 @@ export default function EditGradePage() {
               {queryError instanceof Error ? queryError.message : "La note demandée n'existe pas."}
             </p>
           </div>
-          <Link href="/admin/grades">
-            <Button variant="outline">Retour à la liste des notes</Button>
+          <Link href="/teacher/grades">
+            <Button variant="outline">Retour à mes notes</Button>
           </Link>
         </div>
       </div>
@@ -123,7 +124,7 @@ export default function EditGradePage() {
       {/* Header */}
       <div>
         <Link
-          href={`/admin/grades/${id}`}
+          href={`/teacher/grades/${id}`}
           className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-3 gap-1.5"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -222,7 +223,7 @@ export default function EditGradePage() {
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3">
-          <Link href={`/admin/grades/${id}`}>
+          <Link href={`/teacher/grades/${id}`}>
             <Button type="button" variant="outline">
               Annuler
             </Button>

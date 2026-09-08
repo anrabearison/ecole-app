@@ -15,13 +15,16 @@ import {
   Layers,
 } from "lucide-react"
 import { notFound } from "next/navigation"
+import { auth } from "@/lib/auth"
 
-export default async function AdminGradeDetailPage({
+export default async function TeacherGradeDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
+  const session = await auth()
+
   const result = await getGradeById(id)
 
   if (!result.success) {
@@ -38,8 +41,8 @@ export default async function AdminGradeDetailPage({
             <h2 className="text-lg font-semibold text-gray-900">Erreur de chargement</h2>
             <p className="text-sm text-gray-500 mt-1">{result.error}</p>
           </div>
-          <Link href="/admin/grades">
-            <Button variant="outline">Retour à la liste des notes</Button>
+          <Link href="/teacher/grades">
+            <Button variant="outline">Retour à mes notes</Button>
           </Link>
         </div>
       </div>
@@ -55,16 +58,19 @@ export default async function AdminGradeDetailPage({
     ? `${grade.teacher.firstName} ${grade.teacher.lastName}`
     : grade.teacher.lastName
 
+  // Check if the current teacher owns this grade (to show edit button)
+  const isOwner = session?.user?.teacherId === grade.teacher.id
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8 space-y-6 max-w-3xl mx-auto">
       {/* Header */}
       <div>
         <Link
-          href="/admin/grades"
+          href="/teacher/grades"
           className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 transition-colors mb-3 gap-1.5"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Retour à la liste des notes</span>
+          <span>Retour à mes notes</span>
         </Link>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
@@ -73,12 +79,14 @@ export default async function AdminGradeDetailPage({
               {grade.subject.name} — {studentName}
             </p>
           </div>
-          <Link href={`/admin/grades/${id}/edit`}>
-            <Button size="sm" className="gap-1.5">
-              <Pencil className="w-3.5 h-3.5" />
-              Modifier
-            </Button>
-          </Link>
+          {isOwner && (
+            <Link href={`/teacher/grades/${id}/edit`}>
+              <Button size="sm" className="gap-1.5">
+                <Pencil className="w-3.5 h-3.5" />
+                Modifier
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

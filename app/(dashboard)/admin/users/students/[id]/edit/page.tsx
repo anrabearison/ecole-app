@@ -89,7 +89,6 @@ export default function EditStudentPage() {
       queryClient.invalidateQueries({ queryKey: ["student", id] })
       queryClient.invalidateQueries({ queryKey: ["students"] })
       showToast('success', 'Élève modifié avec succès')
-      router.refresh()
       router.push(`/admin/users/students/${id}`)
     },
     onError: (error: Error) => {

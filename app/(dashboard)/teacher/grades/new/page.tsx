@@ -113,7 +113,6 @@ export default function NewGradesPage() {
 
     if (result.success) {
       router.push("/teacher/grades")
-      router.refresh()
     } else {
       setError(result.error)
       setSubmitting(false)

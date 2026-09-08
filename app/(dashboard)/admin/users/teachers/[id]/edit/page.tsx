@@ -77,7 +77,6 @@ export default function EditTeacherPage() {
       queryClient.invalidateQueries({ queryKey: ["teacher", id] })
       queryClient.invalidateQueries({ queryKey: ["teachers"] })
       showToast('success', 'Enseignant modifié avec succès')
-      router.refresh()
       router.push(`/admin/users/teachers/${id}`)
     },
     onError: (error: Error) => {

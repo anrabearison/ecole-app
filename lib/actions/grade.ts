@@ -542,22 +542,25 @@ export async function createGrades(data: BulkGradeCreateInput): Promise<ActionRe
         },
       })
 
-      const rawGrades = await Promise.all(
-        validation.data.entries.map((entry) =>
-          tx.grade.create({
-            data: {
-              studentId: entry.studentId,
-              value: entry.value,
-              comment: entry.comment || null,
-              assessmentId: assessment.id,
-            },
-            include: assessmentInclude,
-          })
-        )
-      )
+      const rawGrades: any[] = []
+      for (const entry of validation.data.entries) {
+        const grade = await tx.grade.create({
+          data: {
+            studentId: entry.studentId,
+            value: entry.value,
+            comment: entry.comment || null,
+            assessmentId: assessment.id,
+          },
+          include: assessmentInclude,
+        })
+        rawGrades.push(grade)
+      }
 
       return rawGrades.map(mapGradeToRelations)
     })
+
+    revalidatePath("/teacher/grades")
+    revalidatePath("/admin/grades")
 
     return { success: true, data: result }
   } catch (error: any) {
@@ -627,6 +630,9 @@ export async function updateGrade(id: string, data: GradeUpdateInput): Promise<A
       include: assessmentInclude,
     })
 
+    revalidatePath("/teacher/grades")
+    revalidatePath("/admin/grades")
+
     return { success: true, data: mapGradeToRelations(rawGrade) }
   } catch (error: any) {
     console.error("Error updating grade:", error)
@@ -672,6 +678,9 @@ export async function deleteGrade(id: string): Promise<ActionResult<void>> {
       where: { id },
     })
 
+    revalidatePath("/teacher/grades")
+    revalidatePath("/admin/grades")
+
     return { success: true, data: undefined }
   } catch (error: any) {
     console.error("Error deleting grade:", error)
@@ -686,15 +695,12 @@ export async function getGradeById(id: string): Promise<ActionResult<GradeWithRe
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!can(session.user.role, "view", "grade", { schoolId: session.user.schoolId || undefined })) {
-    return { success: false, error: "Forbidden" }
-  }
-
   if (!session.user.schoolId) {
     return { success: false, error: "School ID is required" }
   }
 
   try {
+    // Fetch the grade first so we can check ownership for teachers
     const rawGrade = await prisma.grade.findFirst({
       where: { 
         id, 
@@ -705,6 +711,20 @@ export async function getGradeById(id: string): Promise<ActionResult<GradeWithRe
 
     if (!rawGrade) {
       return { success: false, error: "Note non trouvée" }
+    }
+
+    // Build permission context — teachers need ownerId === teacherId to view
+    const permissionContext: Record<string, string | undefined> = {
+      schoolId: session.user.schoolId,
+    }
+
+    if (session.user.role === "TEACHER") {
+      permissionContext.teacherId = session.user.teacherId || undefined
+      permissionContext.ownerId = rawGrade.assessment.teacher?.id
+    }
+
+    if (!can(session.user.role, "view", "grade", permissionContext)) {
+      return { success: false, error: "Forbidden" }
     }
 
     return { success: true, data: mapGradeToRelations(rawGrade) }
@@ -774,6 +794,7 @@ export async function updateGradeForAdmin(id: string, data: GradeUpdateInput): P
       include: assessmentInclude,
     })
 
+    revalidatePath("/teacher/grades")
     revalidatePath("/admin/grades")
     revalidatePath(`/admin/grades/${id}`)
 

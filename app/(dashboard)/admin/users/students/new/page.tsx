@@ -105,7 +105,6 @@ export default function NewStudentPage() {
     setTemporaryPassword(null)
     setStudentInfo(null)
     router.push("/admin/users/students")
-    router.refresh()
   }
 
   return (
