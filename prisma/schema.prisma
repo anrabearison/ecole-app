@@ -83,7 +83,7 @@ model School {
   teachers            Teacher[]
   teacherSubjects     TeacherSubject[]
   enrollments         Enrollment[]
-  grades              Grade[]
+  assessments         Assessment[]
   scheduleSlots       ScheduleSlot[]
   rooms               Room[]
   periods             Period[]
@@ -172,7 +172,7 @@ model Classroom {
   students        Student[]
   enrollments     Enrollment[]
   teacherSubjects TeacherSubject[]
-  grades          Grade[]
+  assessments     Assessment[]
   scheduleSlots   ScheduleSlot[]
   homeroomTeachers ClassroomHomeroomTeacher[]
 
@@ -275,7 +275,7 @@ model Teacher {
   school   School @relation(fields: [schoolId], references: [id])
 
   subjects           TeacherSubject[]
-  grades             Grade[] // grades this teacher has personally entered
+  assessments        Assessment[]
   scheduleSlots      ScheduleSlot[]
   homeroomClassrooms ClassroomHomeroomTeacher[]
   createdAt          DateTime @default(now())
@@ -296,7 +296,7 @@ model Subject {
   school   School @relation(fields: [schoolId], references: [id])
 
   teacherSubjects     TeacherSubject[]
-  grades              Grade[]
+  assessments         Assessment[]
   scheduleSlots       ScheduleSlot[]
   subjectCoefficients SubjectCoefficient[]
 
@@ -328,32 +328,48 @@ model TeacherSubject {
 // ============================================================
 
 model Grade {
-  id        String    @id @default(cuid())
-  value     Float
-  type      GradeType
-  date      DateTime
-  comment   String?
-  periodId  String    // required period for grade grouping
+  id      String  @id @default(cuid())
+  value   Float
+  comment String?
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])
 
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ============================================================
+// Assessment (Évaluation collective)
+// ============================================================
+
+// Represents one evaluation event (e.g. one exam or one daily test)
+// shared by a group of students from the same classroom, for the same
+// subject, teacher, period, type, and date.
+model Assessment {
+  id    String    @id @default(cuid())
+  date  DateTime
+  type  GradeType
+  title String?   // optional label, e.g. "Interrogation N°2"
+
+  periodId String
+  period   Period @relation(fields: [periodId], references: [id])
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id])
+
   subjectId String
   subject   Subject @relation(fields: [subjectId], references: [id])
 
-  // the teacher who personally entered this grade — visibility is scoped to this field
   teacherId String
   teacher   Teacher @relation(fields: [teacherId], references: [id])
-
-  // denormalized on purpose: enables querying "all grades for classroom X in subject Y"
-  // without joining through Student every time
-  classroomId String
-  classroom   Classroom @relation(fields: [classroomId], references: [id])
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  period   Period @relation(fields: [periodId], references: [id])
+  grades Grade[]
 
   createdAt DateTime @default(now())
 }
@@ -373,8 +389,8 @@ model Period {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  grades   Grade[]
-  reportCardComments ReportCardComment[]
+  assessments         Assessment[]
+  reportCardComments  ReportCardComment[]
 
   @@unique([name, schoolYear, schoolId])
 }

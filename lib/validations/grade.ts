@@ -33,6 +33,7 @@ export type SingleGradeInput = z.infer<typeof singleGradeSchema>
 export const bulkGradeEntrySchema = z.object({
   studentId: z.string().min(1, "Student ID is required"),
   value: z.number().min(0).max(20, "Grade must be between 0 and 20"),
+  comment: z.string().optional(),
 })
 
 export type BulkGradeEntry = z.infer<typeof bulkGradeEntrySchema>
@@ -43,6 +44,7 @@ export const bulkGradeCreateSchema = z.object({
   periodId: z.string().min(1, "Period ID is required"),
   type: z.enum(["EXAM", "DAILY"]),
   date: z.string().or(z.date()),
+  title: z.string().optional(),
   entries: z.array(bulkGradeEntrySchema).min(1, "At least one grade entry is required"),
 })
 

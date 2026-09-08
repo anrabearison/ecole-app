@@ -485,40 +485,56 @@ async function main() {
     })
   }
 
-  // Create grades for all students, subjects, and periods
+  // Create assessments and grades for all students, subjects, and periods
   const allStudents = await prisma.student.findMany({ 
     where: { classroomId: sixieme1.id },
     include: { user: true }
   })
 
-  for (const student of allStudents) {
-    const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
-    
-    for (const subject of subjects) {
-      for (const period of periods) {
-        // Find the teacher assigned to this subject in this classroom
-        const teacherSubject = await prisma.teacherSubject.findFirst({
-          where: {
-            subjectId: subject.id,
+  for (const subject of subjects) {
+    for (const period of periods) {
+      // Find the teacher assigned to this subject in this classroom
+      const teacherSubject = await prisma.teacherSubject.findFirst({
+        where: {
+          subjectId: subject.id,
+          classroomId: sixieme1.id,
+        },
+      })
+
+      if (!teacherSubject) continue
+
+      // Create 2-3 daily assessments per period
+      for (let i = 0; i < 3; i++) {
+        const assessmentId = `assess-daily-${subject.id}-${period.id}-${i}`
+        const gradeDate = new Date()
+        if (period.name === "Trimestre 2") {
+          gradeDate.setMonth(gradeDate.getMonth() + 3)
+        } else if (period.name === "Trimestre 3") {
+          gradeDate.setMonth(gradeDate.getMonth() + 6)
+        }
+        gradeDate.setDate(gradeDate.getDate() + i * 7) // Different dates for each grade
+
+        await prisma.assessment.upsert({
+          where: { id: assessmentId },
+          update: {},
+          create: {
+            id: assessmentId,
+            title: `Evaluation quotidienne N°${i + 1}`,
+            type: "DAILY",
+            date: gradeDate,
+            periodId: period.id,
             classroomId: sixieme1.id,
+            subjectId: subject.id,
+            teacherId: teacherSubject.teacherId,
+            schoolId: school.id,
           },
         })
 
-        if (!teacherSubject) continue
-
-        // Create 2-3 daily grades per period
-        for (let i = 0; i < 3; i++) {
+        for (const student of allStudents) {
+          const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
           const dailyGrade = isStrugglingStudent 
             ? 4 + Math.floor(Math.random() * 5) // 4-9 for struggling student
             : 10 + Math.floor(Math.random() * 10) // 10-20 for regular students
-          
-          const gradeDate = new Date()
-          if (period.name === "Trimestre 2") {
-            gradeDate.setMonth(gradeDate.getMonth() + 3)
-          } else if (period.name === "Trimestre 3") {
-            gradeDate.setMonth(gradeDate.getMonth() + 6)
-          }
-          gradeDate.setDate(gradeDate.getDate() + i * 7) // Different dates for each grade
 
           await prisma.grade.upsert({
             where: { id: `daily-${student.id}-${subject.id}-${period.id}-${i}` },
@@ -526,30 +542,44 @@ async function main() {
             create: {
               id: `daily-${student.id}-${subject.id}-${period.id}-${i}`,
               value: dailyGrade,
-              type: "DAILY",
-              date: gradeDate,
               studentId: student.id,
-              subjectId: subject.id,
-              classroomId: sixieme1.id,
-              teacherId: teacherSubject.teacherId,
-              periodId: period.id,
-              schoolId: school.id,
+              assessmentId,
             },
           })
         }
+      }
 
-        // Create 1 exam grade per period
+      // Create 1 exam assessment per period
+      const examAssessmentId = `assess-exam-${subject.id}-${period.id}`
+      const examDate = new Date()
+      if (period.name === "Trimestre 2") {
+        examDate.setMonth(examDate.getMonth() + 3)
+      } else if (period.name === "Trimestre 3") {
+        examDate.setMonth(examDate.getMonth() + 6)
+      }
+      examDate.setDate(examDate.getDate() + 21) // Exam at end of period
+
+      await prisma.assessment.upsert({
+        where: { id: examAssessmentId },
+        update: {},
+        create: {
+          id: examAssessmentId,
+          title: `Examen ${period.name}`,
+          type: "EXAM",
+          date: examDate,
+          periodId: period.id,
+          classroomId: sixieme1.id,
+          subjectId: subject.id,
+          teacherId: teacherSubject.teacherId,
+          schoolId: school.id,
+        },
+      })
+
+      for (const student of allStudents) {
+        const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
         const examGrade = isStrugglingStudent
           ? 3 + Math.floor(Math.random() * 6) // 3-9 for struggling student
           : 8 + Math.floor(Math.random() * 12) // 8-20 for regular students
-        
-        const examDate = new Date()
-        if (period.name === "Trimestre 2") {
-          examDate.setMonth(examDate.getMonth() + 3)
-        } else if (period.name === "Trimestre 3") {
-          examDate.setMonth(examDate.getMonth() + 6)
-        }
-        examDate.setDate(examDate.getDate() + 21) // Exam at end of period
 
         await prisma.grade.upsert({
           where: { id: `exam-${student.id}-${subject.id}-${period.id}` },
@@ -557,14 +587,8 @@ async function main() {
           create: {
             id: `exam-${student.id}-${subject.id}-${period.id}`,
             value: examGrade,
-            type: "EXAM",
-            date: examDate,
             studentId: student.id,
-            subjectId: subject.id,
-            classroomId: sixieme1.id,
-            teacherId: teacherSubject.teacherId,
-            periodId: period.id,
-            schoolId: school.id,
+            assessmentId: examAssessmentId,
           },
         })
       }

@@ -27,6 +27,47 @@ describe("Grade Server Actions", () => {
     } as any)
   }
 
+  const rawGradeMock = {
+    id: "g1",
+    value: 14,
+    comment: null,
+    createdAt: new Date(),
+    student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
+    assessment: {
+      id: "a1",
+      date: new Date(),
+      type: "DAILY",
+      title: null,
+      periodId: mockPeriodId,
+      schoolId: mockSchoolId,
+      subject: { id: mockSubjectId, name: "Mathématiques" },
+      teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+      classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+      period: { id: mockPeriodId, name: "Trimestre 1" },
+    },
+  }
+
+  const expectedGradeWithRelations = {
+    id: "g1",
+    value: 14,
+    comment: null,
+    type: "DAILY",
+    date: rawGradeMock.assessment.date,
+    student: rawGradeMock.student,
+    subject: rawGradeMock.assessment.subject,
+    teacher: rawGradeMock.assessment.teacher,
+    classroom: rawGradeMock.assessment.classroom,
+    assessment: {
+      id: "a1",
+      date: rawGradeMock.assessment.date,
+      type: "DAILY",
+      title: null,
+      periodId: mockPeriodId,
+    },
+    schoolId: mockSchoolId,
+    createdAt: rawGradeMock.createdAt,
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -35,29 +76,14 @@ describe("Grade Server Actions", () => {
     it("should return grades for teacher", async () => {
       mockSession("TEACHER", mockSchoolId, mockTeacherId1)
       
-      const mockData = [
-        { 
-          id: "g1", 
-          value: 14,
-          type: "DAILY",
-          date: new Date(),
-          comment: null,
-          student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-          subject: { id: mockSubjectId, name: "Mathématiques" },
-          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
-          schoolId: mockSchoolId,
-          createdAt: new Date()
-        }
-      ]
-      
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([rawGradeMock] as any)
+      vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForTeacher()
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data).toEqual(mockData)
+        expect(result.data).toEqual([expectedGradeWithRelations])
       }
     })
   })
@@ -66,29 +92,14 @@ describe("Grade Server Actions", () => {
     it("should return grades for student", async () => {
       mockSession("STUDENT", mockSchoolId, null, mockStudentId1)
       
-      const mockData = [
-        { 
-          id: "g1", 
-          value: 14,
-          type: "DAILY",
-          date: new Date(),
-          comment: null,
-          student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-          subject: { id: mockSubjectId, name: "Mathématiques" },
-          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
-          schoolId: mockSchoolId,
-          createdAt: new Date()
-        }
-      ]
-      
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([rawGradeMock] as any)
+      vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForStudent()
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data).toEqual(mockData)
+        expect(result.data).toEqual([expectedGradeWithRelations])
       }
     })
   })
@@ -98,6 +109,7 @@ describe("Grade Server Actions", () => {
       mockSession("SCHOOL_ADMIN")
 
       vi.mocked(prisma.grade.findMany as any).mockResolvedValue([] as any)
+      vi.mocked(prisma.grade.count).mockResolvedValue(0)
 
       await listGradesForAdmin({
         classroomId: mockClassroomId,
@@ -113,17 +125,19 @@ describe("Grade Server Actions", () => {
       expect(vi.mocked(prisma.grade.findMany as any)).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            schoolId: mockSchoolId,
-            classroomId: mockClassroomId,
-            subjectId: mockSubjectId,
-            teacherId: mockTeacherId1,
             studentId: mockStudentId1,
-            periodId: mockPeriodId,
-            type: "EXAM",
-            date: {
-              gte: new Date("2026-01-01"),
-              lte: new Date("2026-12-31"),
-            },
+            assessment: expect.objectContaining({
+              schoolId: mockSchoolId,
+              classroomId: mockClassroomId,
+              subjectId: mockSubjectId,
+              teacherId: mockTeacherId1,
+              periodId: mockPeriodId,
+              type: "EXAM",
+              date: {
+                gte: new Date("2026-01-01"),
+                lte: new Date("2026-12-31"),
+              },
+            }),
           }),
         })
       )
@@ -132,65 +146,23 @@ describe("Grade Server Actions", () => {
     it("should return all grades for SCHOOL_ADMIN", async () => {
       mockSession("SCHOOL_ADMIN")
       
-      const mockData = [
-        { 
-          id: "g1", 
-          value: 14,
-          type: "DAILY",
-          date: new Date(),
-          comment: null,
-          student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-          subject: { id: mockSubjectId, name: "Mathématiques" },
-          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
-          schoolId: mockSchoolId,
-          createdAt: new Date()
-        }
-      ]
-      
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([rawGradeMock] as any)
       vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForAdmin()
 
-      expect(vi.mocked(prisma.grade.findMany as any)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { schoolId: mockSchoolId }
-        })
-      )
-      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
+      expect(result).toEqual(expect.objectContaining({ success: true, data: [expectedGradeWithRelations] }))
     })
 
     it("should return all grades for STAFF_ADMIN", async () => {
       mockSession("STAFF_ADMIN")
       
-      const mockData = [
-        { 
-          id: "g1", 
-          value: 14,
-          type: "DAILY",
-          date: new Date(),
-          comment: null,
-          student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-          subject: { id: mockSubjectId, name: "Mathématiques" },
-          teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-          classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
-          schoolId: mockSchoolId,
-          createdAt: new Date()
-        }
-      ]
-      
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue(mockData as any)
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([rawGradeMock] as any)
       vi.mocked(prisma.grade.count).mockResolvedValue(1)
 
       const result = await listGradesForAdmin()
 
-      expect(vi.mocked(prisma.grade.findMany as any)).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { schoolId: mockSchoolId }
-        })
-      )
-      expect(result).toEqual(expect.objectContaining({ success: true, data: mockData }))
+      expect(result).toEqual(expect.objectContaining({ success: true, data: [expectedGradeWithRelations] }))
     })
   })
 
@@ -198,7 +170,6 @@ describe("Grade Server Actions", () => {
     it("should create grades if teacher is assigned to subject+class via TeacherSubject (CRITICAL SECURITY TEST)", async () => {
       mockSession("TEACHER", mockSchoolId, mockTeacherId1)
       
-      // Mock that teacher IS assigned to this subject+class
       vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
         id: "ts1",
         teacherId: mockTeacherId1,
@@ -209,20 +180,21 @@ describe("Grade Server Actions", () => {
       
       vi.mocked(prisma.$transaction as any).mockImplementation(async (callback: any) => {
         const tx = {
-          grade: {
+          assessment: {
             create: vi.fn().mockResolvedValue({
-              id: "g1",
-              value: 14,
-              type: "DAILY",
+              id: "a1",
               date: new Date(),
-              comment: null,
-              student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-              subject: { id: mockSubjectId, name: "Mathématiques" },
-              teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-              classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+              type: "DAILY",
+              title: null,
+              periodId: mockPeriodId,
+              classroomId: mockClassroomId,
+              subjectId: mockSubjectId,
+              teacherId: mockTeacherId1,
               schoolId: mockSchoolId,
-              createdAt: new Date()
             }),
+          },
+          grade: {
+            create: vi.fn().mockResolvedValue(rawGradeMock),
           },
         }
         return callback(tx)
@@ -254,7 +226,6 @@ describe("Grade Server Actions", () => {
     it("should refuse if teacher is NOT assigned to subject+class via TeacherSubject (CRITICAL SECURITY TEST)", async () => {
       mockSession("TEACHER", mockSchoolId, mockTeacherId1)
       
-      // Mock that teacher is NOT assigned to this subject+class
       vi.mocked(prisma.teacherSubject.findUnique).mockResolvedValue(null)
       
       const result = await createGrades({
@@ -295,22 +266,13 @@ describe("Grade Server Actions", () => {
       
       vi.mocked(prisma.grade.findUnique as any).mockResolvedValue({
         id: "g1",
-        teacherId: mockTeacherId1,
-        schoolId: mockSchoolId,
+        assessmentId: "a1",
+        assessment: { teacherId: mockTeacherId1, schoolId: mockSchoolId },
       } as any)
       
       vi.mocked(prisma.grade.update as any).mockResolvedValue({
-        id: "g1",
+        ...rawGradeMock,
         value: 15,
-        type: "DAILY",
-        date: new Date(),
-        comment: null,
-        student: { id: mockStudentId1, firstName: "Jean", lastName: "Rakoto" },
-        subject: { id: mockSubjectId, name: "Mathématiques" },
-        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
-        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
-        schoolId: mockSchoolId,
-        createdAt: new Date()
       } as any)
       
       const result = await updateGrade("g1", { value: 15 })
@@ -321,11 +283,10 @@ describe("Grade Server Actions", () => {
     it("should refuse if grade belongs to another teacher (CRITICAL SECURITY TEST)", async () => {
       mockSession("TEACHER", mockSchoolId, mockTeacherId1)
       
-      // Grade belongs to teacher-2
       vi.mocked(prisma.grade.findUnique as any).mockResolvedValue({
         id: "g1",
-        teacherId: mockTeacherId2, // Different teacher
-        schoolId: mockSchoolId,
+        assessmentId: "a1",
+        assessment: { teacherId: mockTeacherId2, schoolId: mockSchoolId },
       } as any)
       
       const result = await updateGrade("g1", { value: 15 })
@@ -344,8 +305,8 @@ describe("Grade Server Actions", () => {
       
       vi.mocked(prisma.grade.findUnique as any).mockResolvedValue({
         id: "g1",
-        teacherId: mockTeacherId1,
-        schoolId: mockSchoolId,
+        assessmentId: "a1",
+        assessment: { teacherId: mockTeacherId1, schoolId: mockSchoolId },
       } as any)
       
       vi.mocked(prisma.grade.delete as any).mockResolvedValue({ id: "g1" } as any)
@@ -358,11 +319,10 @@ describe("Grade Server Actions", () => {
     it("should refuse if grade belongs to another teacher (CRITICAL SECURITY TEST)", async () => {
       mockSession("TEACHER", mockSchoolId, mockTeacherId1)
       
-      // Grade belongs to teacher-2
       vi.mocked(prisma.grade.findUnique as any).mockResolvedValue({
         id: "g1",
-        teacherId: mockTeacherId2, // Different teacher
-        schoolId: mockSchoolId,
+        assessmentId: "a1",
+        assessment: { teacherId: mockTeacherId2, schoolId: mockSchoolId },
       } as any)
       
       const result = await deleteGrade("g1")
