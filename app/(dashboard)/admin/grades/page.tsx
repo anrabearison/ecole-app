@@ -128,12 +128,16 @@ export default async function AdminGradesPage({
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
                         {grade.classroom.schoolGrade.name} {grade.classroom.section}
+                        {grade.period?.name ? ` • ${grade.period.name}` : ""}
                       </div>
                     </td>
                     <td className="px-4 py-4 sm:px-6">
                       <div className="text-sm font-medium text-gray-700">{grade.subject.name}</div>
-                      <div className="text-xs text-gray-500 mt-0.5 lg:hidden">
-                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'}
+                      <div className="text-xs text-gray-500 mt-0.5 sm:hidden">
+                        {grade.type === 'EXAM' ? 'Examen' : 'Journalière'} • {new Date(grade.date).toLocaleDateString('fr-FR')}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5 md:hidden">
+                        Par {grade.teacher.lastName} {grade.teacher.firstName}
                       </div>
                     </td>
                     <td className="hidden sm:table-cell px-4 py-4 sm:px-6">
@@ -177,15 +181,13 @@ export default async function AdminGradesPage({
                     <td className="px-4 py-4 sm:px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/admin/grades/${grade.id}`}>
-                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" title="Voir les détails">
                             <Eye className="h-4 w-4" />
-                            <span className="hidden sm:inline">Voir</span>
                           </Button>
                         </Link>
                         <Link href={`/admin/grades/${grade.id}/edit`}>
-                          <Button variant="outline" size="sm" className="flex items-center gap-2">
+                          <Button variant="outline" size="sm" title="Modifier la note">
                             <Pencil className="h-4 w-4" />
-                            <span className="hidden sm:inline">Modifier</span>
                           </Button>
                         </Link>
                       </div>
