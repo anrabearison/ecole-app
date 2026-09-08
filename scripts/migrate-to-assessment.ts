@@ -18,11 +18,13 @@ import "dotenv/config"
 
 // Use DIRECT_URL (port 5432) to bypass PgBouncer — Prisma's prepared statements
 // are incompatible with PgBouncer in transaction/session mode.
-const connectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL
+const _rawConnectionString = process.env.DIRECT_URL ?? process.env.DATABASE_URL
 
-if (!connectionString) {
+if (!_rawConnectionString) {
   throw new Error("DIRECT_URL or DATABASE_URL environment variable must be set")
 }
+
+const connectionString: string = _rawConnectionString
 
 const adapter = new PrismaPg({ connectionString })
 const prisma = new PrismaClient({ adapter } as any)
