@@ -104,7 +104,8 @@ export function can(
       case "classroom":
       case "subject":
       case "room":
-        // Can view classrooms, subjects and rooms they're assigned to
+      case "period":
+        // Can view classrooms, subjects, rooms and periods
         if (action === "view") return true
         return false
       case "student":
@@ -122,6 +123,9 @@ export function can(
   // STUDENT has read-only access to their own data
   if (role === "STUDENT") {
     switch (resource) {
+      case "period":
+        if (action === "view") return true
+        return false
       case "student":
         // Can view only their own profile
         if (action === "view" && context?.studentId && context?.ownerId === context.studentId) {
