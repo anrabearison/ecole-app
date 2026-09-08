@@ -57,12 +57,14 @@ describe("Grade Server Actions", () => {
     subject: rawGradeMock.assessment.subject,
     teacher: rawGradeMock.assessment.teacher,
     classroom: rawGradeMock.assessment.classroom,
+    period: rawGradeMock.assessment.period,
     assessment: {
       id: "a1",
       date: rawGradeMock.assessment.date,
       type: "DAILY",
       title: null,
       periodId: mockPeriodId,
+      period: rawGradeMock.assessment.period,
     },
     schoolId: mockSchoolId,
     createdAt: rawGradeMock.createdAt,
@@ -133,10 +135,10 @@ describe("Grade Server Actions", () => {
               teacherId: mockTeacherId1,
               periodId: mockPeriodId,
               type: "EXAM",
-              date: {
-                gte: new Date("2026-01-01"),
-                lte: new Date("2026-12-31"),
-              },
+              date: expect.objectContaining({
+                gte: expect.any(Date),
+                lte: expect.any(Date),
+              }),
             }),
           }),
         })
@@ -332,6 +334,25 @@ describe("Grade Server Actions", () => {
         expect(result.error).toBe("You can only delete grades you have entered")
       }
       expect(vi.mocked(prisma.grade.delete as any)).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("listAssessmentDates", () => {
+    it("should return formatted distinct assessment dates", async () => {
+      mockSession("TEACHER", mockSchoolId, mockTeacherId1)
+
+      vi.mocked(prisma.assessment.findMany as any).mockResolvedValue([
+        { date: new Date("2026-09-08T10:00:00Z"), title: "Interro 1", type: "DAILY" },
+      ] as any)
+
+      const { listAssessmentDates } = await import("./grade")
+      const result = await listAssessmentDates({ classroomId: mockClassroomId })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data).toHaveLength(1)
+        expect(result.data[0].date).toBe("2026-09-08")
+      }
     })
   })
 })

@@ -1,7 +1,9 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { Filter, RotateCcw } from "lucide-react"
+import { listAssessmentDates } from "@/lib/actions/grade"
 
 type GradeFilterValues = {
   classroomId?: string
@@ -9,6 +11,7 @@ type GradeFilterValues = {
   teacherId?: string
   periodId?: string
   type?: "EXAM" | "DAILY"
+  date?: string
   startDate?: string
   endDate?: string
 }
@@ -26,6 +29,24 @@ export function GradeFilters({ values, classrooms, subjects, teachers, periods, 
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+
+  const [assessmentDates, setAssessmentDates] = useState<Array<{ date: string; label: string }>>([])
+
+  useEffect(() => {
+    async function loadDates() {
+      const res = await listAssessmentDates({
+        classroomId: values.classroomId,
+        subjectId: values.subjectId,
+        teacherId: values.teacherId,
+        periodId: values.periodId,
+        type: values.type,
+      })
+      if (res.success) {
+        setAssessmentDates(res.data)
+      }
+    }
+    loadDates()
+  }, [values.classroomId, values.subjectId, values.teacherId, values.periodId, values.type])
 
   const updateFilters = (name: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -48,7 +69,7 @@ export function GradeFilters({ values, classrooms, subjects, teachers, periods, 
   }
 
   const hasActiveFilters = Boolean(
-    values.classroomId || values.subjectId || values.teacherId || values.periodId || values.type || values.startDate || values.endDate
+    values.classroomId || values.subjectId || values.teacherId || values.periodId || values.type || values.date || values.startDate || values.endDate
   )
 
   return (
@@ -178,28 +199,32 @@ export function GradeFilters({ values, classrooms, subjects, teachers, periods, 
           </div>
         </div>
 
-        {/* Start Date */}
+        {/* Assessment Date Filter */}
         <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Du</label>
-          <input
-            type="date"
-            name="startDate"
-            value={values.startDate || ""}
-            onChange={(e) => updateFilters("startDate", e.target.value)}
-            className="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2.5 border bg-white"
-          />
-        </div>
-
-        {/* End Date */}
-        <div>
-          <label className="block text-xs font-medium text-gray-500 mb-1">Au</label>
-          <input
-            type="date"
-            name="endDate"
-            value={values.endDate || ""}
-            onChange={(e) => updateFilters("endDate", e.target.value)}
-            className="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2.5 border bg-white"
-          />
+          <label className="block text-xs font-medium text-gray-500 mb-1">Date de l'évaluation</label>
+          {assessmentDates.length > 0 ? (
+            <select
+              name="date"
+              value={values.date || ""}
+              onChange={(e) => updateFilters("date", e.target.value)}
+              className="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2.5 border bg-white"
+            >
+              <option value="">Toutes les dates d'évaluation</option>
+              {assessmentDates.map((item) => (
+                <option key={item.date} value={item.date}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="date"
+              name="date"
+              value={values.date || ""}
+              onChange={(e) => updateFilters("date", e.target.value)}
+              className="w-full rounded-lg border-gray-300 shadow-xs focus:border-indigo-500 focus:ring-indigo-500 text-sm p-2.5 border bg-white"
+            />
+          )}
         </div>
       </div>
     </div>

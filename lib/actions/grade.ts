@@ -37,12 +37,20 @@ export type GradeWithRelations = {
       cycle: string
     }
   }
+  period?: {
+    id: string
+    name: string
+  }
   assessment?: {
     id: string
     date: Date
     type: "EXAM" | "DAILY"
     title: string | null
     periodId: string
+    period?: {
+      id: string
+      name: string
+    }
   }
   schoolId: string
   createdAt: Date
@@ -103,15 +111,77 @@ function mapGradeToRelations(g: any): GradeWithRelations {
     subject: g.assessment.subject,
     teacher: g.assessment.teacher,
     classroom: g.assessment.classroom,
+    period: g.assessment.period,
     assessment: {
       id: g.assessment.id,
       date: g.assessment.date,
       type: g.assessment.type,
       title: g.assessment.title,
       periodId: g.assessment.periodId,
+      period: g.assessment.period,
     },
     schoolId: g.assessment.schoolId,
     createdAt: g.createdAt,
+  }
+}
+
+export async function listAssessmentDates(filters?: {
+  classroomId?: string
+  subjectId?: string
+  teacherId?: string
+  periodId?: string
+  type?: "EXAM" | "DAILY"
+}): Promise<ActionResult<Array<{ date: string; label: string }>>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const where: Record<string, unknown> = {
+      schoolId: session.user.schoolId,
+      ...(session.user.role === "TEACHER" && session.user.teacherId && { teacherId: session.user.teacherId }),
+      ...(filters?.classroomId && { classroomId: filters.classroomId }),
+      ...(filters?.subjectId && { subjectId: filters.subjectId }),
+      ...(filters?.teacherId && { teacherId: filters.teacherId }),
+      ...(filters?.periodId && { periodId: filters.periodId }),
+      ...(filters?.type && { type: filters.type }),
+    }
+
+    const assessments = await prisma.assessment.findMany({
+      where,
+      select: {
+        date: true,
+        title: true,
+        type: true,
+      },
+      orderBy: { date: "desc" },
+    })
+
+    const dateMap = new Map<string, string>()
+    assessments.forEach((a) => {
+      const dateKey = a.date.toISOString().split("T")[0]
+      if (!dateMap.has(dateKey)) {
+        const dateStr = new Date(a.date).toLocaleDateString("fr-FR")
+        const label = a.title ? `${dateStr} (${a.title})` : dateStr
+        dateMap.set(dateKey, label)
+      }
+    })
+
+    const result = Array.from(dateMap.entries()).map(([date, label]) => ({
+      date,
+      label,
+    }))
+
+    return { success: true, data: result }
+  } catch (error: any) {
+    console.error("Error listing assessment dates:", error)
+    return { success: false, error: "Erreur lors du chargement des dates d'évaluation" }
   }
 }
 
@@ -121,6 +191,9 @@ export async function listGradesForTeacher(filters?: {
   type?: "EXAM" | "DAILY"
   studentId?: string
   periodId?: string
+  date?: string
+  startDate?: string
+  endDate?: string
   page?: number
   pageSize?: number
 }): Promise<PaginatedActionResult<GradeWithRelations[]>> {
@@ -146,16 +219,43 @@ export async function listGradesForTeacher(filters?: {
     const page = filters?.page && filters.page > 0 ? filters.page : 1
     const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 20
 
+    const dateFilter: Record<string, Date> = {}
+    if (filters?.date) {
+      const start = new Date(filters.date)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(filters.date)
+      end.setHours(23, 59, 59, 999)
+      dateFilter.gte = start
+      dateFilter.lte = end
+    } else {
+      if (filters?.startDate) {
+        const start = new Date(filters.startDate)
+        start.setHours(0, 0, 0, 0)
+        dateFilter.gte = start
+      }
+      if (filters?.endDate) {
+        const end = new Date(filters.endDate)
+        end.setHours(23, 59, 59, 999)
+        dateFilter.lte = end
+      }
+    }
+
+    const assessmentWhere: Record<string, unknown> = {
+      schoolId: session.user.schoolId,
+      teacherId: session.user.teacherId, // CRITICAL: Only grades entered by this teacher
+      ...(filters?.classroomId && { classroomId: filters.classroomId }),
+      ...(filters?.subjectId && { subjectId: filters.subjectId }),
+      ...(filters?.type && { type: filters.type }),
+      ...(filters?.periodId && { periodId: filters.periodId }),
+    }
+
+    if (Object.keys(dateFilter).length > 0) {
+      assessmentWhere.date = dateFilter
+    }
+
     const where: Record<string, unknown> = {
       ...(filters?.studentId && { studentId: filters.studentId }),
-      assessment: {
-        schoolId: session.user.schoolId,
-        teacherId: session.user.teacherId, // CRITICAL: Only grades entered by this teacher
-        ...(filters?.classroomId && { classroomId: filters.classroomId }),
-        ...(filters?.subjectId && { subjectId: filters.subjectId }),
-        ...(filters?.type && { type: filters.type }),
-        ...(filters?.periodId && { periodId: filters.periodId }),
-      },
+      assessment: assessmentWhere,
     }
 
     const [rawGrades, total] = await Promise.all([
@@ -280,6 +380,7 @@ export async function listGradesForAdmin(filters?: {
   studentId?: string
   periodId?: string
   type?: "EXAM" | "DAILY"
+  date?: string
   startDate?: string
   endDate?: string
   page?: number
@@ -304,11 +405,24 @@ export async function listGradesForAdmin(filters?: {
     const pageSize = filters?.pageSize && filters.pageSize > 0 ? filters.pageSize : 20
 
     const dateFilter: Record<string, Date> = {}
-    if (filters?.startDate) {
-      dateFilter.gte = new Date(filters.startDate)
-    }
-    if (filters?.endDate) {
-      dateFilter.lte = new Date(filters.endDate)
+    if (filters?.date) {
+      const start = new Date(filters.date)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(filters.date)
+      end.setHours(23, 59, 59, 999)
+      dateFilter.gte = start
+      dateFilter.lte = end
+    } else {
+      if (filters?.startDate) {
+        const start = new Date(filters.startDate)
+        start.setHours(0, 0, 0, 0)
+        dateFilter.gte = start
+      }
+      if (filters?.endDate) {
+        const end = new Date(filters.endDate)
+        end.setHours(23, 59, 59, 999)
+        dateFilter.lte = end
+      }
     }
 
     const assessmentWhere: Record<string, unknown> = {
