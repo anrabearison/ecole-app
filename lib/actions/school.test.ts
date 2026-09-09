@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { listSchools, createSchool, getSchoolStats } from "./school"
+import { listSchools, createSchool, getSchoolStats, getSchoolScheduleSettings, updateSchoolScheduleSettings } from "./school"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -11,6 +11,8 @@ vi.mock("@/lib/permissions", () => ({
   can: vi.fn((role: string, action: string, resource: string) => {
     // PLATFORM_SUPER_ADMIN has full access to everything
     if (role === "PLATFORM_SUPER_ADMIN") return true
+    // SCHOOL_ADMIN can update their school settings
+    if (role === "SCHOOL_ADMIN" && resource === "school" && action === "update") return true
     // Other roles have no access to "school" resource
     if (resource === "school") return false
     return true
@@ -184,6 +186,76 @@ describe("school actions", () => {
       const result = await getSchoolStats(mockSchoolId)
       
       expect(result.success).toBe(false)
+    })
+  })
+
+  describe("getSchoolScheduleSettings", () => {
+    it("should return schedule settings for the user's school", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+        scheduleStartTime: "07:00",
+        morningEndTime: "12:00",
+        afternoonStartTime: "14:00",
+        scheduleEndTime: "18:00",
+        slotDurationMinutes: 60,
+      } as any)
+
+      const result = await getSchoolScheduleSettings()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.scheduleStartTime).toBe("07:00")
+        expect(result.data.morningEndTime).toBe("12:00")
+        expect(result.data.afternoonStartTime).toBe("14:00")
+        expect(result.data.scheduleEndTime).toBe("18:00")
+        expect(result.data.slotDurationMinutes).toBe(60)
+      }
+    })
+  })
+
+  describe("updateSchoolScheduleSettings", () => {
+    it("should allow SCHOOL_ADMIN to update schedule settings", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.school.update as any).mockResolvedValue({
+        scheduleStartTime: "08:00",
+        morningEndTime: "12:00",
+        afternoonStartTime: "13:30",
+        scheduleEndTime: "17:30",
+        slotDurationMinutes: 45,
+      } as any)
+
+      const result = await updateSchoolScheduleSettings({
+        scheduleStartTime: "08:00",
+        morningEndTime: "12:00",
+        afternoonStartTime: "13:30",
+        scheduleEndTime: "17:30",
+        slotDurationMinutes: 45,
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.scheduleStartTime).toBe("08:00")
+        expect(result.data.slotDurationMinutes).toBe(45)
+      }
+    })
+
+    it("should reject invalid schedule order where morning end is after afternoon start", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const result = await updateSchoolScheduleSettings({
+        scheduleStartTime: "08:00",
+        morningEndTime: "14:00",
+        afternoonStartTime: "13:00",
+        scheduleEndTime: "18:00",
+        slotDurationMinutes: 60,
+      })
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain("Les horaires doivent respecter l'ordre")
+      }
     })
   })
 })

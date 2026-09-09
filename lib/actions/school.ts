@@ -4,8 +4,17 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import { schoolSchema, type SchoolInput } from "@/lib/validations/school"
+import { scheduleSettingsSchema, type ScheduleSettingsInput } from "@/lib/validations/school"
 import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 import bcrypt from "bcryptjs"
+
+export type ScheduleSettings = {
+  scheduleStartTime: string
+  morningEndTime: string
+  afternoonStartTime: string
+  scheduleEndTime: string
+  slotDurationMinutes: number
+}
 
 export type SchoolWithStats = {
   id: string
@@ -224,5 +233,92 @@ export async function getSchoolNameById(schoolId: string): Promise<ActionResult<
   } catch (error: any) {
     console.error("Error getting school name:", error)
     return { success: false, error: "Erreur lors de la récupération du nom de l'école" }
+  }
+}
+
+/**
+ * Get the schedule configuration for the current user's school
+ */
+export async function getSchoolScheduleSettings(): Promise<ActionResult<ScheduleSettings>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const school = await prisma.school.findUnique({
+      where: { id: session.user.schoolId },
+      select: {
+        scheduleStartTime: true,
+        morningEndTime: true,
+        afternoonStartTime: true,
+        scheduleEndTime: true,
+        slotDurationMinutes: true,
+      },
+    })
+
+    if (!school) {
+      return { success: false, error: "École introuvable" }
+    }
+
+    return { success: true, data: school }
+  } catch (error: any) {
+    console.error("Error getting school schedule settings:", error)
+    return { success: false, error: "Erreur lors de la récupération des paramètres horaires" }
+  }
+}
+
+/**
+ * Update the schedule configuration for the current user's school - SCHOOL_ADMIN only
+ */
+export async function updateSchoolScheduleSettings(data: ScheduleSettingsInput): Promise<ActionResult<ScheduleSettings>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "update", "school", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  const validation = scheduleSettingsSchema.safeParse(data)
+
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+
+  try {
+    const school = await prisma.school.update({
+      where: { id: session.user.schoolId },
+      data: {
+        scheduleStartTime: validation.data.scheduleStartTime,
+        morningEndTime: validation.data.morningEndTime,
+        afternoonStartTime: validation.data.afternoonStartTime,
+        scheduleEndTime: validation.data.scheduleEndTime,
+        slotDurationMinutes: validation.data.slotDurationMinutes,
+      },
+      select: {
+        scheduleStartTime: true,
+        morningEndTime: true,
+        afternoonStartTime: true,
+        scheduleEndTime: true,
+        slotDurationMinutes: true,
+      },
+    })
+
+    return { success: true, data: school }
+  } catch (error: any) {
+    console.error("Error updating school schedule settings:", error)
+    return { success: false, error: "Erreur lors de la mise à jour des paramètres horaires" }
   }
 }

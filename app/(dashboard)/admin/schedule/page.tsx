@@ -5,6 +5,7 @@ import Link from "next/link"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { listTeachers } from "@/lib/actions/teacher"
 import { listRooms } from "@/lib/actions/room"
+import { getSchoolScheduleSettings, type ScheduleSettings } from "@/lib/actions/school"
 import { listScheduleSlotsByClassroom, listScheduleSlotsByTeacher, listScheduleSlotsByRoom } from "@/lib/actions/schedule-slot"
 import { ScheduleView } from "@/components/ScheduleView"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
@@ -33,6 +34,7 @@ export default function AdminSchedulePage() {
   const [mode, setMode] = useState<FilterMode>("classroom")
   const [selectedId, setSelectedId] = useState<string>("")
   const [slots, setSlots] = useState<ScheduleSlotWithRelations[]>([])
+  const [scheduleSettings, setScheduleSettings] = useState<ScheduleSettings | undefined>(undefined)
   const [loading, setLoading] = useState(false)
   const [classrooms, setClassrooms] = useState<ClassroomOption[]>([])
   const [teachers, setTeachers] = useState<TeacherOption[]>([])
@@ -40,15 +42,17 @@ export default function AdminSchedulePage() {
 
   useEffect(() => {
     async function loadData() {
-      const [classroomsResult, teachersResult, roomsResult] = await Promise.all([
+      const [classroomsResult, teachersResult, roomsResult, settingsResult] = await Promise.all([
         listClassrooms({ page: 1, pageSize: 1000 }),
         listTeachers({ page: 1, pageSize: 1000 }),
         listRooms({ page: 1, pageSize: 1000 }),
+        getSchoolScheduleSettings(),
       ])
       
       if (classroomsResult.success) setClassrooms(classroomsResult.data)
       if (teachersResult.success) setTeachers(teachersResult.data)
       if (roomsResult.success) setRooms(roomsResult.data)
+      if (settingsResult.success) setScheduleSettings(settingsResult.data)
     }
     loadData()
   }, [])
@@ -133,9 +137,9 @@ export default function AdminSchedulePage() {
         <h1 className="text-2xl font-bold">Emploi du temps</h1>
         <Link
           href="/admin/schedule/new"
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm"
         >
-          Nouveau créneau
+          + Nouveau créneau
         </Link>
       </div>
 
@@ -199,14 +203,8 @@ export default function AdminSchedulePage() {
         </div>
       )}
 
-      {!loading && selectedId && slots.length === 0 && (
-        <div className="text-center py-8 text-gray-600">
-          Aucun créneau trouvé pour cette sélection
-        </div>
-      )}
-
-      {!loading && selectedId && slots.length > 0 && (
-        <ScheduleView slots={slots} />
+      {!loading && selectedId && (
+        <ScheduleView slots={slots} scheduleSettings={scheduleSettings} />
       )}
     </div>
   )

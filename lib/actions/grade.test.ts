@@ -180,28 +180,20 @@ describe("Grade Server Actions", () => {
         schoolId: mockSchoolId,
       } as any)
       
-      vi.mocked(prisma.$transaction as any).mockImplementation(async (callback: any) => {
-        const tx = {
-          assessment: {
-            create: vi.fn().mockResolvedValue({
-              id: "a1",
-              date: new Date(),
-              type: "DAILY",
-              title: null,
-              periodId: mockPeriodId,
-              classroomId: mockClassroomId,
-              subjectId: mockSubjectId,
-              teacherId: mockTeacherId1,
-              schoolId: mockSchoolId,
-            }),
-          },
-          grade: {
-            create: vi.fn().mockResolvedValue(rawGradeMock),
-          },
-        }
-        return callback(tx)
+      vi.mocked(prisma.assessment.create as any).mockResolvedValue({
+        id: "a1",
+        date: new Date(),
+        type: "DAILY",
+        title: null,
+        periodId: mockPeriodId,
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
       })
-      
+      vi.mocked(prisma.grade.createMany as any).mockResolvedValue({ count: 1 })
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([rawGradeMock])
+
       const result = await createGrades({
         classroomId: mockClassroomId,
         subjectId: mockSubjectId,
