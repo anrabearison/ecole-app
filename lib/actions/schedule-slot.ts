@@ -3,7 +3,7 @@
 import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
-import { scheduleSlotSchema, scheduleSlotUpdateSchema, type ScheduleSlotInput, type ScheduleSlotUpdateInput } from "@/lib/validations/schedule-slot"
+import { scheduleSlotSchema, scheduleSlotUpdateSchema, type ScheduleSlotInput, type ScheduleSlotUpdateInput, overlapsBreak } from "@/lib/validations/schedule-slot"
 import type { ActionResult } from "@/lib/utils"
 
 export type ScheduleSlotWithRelations = {
@@ -389,6 +389,15 @@ export async function createScheduleSlot(data: ScheduleSlotInput): Promise<Actio
       validation.data.classroomId,
       validation.data.roomId
     )
+
+    // Check if slot overlaps with school's break period
+    const school = await prisma.school.findUnique({
+      where: { id: session.user.schoolId },
+      select: { morningEndTime: true, afternoonStartTime: true },
+    })
+    if (school && overlapsBreak(validation.data.startTime, validation.data.endTime, school.morningEndTime, school.afternoonStartTime)) {
+      conflicts.push("Ce créneau chevauche la pause méridienne")
+    }
 
     const slot = await prisma.scheduleSlot.create({
       data: {

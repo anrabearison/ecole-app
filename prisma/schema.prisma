@@ -74,6 +74,13 @@ model School {
   address   String?
   createdAt DateTime @default(now())
 
+  // Schedule configuration defaults
+  scheduleStartTime   String @default("07:00")
+  morningEndTime     String @default("12:00")
+  afternoonStartTime String @default("14:00")
+  scheduleEndTime     String @default("18:00")
+  slotDurationMinutes Int    @default(60)
+
   users               User[]
   schoolGrades        SchoolGrade[]
   tracks              Track[]

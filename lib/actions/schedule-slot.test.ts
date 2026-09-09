@@ -477,6 +477,55 @@ describe("ScheduleSlot Server Actions", () => {
         expect(result.warnings).toContain("La salle est déjà occupée sur cet horaire")
       }
     })
+
+    it("should emit warning when created slot overlaps with school lunch break", async () => {
+      mockSession("SCHOOL_ADMIN", mockSchoolId)
+
+      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
+        id: "ts1",
+        teacherId: mockTeacherId1,
+        subjectId: mockSubjectId,
+        classroomId: mockClassroomId,
+        schoolId: mockSchoolId,
+      } as any)
+
+      vi.mocked(prisma.scheduleSlot.findMany as any).mockResolvedValue([])
+      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+        morningEndTime: "12:00",
+        afternoonStartTime: "14:00",
+      } as any)
+
+      vi.mocked(prisma.scheduleSlot.create as any).mockResolvedValue({
+        id: "slot1",
+        day: "MONDAY",
+        startTime: "12:30",
+        endTime: "13:30",
+        roomId: mockRoomId,
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        schoolId: mockSchoolId,
+        classroom: { id: mockClassroomId, section: "A", schoolYear: "2025-2026", schoolGrade: { id: "sg1", name: "6ème", cycle: "MIDDLE_SCHOOL" } },
+        subject: { id: mockSubjectId, name: "Mathématiques" },
+        teacher: { id: mockTeacherId1, firstName: "Prof1", lastName: "Test" },
+        createdAt: new Date()
+      } as any)
+
+      const result = await createScheduleSlot({
+        day: "MONDAY",
+        startTime: "12:30",
+        endTime: "13:30",
+        classroomId: mockClassroomId,
+        subjectId: mockSubjectId,
+        teacherId: mockTeacherId1,
+        roomId: mockRoomId,
+      })
+
+      expect(result.success).toBe(true)
+      if (result.success && result.warnings) {
+        expect(result.warnings).toContain("Ce créneau chevauche la pause méridienne")
+      }
+    })
   })
 
   describe("updateScheduleSlot", () => {

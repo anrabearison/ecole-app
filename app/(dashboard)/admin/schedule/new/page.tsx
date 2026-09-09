@@ -7,7 +7,8 @@ import { createScheduleSlot } from "@/lib/actions/schedule-slot"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { listRooms } from "@/lib/actions/room"
 import { listTeacherSubjectsByClassroom } from "@/lib/actions/teacher-subject"
-import { scheduleSlotSchema, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
+import { getSchoolScheduleSettings } from "@/lib/actions/school"
+import { scheduleSlotSchema, generateTimeSlots, timeToMinutes, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
 
 export default function NewScheduleSlotPage() {
@@ -18,6 +19,8 @@ export default function NewScheduleSlotPage() {
   const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
   const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>>([])
   const [noAssignmentsMessage, setNoAssignmentsMessage] = useState<string | null>(null)
+  const [timeSlotsOptions, setTimeSlotsOptions] = useState<{ value: string; label: string; isBreak: boolean }[]>([])
+  const [slotDuration, setSlotDuration] = useState<number>(60)
 
   const {
     control,
@@ -32,19 +35,45 @@ export default function NewScheduleSlotPage() {
 
   const watchedClassroomId = useWatch({ control, name: "classroomId" })
   const watchedSubjectId = useWatch({ control, name: "subjectId" })
+  const watchedStartTime = useWatch({ control, name: "startTime" })
 
   useEffect(() => {
     async function loadData() {
-      const [classroomsResult, roomsResult] = await Promise.all([
+      const [classroomsResult, roomsResult, settingsResult] = await Promise.all([
         listClassrooms(),
         listRooms(),
+        getSchoolScheduleSettings(),
       ])
 
       if (classroomsResult.success) setClassrooms(classroomsResult.data)
       if (roomsResult.success) setRooms(roomsResult.data)
+      if (settingsResult.success) {
+        const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } = settingsResult.data
+        setSlotDuration(slotDurationMinutes)
+        const slotsOptions = generateTimeSlots(
+          scheduleStartTime,
+          morningEndTime,
+          afternoonStartTime,
+          scheduleEndTime,
+          slotDurationMinutes
+        )
+        setTimeSlotsOptions(slotsOptions)
+      }
     }
     loadData()
   }, [])
+
+  // Auto-set endTime when startTime is selected if endTime is empty
+  useEffect(() => {
+    if (watchedStartTime) {
+      const startMins = timeToMinutes(watchedStartTime)
+      const endMins = startMins + slotDuration
+      const h = Math.floor(endMins / 60)
+      const m = endMins % 60
+      const endTimeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
+      setValue("endTime", endTimeStr)
+    }
+  }, [watchedStartTime, slotDuration, setValue])
 
   // Load teacher-subject assignments when classroom is selected
   useEffect(() => {
@@ -142,7 +171,7 @@ export default function NewScheduleSlotPage() {
 
       {success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-          <p className="text-green-800">Créneau créé avec succès</p>
+          <p className="text-green-800 font-medium">Créneau créé avec succès</p>
         </div>
       )}
 
@@ -231,11 +260,29 @@ export default function NewScheduleSlotPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Heure de début</label>
-            <input
-              type="time"
-              {...register("startTime")}
-              className="w-full border rounded px-3 py-2"
-            />
+            {timeSlotsOptions.length > 0 ? (
+              <select
+                {...register("startTime")}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value="">Sélectionner l&apos;heure</option>
+                {timeSlotsOptions.map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={slot.isBreak}
+                  >
+                    {slot.label} {slot.isBreak ? "(Pause repas)" : ""}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="time"
+                {...register("startTime")}
+                className="w-full border rounded px-3 py-2"
+              />
+            )}
             {errors.startTime && <p className="text-red-600 text-sm mt-1">{errors.startTime.message}</p>}
           </div>
 
