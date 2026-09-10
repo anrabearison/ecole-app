@@ -28,6 +28,8 @@ function findSystemChromePath(): string | null {
   return null
 }
 
+const CHROMIUM_PACK_URL = "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar"
+
 export async function launchBrowser(): Promise<Browser> {
   if (_cachedBrowser && _cachedBrowser.connected) {
     return _cachedBrowser
@@ -36,14 +38,14 @@ export async function launchBrowser(): Promise<Browser> {
   const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL
 
   if (isProduction) {
-    // Production / Vercel — use @sparticuz/chromium-min
+    // Production / Vercel — use @sparticuz/chromium-min with remote binary pack
     const puppeteerCore = await import("puppeteer-core")
     const chromiumMin = await import("@sparticuz/chromium-min")
 
     const browser = await puppeteerCore.default.launch({
       args: chromiumMin.default.args,
       defaultViewport: { width: 1280, height: 720 },
-      executablePath: await chromiumMin.default.executablePath(),
+      executablePath: await chromiumMin.default.executablePath(CHROMIUM_PACK_URL),
       headless: true,
     })
 
