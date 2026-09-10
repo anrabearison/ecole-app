@@ -25,13 +25,19 @@ export type ClassRank = {
 }
 
 /**
- * Calculate subject average for a student in a period
- * Weighted average based on Period.examWeight/dailyWeight
+ * Calculate subject average for a student in a period.
+ * Weighted average based on Period.examWeight/dailyWeight.
+ *
+ * @param selectedDailyAssessmentIds - Optional list of DAILY assessment IDs to include.
+ *   - undefined / null → use ALL daily grades (default behaviour for individual report card)
+ *   - empty array []   → no daily grades included (daily average = 0)
+ *   - non-empty array  → only grades from those specific assessments are averaged
  */
 export async function calculateSubjectAverage(
   studentId: string,
   subjectId: string,
-  periodId: string
+  periodId: string,
+  selectedDailyAssessmentIds?: string[] | null,
 ): Promise<ActionResult<number>> {
   const session = await auth()
 
@@ -62,6 +68,12 @@ export async function calculateSubjectAverage(
       return { success: false, error: "Period not found" }
     }
 
+    // Build DAILY filter: restrict to selected assessments if a selection was provided
+    const dailyAssessmentFilter =
+      selectedDailyAssessmentIds !== undefined && selectedDailyAssessmentIds !== null
+        ? { id: { in: selectedDailyAssessmentIds } }
+        : {}  // no filter → all DAILY assessments
+
     // Get all grades for this student, subject, and period
     const grades = await prisma.grade.findMany({
       where: {
@@ -75,7 +87,7 @@ export async function calculateSubjectAverage(
       select: {
         value: true,
         assessment: {
-          select: { type: true },
+          select: { id: true, type: true },
         },
       },
     })
@@ -95,8 +107,15 @@ export async function calculateSubjectAverage(
         examSum += grade.value
         examCount++
       } else {
-        dailySum += grade.value
-        dailyCount++
+        // DAILY: only include if no filter, or if this assessment is in the selection
+        const isSelected =
+          selectedDailyAssessmentIds === undefined || selectedDailyAssessmentIds === null
+            ? true
+            : selectedDailyAssessmentIds.includes(grade.assessment.id)
+        if (isSelected) {
+          dailySum += grade.value
+          dailyCount++
+        }
       }
     }
 
@@ -114,12 +133,17 @@ export async function calculateSubjectAverage(
 }
 
 /**
- * Calculate general average for a student in a period
- * Weighted by subject coefficients
+ * Calculate general average for a student in a period.
+ * Weighted by subject coefficients.
+ *
+ * @param dailySelectionMap - Optional map of subjectId → selectedDailyAssessmentIds.
+ *   Pass this when generating class report cards with selective daily notes.
+ *   Omit (or pass undefined) to use all daily notes (individual report card behaviour).
  */
 export async function calculateGeneralAverage(
   studentId: string,
-  periodId: string
+  periodId: string,
+  dailySelectionMap?: Map<string, string[] | null>,
 ): Promise<ActionResult<number>> {
   const session = await auth()
 
@@ -213,7 +237,8 @@ export async function calculateGeneralAverage(
     }
 
     for (const [subjectId] of subjectAverages) {
-      const subjectAvgResult = await calculateSubjectAverage(studentId, subjectId, periodId)
+      const selectedDailyIds = dailySelectionMap?.get(subjectId)
+      const subjectAvgResult = await calculateSubjectAverage(studentId, subjectId, periodId, selectedDailyIds)
       if (subjectAvgResult.success) {
         subjectAverages.get(subjectId)!.average = subjectAvgResult.data
       }
@@ -306,11 +331,15 @@ export async function calculateClassRank(
 }
 
 /**
- * Get all subject averages for a student in a period
+ * Get all subject averages for a student in a period.
+ *
+ * @param dailySelectionMap - Optional map of subjectId → selectedDailyAssessmentIds.
+ *   Pass this when generating class report cards with selective daily notes.
  */
 export async function getStudentSubjectAverages(
   studentId: string,
-  periodId: string
+  periodId: string,
+  dailySelectionMap?: Map<string, string[] | null>,
 ): Promise<ActionResult<SubjectAverage[]>> {
   const session = await auth()
 
@@ -374,8 +403,9 @@ export async function getStudentSubjectAverages(
     const subjectAverages: SubjectAverage[] = []
 
     for (const subject of uniqueSubjects) {
+      const selectedDailyIds = dailySelectionMap?.get(subject.id)
       const [avgResult, effectiveCoefficient] = await Promise.all([
-        calculateSubjectAverage(studentId, subject.id, periodId),
+        calculateSubjectAverage(studentId, subject.id, periodId, selectedDailyIds),
         schoolGradeId
           ? getEffectiveCoefficient(subject.id, schoolGradeId, trackId, session.user.schoolId!)
           : Promise.resolve(subject.coefficient),

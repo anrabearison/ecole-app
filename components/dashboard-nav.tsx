@@ -41,6 +41,7 @@ export function DashboardNav() {
           { href: "/teacher", label: "Tableau de bord" },
           { href: "/teacher/schedule", label: "Emploi du temps" },
           { href: "/teacher/grades", label: "Notes" },
+          { href: "/teacher/report-cards", label: "Bulletins & Évaluations" },
         ]
       case "STUDENT":
         return [

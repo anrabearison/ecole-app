@@ -101,6 +101,30 @@ describe("average actions", () => {
         expect(result.data).toBe(9)
       }
     })
+
+    it("should include only selected daily assessment grades when selectedDailyAssessmentIds is provided", async () => {
+      mockSession("STUDENT", mockStudentId)
+
+      vi.mocked(prisma.period.findUnique as any).mockResolvedValue({
+        examWeight: 0.5,
+        dailyWeight: 0.5,
+      })
+
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([
+        { value: 20, assessment: { id: "daily-1", type: "DAILY" } },
+        { value: 10, assessment: { id: "daily-2", type: "DAILY" } },
+      ])
+
+      // Pass only daily-1 in selected IDs
+      const result = await calculateSubjectAverage(mockStudentId, mockSubjectId, mockPeriodId, ["daily-1"])
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        // Exam avg: 0, Daily avg (only daily-1): 20
+        // Weighted: 0 * 0.5 + 20 * 0.5 = 10
+        expect(result.data).toBe(10)
+      }
+    })
   })
 
   describe("calculateGeneralAverage", () => {

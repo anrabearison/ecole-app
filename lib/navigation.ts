@@ -230,6 +230,7 @@ export const navByRole: Record<Role, NavItem[]> = {
       items: [
         { type: "link", label: "Saisir des notes", href: "/teacher/grades/new", icon: Pencil },
         { type: "link", label: "Consulter", href: "/teacher/grades", icon: FileText },
+        { type: "link", label: "Bulletins & Évaluations", href: "/teacher/report-cards", icon: FileText },
       ],
     },
     {
