@@ -5,16 +5,15 @@ import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages } from "./average"
+import { generateReportCardPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf"
 import { getReportCardComment } from "./report-card-comment"
-import { ReportCardDocument, type ReportCardData } from "@/lib/pdf/report-card"
-import { generateReportCardPdfBuffer } from "@/lib/pdf/generate-pdf"
 
 /**
  * Generate a PDF report card for a student in a period
  * SCHOOL_ADMIN/STAFF_ADMIN can generate for any student in their school
  * STUDENT can only generate their own report card
  */
-export async function generateReportCardPdf(studentId: string, periodId: string): Promise<ActionResult<{ pdfBuffer: Buffer; fileName: string }>> {
+export async function generateReportCardPdf(studentId: string, periodId: string): Promise<ActionResult<{ pdfBase64: string; fileName: string }>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -101,6 +100,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     const reportCardData: ReportCardData = {
       schoolName: student.school.name,
       schoolAddress: student.school.address || undefined,
+      schoolLogoBase64: (student.school as any).logoUrl || undefined,
       schoolYear: period.schoolYear,
       periodName: period.name,
       studentFirstName: student.firstName || "",
@@ -119,10 +119,11 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
 
     // Generate PDF
     const pdfStream = await generateReportCardPdfBuffer(reportCardData)
+    const pdfBase64 = pdfStream.toString("base64")
 
     const fileName = `Bulletin_${student.lastName}_${student.firstName || ""}_${period.name.replace(/\s+/g, "_")}.pdf`
 
-    return { success: true, data: { pdfBuffer: pdfStream as Buffer, fileName } }
+    return { success: true, data: { pdfBase64, fileName } }
   } catch (error: any) {
     console.error("Error generating report card PDF:", error)
     return { success: false, error: "Erreur lors de la génération du bulletin PDF" }

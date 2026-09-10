@@ -6,6 +6,7 @@ import { listScheduleSlotsByClassroom } from "@/lib/actions/schedule-slot"
 import { Button } from "@/components/ui/button"
 import { ScheduleView } from "@/components/ScheduleView"
 import { getStudentSubjectAverages, calculateGeneralAverage } from "@/lib/actions/average"
+import { ReportCardSection } from "./grades-tab"
 import { ArrowLeft, Pencil, CheckCircle2, AlertCircle } from "lucide-react"
 
 export default async function StudentDetailPage({
@@ -60,6 +61,7 @@ export default async function StudentDetailPage({
   const enrollments = enrollmentsResult.success ? enrollmentsResult.data : []
   const periods = periodsResult.success ? periodsResult.data : []
   const selectedPeriodId = periodId || periods[0]?.id || ""
+  const selectedPeriodObj = periods.find(p => p.id === selectedPeriodId)
 
   let grades: any[] = []
   let subjectAverages: Array<{ subjectId: string; subjectName: string; coefficient: number; average: number }> = []
@@ -129,7 +131,7 @@ export default async function StudentDetailPage({
           {[
             { key: "info", label: "Informations" },
             { key: "schooling", label: "Scolarité" },
-            { key: "grades", label: "Notes" },
+            { key: "grades", label: "Notes & Bulletin" },
             { key: "schedule", label: "Emploi du temps" },
           ].map((tabItem) => (
             <Link
@@ -252,10 +254,10 @@ export default async function StudentDetailPage({
         </div>
       )}
 
-      {/* Tab: Notes */}
+      {/* Tab: Notes & Bulletin */}
       {activeTab === "grades" && (
         <div className="space-y-5">
-          <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6">
+          <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4">
             <form method="get" className="flex flex-wrap items-end gap-3">
               <input type="hidden" name="tab" value="grades" />
               <div>
@@ -278,6 +280,15 @@ export default async function StudentDetailPage({
               <Button type="submit" size="sm">Afficher</Button>
             </form>
           </div>
+
+          {/* Bulletin generation & appreciation section */}
+          {selectedPeriodId && (
+            <ReportCardSection
+              studentId={student.id}
+              periodId={selectedPeriodId}
+              periodName={selectedPeriodObj?.name}
+            />
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-xs">

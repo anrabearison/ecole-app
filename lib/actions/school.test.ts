@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest"
-import { listSchools, createSchool, getSchoolStats, getSchoolScheduleSettings, updateSchoolScheduleSettings } from "./school"
+import {
+  listSchools,
+  createSchool,
+  getSchoolStats,
+  getSchoolScheduleSettings,
+  updateSchoolScheduleSettings,
+  getSchoolLogo,
+  updateSchoolLogo,
+  deleteSchoolLogo,
+} from "./school"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -256,6 +265,65 @@ describe("school actions", () => {
       if (!result.success) {
         expect(result.error).toContain("Les horaires doivent respecter l'ordre")
       }
+    })
+  })
+
+  describe("getSchoolLogo", () => {
+    it("should return logoUrl for current school", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.school.findUnique as any).mockResolvedValue({
+        logoUrl: "data:image/png;base64,fake-logo-data",
+      } as any)
+
+      const result = await getSchoolLogo()
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.logoUrl).toBe("data:image/png;base64,fake-logo-data")
+      }
+    })
+  })
+
+  describe("updateSchoolLogo", () => {
+    it("should allow SCHOOL_ADMIN to update school logo", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.school.update as any).mockResolvedValue({
+        logoUrl: "data:image/png;base64,new-logo-data",
+      } as any)
+
+      const result = await updateSchoolLogo("data:image/png;base64,new-logo-data")
+
+      expect(result.success).toBe(true)
+      if (result.success) {
+        expect(result.data.logoUrl).toBe("data:image/png;base64,new-logo-data")
+      }
+    })
+
+    it("should reject non data:image format", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      const result = await updateSchoolLogo("https://invalid-url.com/logo.png")
+
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        expect(result.error).toContain("Format d'image invalide")
+      }
+    })
+  })
+
+  describe("deleteSchoolLogo", () => {
+    it("should allow SCHOOL_ADMIN to delete school logo", async () => {
+      mockSession("SCHOOL_ADMIN")
+
+      vi.mocked(prisma.school.update as any).mockResolvedValue({
+        logoUrl: null,
+      } as any)
+
+      const result = await deleteSchoolLogo()
+
+      expect(result.success).toBe(true)
     })
   })
 })

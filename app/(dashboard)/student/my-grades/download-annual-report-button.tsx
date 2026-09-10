@@ -21,8 +21,13 @@ export function DownloadAnnualReportButton({ studentId, schoolYear, studentName 
     const result = await generateAnnualReportPdf(studentId, schoolYear)
 
     if (result.success) {
-      const uint8Array = new Uint8Array(result.data.pdfBuffer)
-      const blob = new Blob([uint8Array], { type: "application/pdf" })
+      const binaryString = window.atob(result.data.pdfBase64)
+      const len = binaryString.length
+      const bytes = new Uint8Array(len)
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i)
+      }
+      const blob = new Blob([bytes], { type: "application/pdf" })
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url

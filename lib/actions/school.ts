@@ -322,3 +322,102 @@ export async function updateSchoolScheduleSettings(data: ScheduleSettingsInput):
     return { success: false, error: "Erreur lors de la mise à jour des paramètres horaires" }
   }
 }
+
+/**
+ * Get school logo for current user's school
+ */
+export async function getSchoolLogo(): Promise<ActionResult<{ logoUrl: string | null }>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const school = await prisma.school.findUnique({
+      where: { id: session.user.schoolId },
+      select: { logoUrl: true } as any,
+    })
+
+    return { success: true, data: { logoUrl: (school as any)?.logoUrl ?? null } }
+  } catch (error: any) {
+    console.error("Error getting school logo:", error)
+    return { success: false, error: "Erreur lors de la récupération du logo" }
+  }
+}
+
+/**
+ * Update school logo for current user's school - SCHOOL_ADMIN only
+ */
+export async function updateSchoolLogo(logoBase64: string): Promise<ActionResult<{ logoUrl: string }>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "update", "school", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  if (!logoBase64.startsWith("data:image/")) {
+    return { success: false, error: "Format d'image invalide (data URL requise)" }
+  }
+
+  // Basic check for size (around 500KB base64 string length ~ 700k chars)
+  if (logoBase64.length > 700000) {
+    return { success: false, error: "La taille du logo ne doit pas dépasser 500 Ko" }
+  }
+
+  try {
+    const school = await prisma.school.update({
+      where: { id: session.user.schoolId },
+      data: { logoUrl: logoBase64 } as any,
+      select: { logoUrl: true } as any,
+    })
+
+    return { success: true, data: { logoUrl: (school as any).logoUrl } }
+  } catch (error: any) {
+    console.error("Error updating school logo:", error)
+    return { success: false, error: "Erreur lors de la mise à jour du logo" }
+  }
+}
+
+/**
+ * Delete school logo for current user's school - SCHOOL_ADMIN only
+ */
+export async function deleteSchoolLogo(): Promise<ActionResult<void>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "update", "school", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    await prisma.school.update({
+      where: { id: session.user.schoolId },
+      data: { logoUrl: null } as any,
+    })
+
+    return { success: true, data: undefined }
+  } catch (error: any) {
+    console.error("Error deleting school logo:", error)
+    return { success: false, error: "Erreur lors de la suppression du logo" }
+  }
+}

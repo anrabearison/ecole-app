@@ -6,8 +6,7 @@ import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { calculateGeneralAverage } from "./average"
 import { deliberationObservationSchema } from "@/lib/validations/deliberation"
-import { generateAnnualReportPdfBuffer } from "@/lib/pdf/generate-pdf"
-import type { AnnualReportData } from "@/lib/pdf/annual-report"
+import { generateAnnualReportPdfBuffer, type AnnualReportData } from "@/lib/pdf/generate-pdf"
 import type { DeliberationDecision } from "@prisma/client"
 
 export type DeliberationWithRelations = {
@@ -338,7 +337,7 @@ export async function listDeliberationsForClassroom(
 export async function generateAnnualReportPdf(
   studentId: string,
   schoolYear: string
-): Promise<ActionResult<{ pdfBuffer: Buffer; fileName: string }>> {
+): Promise<ActionResult<{ pdfBase64: string; fileName: string }>> {
   const session = await auth()
 
   if (!session?.user) {
@@ -438,6 +437,7 @@ export async function generateAnnualReportPdf(
     const reportData: AnnualReportData = {
       schoolName: student.school.name,
       schoolAddress: student.school.address || undefined,
+      schoolLogoBase64: (student.school as any).logoUrl || undefined,
       schoolYear,
       studentFirstName: student.firstName || "",
       studentLastName: student.lastName,
@@ -449,10 +449,11 @@ export async function generateAnnualReportPdf(
     }
 
     const pdfStream = await generateAnnualReportPdfBuffer(reportData)
+    const pdfBase64 = pdfStream.toString("base64")
 
     const fileName = `Bulletin_Annuel_${student.lastName}_${student.firstName || ""}_${schoolYear.replace(/\s+/g, "_")}.pdf`
 
-    return { success: true, data: { pdfBuffer: pdfStream as Buffer, fileName } }
+    return { success: true, data: { pdfBase64, fileName } }
   } catch (error: any) {
     console.error("Error generating annual report PDF:", error)
     return { success: false, error: "Erreur lors de la génération du bulletin annuel" }
