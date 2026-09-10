@@ -35,8 +35,9 @@ describe("daily-grade-selection actions", () => {
     it("should return assessments with selected=true by default when no selection is saved", async () => {
       mockTeacherSession()
 
-      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
-        subject: { id: mockSubjectId, name: "Maths" },
+      vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
+        id: mockSubjectId,
+        name: "Maths",
       })
 
       vi.mocked(prisma.assessment.findMany as any).mockResolvedValue([
@@ -59,8 +60,9 @@ describe("daily-grade-selection actions", () => {
     it("should flag explicitly selected assessments when a saved selection exists", async () => {
       mockTeacherSession()
 
-      vi.mocked(prisma.teacherSubject.findUnique as any).mockResolvedValue({
-        subject: { id: mockSubjectId, name: "Maths" },
+      vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
+        id: mockSubjectId,
+        name: "Maths",
       })
 
       vi.mocked(prisma.assessment.findMany as any).mockResolvedValue([
