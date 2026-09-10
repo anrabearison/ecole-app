@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import { prisma } from "@/lib/prisma"
 import { listTeacherSubjects } from "@/lib/actions/teacher-subject"
 import { listPeriods } from "@/lib/actions/period"
 import { listDailyAssessmentsWithSelection } from "@/lib/actions/daily-grade-selection"
@@ -17,27 +18,69 @@ export default async function TeacherReportCardsPage({
 
   const params = await searchParams
 
-  const [teacherSubjectsResult, periodsResult] = await Promise.all([
-    listTeacherSubjects(session.user.teacherId || undefined),
-    listPeriods(),
-  ])
-
-  const teacherSubjects = teacherSubjectsResult.success ? teacherSubjectsResult.data : []
+  const periodsResult = await listPeriods()
   const periods = periodsResult.success ? periodsResult.data : []
 
-  // Build unique classrooms from teacher's assignments
-  const classroomMap = new Map<string, { id: string; name: string; schoolYear: string }>()
-  for (const ts of teacherSubjects) {
-    if (!classroomMap.has(ts.classroom.id)) {
-      classroomMap.set(ts.classroom.id, {
-        id: ts.classroom.id,
-        name: `${ts.classroom.schoolGrade.name} ${ts.classroom.section}`,
-        schoolYear: ts.classroom.schoolYear,
+  let classrooms: Array<{ id: string; name: string; schoolYear: string }> = []
+  let subjectsForClassroom: Array<{ id: string; name: string }> = []
+
+  if (session.user.teacherId) {
+    // Teacher: load classrooms and subjects assigned to this teacher
+    const teacherSubjectsResult = await listTeacherSubjects(session.user.teacherId)
+    const teacherSubjects = teacherSubjectsResult.success ? teacherSubjectsResult.data : []
+
+    const classroomMap = new Map<string, { id: string; name: string; schoolYear: string }>()
+    for (const ts of teacherSubjects) {
+      if (!classroomMap.has(ts.classroom.id)) {
+        classroomMap.set(ts.classroom.id, {
+          id: ts.classroom.id,
+          name: `${ts.classroom.schoolGrade?.name || ''} ${ts.classroom.section}`,
+          schoolYear: ts.classroom.schoolYear,
+        })
+      }
+    }
+    classrooms = Array.from(classroomMap.values())
+
+    if (params.classroomId) {
+      // Deduplicate subjects in case of multiple assignments
+      const subjectMap = new Map<string, string>()
+      for (const ts of teacherSubjects) {
+        if (ts.classroom.id === params.classroomId) {
+          subjectMap.set(ts.subject.id, ts.subject.name)
+        }
+      }
+      subjectsForClassroom = Array.from(subjectMap.entries()).map(([id, name]) => ({ id, name }))
+    }
+  } else {
+    // Admin / Staff: load all classrooms and subjects for the school
+    const classroomsData = await prisma.classroom.findMany({
+      where: session.user.schoolId ? { schoolId: session.user.schoolId } : {},
+      select: {
+        id: true,
+        section: true,
+        schoolYear: true,
+        schoolGrade: { select: { name: true } },
+      },
+      orderBy: { section: "asc" },
+    })
+
+    classrooms = classroomsData.map((c) => ({
+      id: c.id,
+      name: `${c.schoolGrade?.name || ''} ${c.section}`,
+      schoolYear: c.schoolYear,
+    }))
+
+    if (params.classroomId) {
+      const subjectsData = await prisma.subject.findMany({
+        where: session.user.schoolId ? { schoolId: session.user.schoolId } : {},
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
       })
+      subjectsForClassroom = subjectsData
     }
   }
 
-  // If a classroom + subject + period are selected, load the daily assessment selection
+  // Load daily assessment selection if classroom + subject + period are all selected
   let selectionData = null
   if (params.classroomId && params.subjectId && params.periodId) {
     const selectionResult = await listDailyAssessmentsWithSelection(
@@ -50,16 +93,9 @@ export default async function TeacherReportCardsPage({
     }
   }
 
-  // Filter subjects for the selected classroom
-  const subjectsForClassroom = params.classroomId
-    ? teacherSubjects
-        .filter((ts) => ts.classroom.id === params.classroomId)
-        .map((ts) => ({ id: ts.subject.id, name: ts.subject.name }))
-    : []
-
   return (
     <ReportCardsClient
-      classrooms={Array.from(classroomMap.values())}
+      classrooms={classrooms}
       periods={periods}
       subjectsForClassroom={subjectsForClassroom}
       selectionData={selectionData}

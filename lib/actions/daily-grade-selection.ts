@@ -20,9 +20,9 @@ export type DailyGradeSelectionResult = {
 }
 
 /**
- * List all DAILY assessments for a teacher's subject in a classroom + period,
+ * List all DAILY assessments for a classroom, subject, and period,
  * with a flag indicating which ones are currently selected.
- * Only the teacher assigned to the subject in the classroom can call this.
+ * Accessible to teachers teaching the subject and admins.
  */
 export async function listDailyAssessmentsWithSelection(
   classroomId: string,
@@ -35,42 +35,29 @@ export async function listDailyAssessmentsWithSelection(
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!session.user.teacherId) {
-    return { success: false, error: "Teacher ID is required" }
-  }
-
   if (!session.user.schoolId) {
     return { success: false, error: "School ID is required" }
   }
 
-  if (!can(session.user.role, "view", "grade", { teacherId: session.user.teacherId, schoolId: session.user.schoolId })) {
+  if (!can(session.user.role, "view", "grade", { schoolId: session.user.schoolId })) {
     return { success: false, error: "Forbidden" }
   }
 
-  // Verify teacher is assigned to this subject in this classroom
-  const teacherSubject = await prisma.teacherSubject.findUnique({
-    where: {
-      teacherId_subjectId_classroomId: {
-        teacherId: session.user.teacherId,
-        subjectId,
-        classroomId,
-      },
-    },
-    include: {
-      subject: { select: { id: true, name: true } },
-    },
-  })
-
-  if (!teacherSubject) {
-    return { success: false, error: "Vous n'enseignez pas cette matière dans cette classe" }
-  }
-
   try {
-    // Get all DAILY assessments for this teacher/classroom/subject/period
+    // Get subject info
+    const subject = await prisma.subject.findUnique({
+      where: { id: subjectId },
+      select: { id: true, name: true },
+    })
+
+    if (!subject) {
+      return { success: false, error: "Matière non trouvée" }
+    }
+
+    // Get all DAILY assessments for this classroom/subject/period in this school
     const assessments = await prisma.assessment.findMany({
       where: {
         schoolId: session.user.schoolId,
-        teacherId: session.user.teacherId,
         classroomId,
         subjectId,
         periodId,
@@ -80,11 +67,10 @@ export async function listDailyAssessmentsWithSelection(
       select: { id: true, date: true, title: true },
     })
 
-    // Get currently selected assessment IDs for this combination
+    // Get currently selected assessment IDs for this classroom/subject/period
     const selections = await prisma.dailyGradeSelection.findMany({
       where: {
         schoolId: session.user.schoolId,
-        teacherId: session.user.teacherId,
         classroomId,
         subjectId,
         periodId,
@@ -96,8 +82,8 @@ export async function listDailyAssessmentsWithSelection(
     const selectedIds = new Set(selections.map((s: { assessmentId: string }) => s.assessmentId))
 
     const result: DailyGradeSelectionResult = {
-      subjectId: teacherSubject.subject.id,
-      subjectName: teacherSubject.subject.name,
+      subjectId: subject.id,
+      subjectName: subject.name,
       assessments: assessments.map((a) => ({
         assessmentId: a.id,
         date: a.date.toISOString().split("T")[0],
@@ -119,8 +105,8 @@ export async function listDailyAssessmentsWithSelection(
 }
 
 /**
- * Save (replace) the daily grade selection for a teacher's subject in a classroom + period.
- * Only the teacher assigned to the subject can call this.
+ * Save (replace) the daily grade selection for a classroom + subject + period.
+ * Accessible to teachers teaching the subject and admins.
  * Replaces previous selection entirely (delete + recreate).
  */
 export async function saveDailyGradeSelection(
@@ -135,40 +121,20 @@ export async function saveDailyGradeSelection(
     return { success: false, error: "Unauthorized" }
   }
 
-  if (!session.user.teacherId) {
-    return { success: false, error: "Teacher ID is required" }
-  }
-
   if (!session.user.schoolId) {
     return { success: false, error: "School ID is required" }
   }
 
-  if (!can(session.user.role, "create", "grade", { teacherId: session.user.teacherId, schoolId: session.user.schoolId })) {
+  if (!can(session.user.role, "create", "grade", { schoolId: session.user.schoolId })) {
     return { success: false, error: "Forbidden" }
   }
 
-  // Verify teacher is assigned to this subject in this classroom
-  const teacherSubject = await prisma.teacherSubject.findUnique({
-    where: {
-      teacherId_subjectId_classroomId: {
-        teacherId: session.user.teacherId,
-        subjectId,
-        classroomId,
-      },
-    },
-  })
-
-  if (!teacherSubject) {
-    return { success: false, error: "Vous n'enseignez pas cette matière dans cette classe" }
-  }
-
-  // Validate that all assessment IDs belong to this teacher/classroom/subject/period and are DAILY
+  // Validate that all assessment IDs belong to this classroom/subject/period and are DAILY
   if (selectedAssessmentIds.length > 0) {
     const validCount = await prisma.assessment.count({
       where: {
         id: { in: selectedAssessmentIds },
         schoolId: session.user.schoolId,
-        teacherId: session.user.teacherId,
         classroomId,
         subjectId,
         periodId,
@@ -182,13 +148,14 @@ export async function saveDailyGradeSelection(
   }
 
   try {
+    const teacherIdToSave = session.user.teacherId || session.user.id
+
     // Replace selection atomically
     await prisma.$transaction([
-      // Delete previous selection
+      // Delete previous selection for this classroom + subject + period
       prisma.dailyGradeSelection.deleteMany({
         where: {
           schoolId: session.user.schoolId,
-          teacherId: session.user.teacherId,
           classroomId,
           subjectId,
           periodId,
@@ -199,7 +166,7 @@ export async function saveDailyGradeSelection(
         ? [
             prisma.dailyGradeSelection.createMany({
               data: selectedAssessmentIds.map((assessmentId) => ({
-                teacherId: session.user.teacherId!,
+                teacherId: teacherIdToSave,
                 classroomId,
                 subjectId,
                 periodId,
@@ -234,7 +201,7 @@ export async function getSelectedDailyAssessmentIds(
     select: { assessmentId: true },
   })
 
-  // If no selection row exists, teacher never configured this → return null (use all)
+  // If no selection row exists, teacher/admin never configured this → return null (use all)
   if (selections.length === 0) return null
 
   return selections.map((s: { assessmentId: string }) => s.assessmentId)
