@@ -91,14 +91,15 @@ model School {
   teachers            Teacher[]
   teacherSubjects     TeacherSubject[]
   enrollments         Enrollment[]
-  assessments         Assessment[]
-  scheduleSlots       ScheduleSlot[]
-  rooms               Room[]
-  periods             Period[]
-  reportCardComments  ReportCardComment[]
-  deliberations       Deliberation[]
-  subjectCoefficients SubjectCoefficient[]
+  assessments            Assessment[]
+  scheduleSlots          ScheduleSlot[]
+  rooms                  Room[]
+  periods                Period[]
+  reportCardComments     ReportCardComment[]
+  deliberations          Deliberation[]
+  subjectCoefficients    SubjectCoefficient[]
   classroomHomeroomTeachers ClassroomHomeroomTeacher[]
+  dailyGradeSelections   DailyGradeSelection[]
 }
 
 // ============================================================
@@ -177,12 +178,13 @@ model Classroom {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  students        Student[]
-  enrollments     Enrollment[]
-  teacherSubjects TeacherSubject[]
-  assessments     Assessment[]
-  scheduleSlots   ScheduleSlot[]
-  homeroomTeachers ClassroomHomeroomTeacher[]
+  students             Student[]
+  enrollments          Enrollment[]
+  teacherSubjects      TeacherSubject[]
+  assessments          Assessment[]
+  scheduleSlots        ScheduleSlot[]
+  homeroomTeachers     ClassroomHomeroomTeacher[]
+  dailyGradeSelections DailyGradeSelection[]
 
   @@unique([schoolGradeId, trackId, section, schoolYear])
 }
@@ -282,11 +284,12 @@ model Teacher {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  subjects           TeacherSubject[]
-  assessments        Assessment[]
-  scheduleSlots      ScheduleSlot[]
-  homeroomClassrooms ClassroomHomeroomTeacher[]
-  createdAt          DateTime @default(now())
+  subjects             TeacherSubject[]
+  assessments          Assessment[]
+  scheduleSlots        ScheduleSlot[]
+  homeroomClassrooms   ClassroomHomeroomTeacher[]
+  dailyGradeSelections DailyGradeSelection[]
+  createdAt            DateTime @default(now())
 
   @@unique([nationalIdNumber, schoolId])
 }
@@ -303,10 +306,11 @@ model Subject {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  teacherSubjects     TeacherSubject[]
-  assessments         Assessment[]
-  scheduleSlots       ScheduleSlot[]
-  subjectCoefficients SubjectCoefficient[]
+  teacherSubjects      TeacherSubject[]
+  assessments          Assessment[]
+  scheduleSlots        ScheduleSlot[]
+  subjectCoefficients  SubjectCoefficient[]
+  dailyGradeSelections DailyGradeSelection[]
 
   @@unique([name, schoolId])
 }
@@ -377,7 +381,8 @@ model Assessment {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  grades Grade[]
+  grades               Grade[]
+  dailyGradeSelections DailyGradeSelection[]
 
   createdAt DateTime @default(now())
 }
@@ -397,8 +402,9 @@ model Period {
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])
 
-  assessments         Assessment[]
-  reportCardComments  ReportCardComment[]
+  assessments          Assessment[]
+  reportCardComments   ReportCardComment[]
+  dailyGradeSelections DailyGradeSelection[]
 
   @@unique([name, schoolYear, schoolId])
 }
@@ -512,4 +518,40 @@ model SubjectCoefficient {
   // Performance index — uniqueness enforced at application level to handle nullable trackId
   @@index([subjectId, schoolGradeId, trackId, schoolId])
   @@index([schoolGradeId, schoolId])
+}
+
+// ============================================================
+// Daily Grade Selection (sélection des notes journalières pour bulletin)
+// ============================================================
+
+// Persists which DAILY assessments an teacher has chosen to include
+// in the subject average calculation for a given classroom + period.
+// One row per selected (teacher, classroom, subject, period, assessment).
+model DailyGradeSelection {
+  id String @id @default(cuid())
+
+  teacherId String
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  classroomId String
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  subjectId String
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   Period @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  // The specific DAILY assessment selected for inclusion
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  schoolId String
+  school   School @relation(fields: [schoolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([teacherId, classroomId, subjectId, periodId, assessmentId])
+  @@index([teacherId, classroomId, subjectId, periodId])
+  @@index([classroomId, periodId])
 }
