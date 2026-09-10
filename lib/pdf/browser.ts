@@ -42,7 +42,7 @@ export async function launchBrowser(): Promise<Browser> {
 
     const browser = await puppeteerCore.default.launch({
       args: chromiumMin.default.args,
-      defaultViewport: chromiumMin.default.defaultViewport,
+      defaultViewport: { width: 1280, height: 720 },
       executablePath: await chromiumMin.default.executablePath(),
       headless: true,
     })
@@ -81,7 +81,7 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
   const page = await browser.newPage()
 
   try {
-    await page.setContent(html, { waitUntil: "networkidle0" })
+    await page.setContent(html, { waitUntil: "domcontentloaded" })
 
     const pdfBuffer = await page.pdf({
       format: "A4",
