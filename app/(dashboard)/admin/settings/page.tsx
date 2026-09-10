@@ -1,9 +1,16 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { getSchoolScheduleSettings, updateSchoolScheduleSettings, type ScheduleSettings } from "@/lib/actions/school"
+import {
+  getSchoolScheduleSettings,
+  updateSchoolScheduleSettings,
+  getSchoolLogo,
+  updateSchoolLogo,
+  deleteSchoolLogo,
+  type ScheduleSettings,
+} from "@/lib/actions/school"
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<ScheduleSettings | null>(null)
@@ -11,6 +18,14 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Logo state
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoLoading, setLogoLoading] = useState(true)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoSuccess, setLogoSuccess] = useState(false)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Form fields
   const [scheduleStartTime, setScheduleStartTime] = useState("07:00")
@@ -21,19 +36,86 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const result = await getSchoolScheduleSettings()
-      if (result.success) {
-        setSettings(result.data)
-        setScheduleStartTime(result.data.scheduleStartTime)
-        setMorningEndTime(result.data.morningEndTime)
-        setAfternoonStartTime(result.data.afternoonStartTime)
-        setScheduleEndTime(result.data.scheduleEndTime)
-        setSlotDurationMinutes(result.data.slotDurationMinutes)
+      const [scheduleRes, logoRes] = await Promise.all([
+        getSchoolScheduleSettings(),
+        getSchoolLogo(),
+      ])
+
+      if (scheduleRes.success) {
+        setSettings(scheduleRes.data)
+        setScheduleStartTime(scheduleRes.data.scheduleStartTime)
+        setMorningEndTime(scheduleRes.data.morningEndTime)
+        setAfternoonStartTime(scheduleRes.data.afternoonStartTime)
+        setScheduleEndTime(scheduleRes.data.scheduleEndTime)
+        setSlotDurationMinutes(scheduleRes.data.slotDurationMinutes)
       }
+
+      if (logoRes.success) {
+        setLogoUrl(logoRes.data.logoUrl)
+      }
+
       setLoading(false)
+      setLogoLoading(false)
     }
     load()
   }, [])
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      setLogoError("Veuillez sélectionner une image (PNG, JPEG)")
+      return
+    }
+
+    if (file.size > 500 * 1024) {
+      setLogoError("La taille de l'image ne doit pas dépasser 500 Ko")
+      return
+    }
+
+    setLogoUploading(true)
+    setLogoSuccess(false)
+    setLogoError(null)
+
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const base64 = reader.result as string
+      const res = await updateSchoolLogo(base64)
+      if (res.success) {
+        setLogoUrl(res.data.logoUrl)
+        setLogoSuccess(true)
+        setTimeout(() => setLogoSuccess(false), 3000)
+      } else {
+        setLogoError(res.error)
+      }
+      setLogoUploading(false)
+    }
+    reader.onerror = () => {
+      setLogoError("Erreur lors de la lecture du fichier")
+      setLogoUploading(false)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleLogoDelete = async () => {
+    if (!confirm("Voulez-vous vraiment supprimer le logo de l'école ?")) return
+
+    setLogoUploading(true)
+    setLogoSuccess(false)
+    setLogoError(null)
+
+    const res = await deleteSchoolLogo()
+    if (res.success) {
+      setLogoUrl(null)
+      setLogoSuccess(true)
+      setTimeout(() => setLogoSuccess(false), 3000)
+      if (fileInputRef.current) fileInputRef.current.value = ""
+    } else {
+      setLogoError(res.error)
+    }
+    setLogoUploading(false)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -74,6 +156,71 @@ export default function SettingsPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold mb-6">Paramètres de l&apos;école</h1>
         
+        {/* School Logo Section */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">
+            🖼️ Logo de l&apos;établissement
+          </h2>
+          <p className="text-sm text-gray-500 mb-5">
+            Ce logo apparaîtra sur tous les bulletins de notes (trimestriels et annuels) générés en PDF.
+          </p>
+
+          {logoSuccess && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800 text-sm font-medium">✅ Logo mis à jour avec succès</p>
+            </div>
+          )}
+
+          {logoError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800 text-sm font-medium">❌ {logoError}</p>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden shrink-0">
+              {logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={logoUrl} alt="Logo École" className="w-full h-full object-contain p-1" />
+              ) : (
+                <div className="text-center p-2">
+                  <span className="text-3xl block mb-1">🏫</span>
+                  <span className="text-xs text-gray-400 font-medium">Aucun logo</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3 flex-1">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Télécharger un nouveau logo
+                </label>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/png, image/jpeg, image/webp"
+                  onChange={handleLogoUpload}
+                  disabled={logoUploading || logoLoading}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer disabled:opacity-50"
+                />
+                <p className="text-xs text-gray-400 mt-1">Formats acceptés : PNG, JPEG, WebP. Taille max : 500 Ko.</p>
+              </div>
+
+              {logoUrl && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogoDelete}
+                  disabled={logoUploading}
+                  className="text-red-600 hover:text-red-700 border-red-200 hover:bg-red-50"
+                >
+                  Supprimer le logo
+                </Button>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Grade weighting section */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
           <h2 className="text-lg font-semibold text-blue-900 mb-3">
