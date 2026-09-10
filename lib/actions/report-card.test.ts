@@ -5,12 +5,19 @@ import { prisma } from "@/lib/prisma"
 import { getStudentSubjectAverages, calculateGeneralAverage, calculateClassRank } from "./average"
 import { getReportCardComment } from "./report-card-comment"
 
+import { generateReportCardPdfBuffer } from "@/lib/pdf/generate-pdf"
+
 // Mock auth
 vi.mock("@/lib/auth")
 
 // Mock permissions
 vi.mock("@/lib/permissions", () => ({
   can: vi.fn(() => true),
+}))
+
+// Mock pdf generation
+vi.mock("@/lib/pdf/generate-pdf", () => ({
+  generateReportCardPdfBuffer: vi.fn().mockResolvedValue(Buffer.from("mock pdf content")),
 }))
 
 // Mock average functions
@@ -107,7 +114,7 @@ describe("report-card actions", () => {
 
       expect(result.success).toBe(true)
       if (result.success) {
-        expect(result.data.pdfBuffer).toBeDefined()
+        expect(result.data.pdfBase64).toBeDefined()
         expect(result.data.fileName).toContain("Bulletin")
         expect(result.data.fileName).toContain("Dupont")
         expect(result.data.fileName).toContain("Trimestre_1")

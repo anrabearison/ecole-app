@@ -171,7 +171,7 @@ describe("deliberation actions", () => {
       expect(result.success).toBe(true)
       if (result.success) {
         expect(result.data.fileName).toContain("Bulletin_Annuel")
-        expect(result.data.pdfBuffer).toBeInstanceOf(Buffer)
+        expect(result.data.pdfBase64).toBeDefined()
       }
     })
   })
