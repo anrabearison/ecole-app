@@ -4,8 +4,9 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
-import { ClassroomDeliberationSection } from "./deliberation-section"
-import { ArrowLeft, Pencil, Users, BookOpen } from "lucide-react"
+import { ClassroomDetailClient } from "./classroom-detail-client"
+import { ArrowLeft, Pencil, BookOpen } from "lucide-react"
+import { listPeriods } from "@/lib/actions/period"
 
 export default async function ClassroomDetailPage({
   params,
@@ -39,6 +40,9 @@ export default async function ClassroomDetailPage({
       </div>
     )
   }
+
+  const periodsResult = await listPeriods()
+  const periods = periodsResult.success ? periodsResult.data : []
 
   const cycleNames: Record<string, string> = {
     PRIMARY: "Primaire",
@@ -119,13 +123,6 @@ export default async function ClassroomDetailPage({
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Seuil de passage</p>
           <p className="text-base font-semibold text-indigo-700 mt-1">{classroom.passingThreshold.toFixed(1)}/20</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-4 flex items-start gap-3">
-          <Users className="w-4 h-4 text-indigo-500 mt-1" />
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Élèves</p>
-            <p className="text-base font-semibold text-gray-900 mt-1">{classroom._count.students}</p>
-          </div>
-        </div>
         {classroom.homeroomTeachers.length > 0 && (
           <div className="col-span-2 bg-white rounded-xl border border-gray-200 shadow-xs p-4 flex items-start gap-3">
             <BookOpen className="w-4 h-4 text-indigo-500 mt-1" />
@@ -146,16 +143,7 @@ export default async function ClassroomDetailPage({
         )}
       </div>
 
-      <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
-
-      {/* Students placeholder */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Élèves</h2>
-        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6">
-          <p className="text-gray-500 text-sm">Aucun élève inscrit pour le moment.</p>
-          <p className="text-xs text-gray-400 mt-2">La fonctionnalité de gestion des élèves sera implémentée ultérieurement.</p>
-        </div>
-      </div>
+      <ClassroomDetailClient classroomId={id} schoolYear={classroom.schoolYear} periods={periods} />
     </div>
   )
 }

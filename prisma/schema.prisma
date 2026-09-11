@@ -399,8 +399,8 @@ model Period {
   name       String   // "Trimestre 1", "Bimestre 2", etc.
   order      Int      // for sorting periods chronologically
   schoolYear String   // "2025-2026"
-  examWeight Float    @default(0.6) // weight for EXAM grades in average calculation
-  dailyWeight Float   @default(0.4) // weight for DAILY grades in average calculation
+  examWeight Float    @default(0.5) // weight for EXAM grades in average calculation
+  dailyWeight Float   @default(0.5) // weight for DAILY grades in average calculation
 
   schoolId String
   school   School @relation(fields: [schoolId], references: [id])

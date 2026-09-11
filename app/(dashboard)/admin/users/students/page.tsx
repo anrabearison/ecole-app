@@ -72,6 +72,12 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
             <thead className="bg-gray-50/50">
               <tr>
                 <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  N°
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                  N° Matricule
+                </th>
+                <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                   <Link 
                     href={`/admin/users/students?${new URLSearchParams({
                       ...(search && { search }),
@@ -103,6 +109,12 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
             <tbody className="bg-white divide-y divide-gray-200">
               {students.map((student) => (
                 <tr key={student.id} className="hover:bg-gray-50/80 transition-colors">
+                  <td className="px-4 py-4 sm:px-6 text-sm text-gray-600">
+                    {student.classNumber || "-"}
+                  </td>
+                  <td className="px-4 py-4 sm:px-6 text-sm text-gray-600">
+                    {student.registrationNumber}
+                  </td>
                   <td className="px-4 py-4 sm:px-6">
                     <div className="text-sm font-semibold text-gray-900">
                       {student.firstName ? `${student.firstName} ${student.lastName}` : student.lastName}
@@ -155,7 +167,7 @@ export default async function StudentsPage({ searchParams }: { searchParams?: { 
               ))}
               {students.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-0">
+                  <td colSpan={7} className="p-0">
                     <EmptyState
                       type="students"
                       hasActiveFilters={hasActiveFilters}

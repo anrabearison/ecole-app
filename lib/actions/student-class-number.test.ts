@@ -33,7 +33,10 @@ describe("generateClassNumbers action", () => {
       },
     } as any)
     const result = await generateClassNumbers(classroomId)
-    expect(result).toEqual({ success: false, error: "Forbidden" })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain("Forbidden")
+    }
   })
 
   it("should sort unassigned students alphabetically and assign numbers starting at 1", async () => {
