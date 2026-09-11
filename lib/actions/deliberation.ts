@@ -277,9 +277,11 @@ export async function listDeliberationsForClassroom(
   studentId: string
   studentFirstName: string
   studentLastName: string
+  classNumber: number | null
   studentAverage: number
   decision: DeliberationDecision
   observations: string | null
+  hasDeliberation: boolean
 }>>> {
   const session = await auth()
 
@@ -305,6 +307,7 @@ export async function listDeliberationsForClassroom(
         id: true,
         firstName: true,
         lastName: true,
+        classNumber: true,
         deliberations: {
           where: { schoolYear },
           select: {
@@ -323,9 +326,11 @@ export async function listDeliberationsForClassroom(
         studentId: student.id,
         studentFirstName: student.firstName || "",
         studentLastName: student.lastName,
+        classNumber: student.classNumber,
         studentAverage: student.deliberations[0]?.studentAverage ?? 0,
         decision: student.deliberations[0]?.decision ?? "REPEATED",
         observations: student.deliberations[0]?.observations ?? null,
+        hasDeliberation: student.deliberations.length > 0,
       })),
     }
   } catch (error: any) {

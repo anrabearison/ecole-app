@@ -9,9 +9,11 @@ interface DeliberationRow {
   studentId: string
   studentFirstName: string
   studentLastName: string
+  classNumber: number | null
   studentAverage: number
   decision: DeliberationDecision
   observations: string | null
+  hasDeliberation: boolean
 }
 
 interface ClassroomDeliberationSectionProps {
@@ -114,9 +116,26 @@ export function ClassroomDeliberationSection({ classroomId, schoolYear }: Classr
               <tbody className="divide-y divide-gray-100 bg-white">
                 {deliberations.map((item) => (
                   <tr key={item.studentId}>
-                    <td className="px-3 py-3 text-sm text-gray-900">{item.studentLastName} {item.studentFirstName}</td>
-                    <td className="px-3 py-3 text-sm text-right text-gray-900">{item.studentAverage.toFixed(2)}/20</td>
-                    <td className="px-3 py-3 text-sm text-gray-900">{item.decision === "PROMOTED" ? "Admis" : "Redouble"}</td>
+                    <td className="px-3 py-3 text-sm text-gray-900">
+                      <div className="flex items-center gap-2">
+                        {item.classNumber !== null ? (
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold shrink-0" title="Numéro de classe">
+                            {item.classNumber}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 text-gray-400 text-[10px] shrink-0" title="Pas de numéro">
+                            —
+                          </span>
+                        )}
+                        <span className="truncate">{item.studentLastName} {item.studentFirstName}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-sm text-right text-gray-900">
+                      {item.hasDeliberation ? `${item.studentAverage.toFixed(2)}/20` : "—"}
+                    </td>
+                    <td className="px-3 py-3 text-sm text-gray-900">
+                      {item.hasDeliberation ? (item.decision === "PROMOTED" ? "Admis" : "Redouble") : "—"}
+                    </td>
                     <td className="px-3 py-3 text-sm text-gray-500">{item.observations || "—"}</td>
                   </tr>
                 ))}
