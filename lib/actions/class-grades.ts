@@ -12,6 +12,7 @@ export type StudentGradeData = {
   studentId: string
   studentFirstName: string | null
   studentLastName: string
+  classNumber: number | null
   subjects: SubjectGradeData[]
   generalAverage: number
 }
@@ -111,6 +112,7 @@ export async function getClassGrades(
         id: true,
         firstName: true,
         lastName: true,
+        classNumber: true,
         classroom: {
           select: { schoolGradeId: true, trackId: true },
         },
@@ -292,6 +294,7 @@ export async function getClassGrades(
         studentId: student.id,
         studentFirstName: student.firstName,
         studentLastName: student.lastName,
+        classNumber: student.classNumber,
         subjects: subjectGrades,
         generalAverage,
       })

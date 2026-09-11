@@ -94,12 +94,19 @@ export function GradesPreview({ classroomId, periodId, subjectId }: GradesPrevie
       {data.students.map((student) => (
         <div key={student.studentId} className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-100 bg-gray-50/60">
-            <h3 className="text-sm font-semibold text-gray-800">
-              {student.studentLastName} {student.studentFirstName || ""}
-            </h3>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Moyenne générale: <span className="font-medium text-gray-900">{student.generalAverage.toFixed(2)}/20</span>
-            </p>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-800">
+                {student.studentLastName} {student.studentFirstName || ""}
+                {student.classNumber && (
+                  <span className="ml-2 text-xs font-normal text-gray-500">
+                    (N°{student.classNumber})
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs text-gray-500">
+                Moyenne générale: <span className="font-medium text-gray-900">{student.generalAverage.toFixed(2)}/20</span>
+              </p>
+            </div>
           </div>
 
           <div className="divide-y divide-gray-100">
