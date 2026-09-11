@@ -237,6 +237,7 @@ model Student {
   // kept in sync with the latest Enrollment. Full history lives in Enrollment.
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
+  classNumber Int?       // Numéro de classe attribué pour l'année en cours
 
   enrollments   Enrollment[]
   grades        Grade[]
@@ -251,8 +252,9 @@ model Student {
 // One row per (student, schoolYear) — enables showing past classrooms
 // even after the student has moved to a new classroom.
 model Enrollment {
-  id         String @id @default(cuid())
-  schoolYear String // "2025-2026"
+  id          String @id @default(cuid())
+  schoolYear  String // "2025-2026"
+  classNumber Int?   // Numéro de classe attribué pour cette année scolaire
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])
@@ -266,6 +268,7 @@ model Enrollment {
   createdAt DateTime @default(now())
 
   @@unique([studentId, schoolYear])
+  @@unique([classroomId, classNumber])
 }
 
 model Teacher {

@@ -67,6 +67,8 @@ export async function listDailyAssessmentsWithSelection(
       select: { id: true, date: true, title: true },
     })
 
+    console.log("[listDailyAssessmentsWithSelection] session.user.schoolId:", session.user.schoolId, "found assessments:", assessments.length)
+
     // Get currently selected assessment IDs for this classroom/subject/period
     const selections = await prisma.dailyGradeSelection.findMany({
       where: {
@@ -125,7 +127,7 @@ export async function saveDailyGradeSelection(
     return { success: false, error: "School ID is required" }
   }
 
-  if (!can(session.user.role, "create", "grade", { schoolId: session.user.schoolId })) {
+  if (!can(session.user.role, "create", "grade", { schoolId: session.user.schoolId, teacherId: session.user.teacherId ?? undefined })) {
     return { success: false, error: "Forbidden" }
   }
 

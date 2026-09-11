@@ -9,7 +9,7 @@ import type { DailyGradeSelectionResult } from "@/lib/actions/daily-grade-select
 import type { PeriodWithRelations } from "@/lib/actions/period"
 
 type Classroom = { id: string; name: string; schoolYear: string }
-type Subject = { id: string; name: string }
+type Subject = { id: string; name: string; dailyAssessmentCount?: number }
 
 interface ReportCardsClientProps {
   classrooms: Classroom[]
@@ -222,6 +222,9 @@ export function ReportCardsClient({
               {subjectsForClassroom.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
+                  {selectedPeriodId && typeof s.dailyAssessmentCount === "number"
+                    ? ` (${s.dailyAssessmentCount} note${s.dailyAssessmentCount > 1 ? "s" : ""} journalière${s.dailyAssessmentCount > 1 ? "s" : ""})`
+                    : ""}
                 </option>
               ))}
             </select>
@@ -386,10 +389,16 @@ export function ReportCardsClient({
       )}
 
       {!selectionData && selectedClassroomId && selectedSubjectId && selectedPeriodId && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-white rounded-xl border border-gray-200 shadow-xs">
           <Calendar className="w-10 h-10 text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">
-            Aucune évaluation journalière pour cette combinaison classe / matière / période.
+          <h4 className="text-base font-semibold text-gray-800 mb-1">
+            Aucune évaluation journalière disponible
+          </h4>
+          <p className="text-sm text-gray-500 max-w-md">
+            Aucune évaluation de type <span className="font-medium text-gray-700">Journalière (DAILY)</span> n'a encore été saisie pour cette matière dans cette période.
+          </p>
+          <p className="text-xs text-indigo-600 mt-3 font-medium">
+            💡 Allez dans "Notes &gt; Saisir des notes" pour ajouter des devoirs/notes journalières.
           </p>
         </div>
       )}

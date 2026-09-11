@@ -19,6 +19,7 @@ type StudentWithRelations = {
   status: string
   placeOfBirth: string | null
   sex: string | null
+  classNumber: number | null
   user: {
     id: string
     email: string | null
@@ -312,7 +313,7 @@ export async function listStudents(opts?: { search?: string; page?: number; page
     const active = opts?.active
     const classroomId = opts?.classroomId
     const sortBy = opts?.sortBy || "name" // "name" or "name_desc"
-    const orderBy = sortBy === "name_desc" 
+    const orderBy = sortBy === "name_desc"
       ? [{ lastName: "desc" as const }, { firstName: "desc" as const }]
       : [{ lastName: "asc" as const }, { firstName: "asc" as const }]
 
@@ -391,8 +392,8 @@ export async function listStudents(opts?: { search?: string; page?: number; page
 
     const totalPages = Math.ceil(total / pageSize)
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: students,
       pagination: {
         total,
@@ -758,5 +759,109 @@ export async function deleteStudent(id: string): Promise<ActionResult<void>> {
   } catch (error: any) {
     console.error("Error deleting student:", error)
     return { success: false, error: "Erreur lors de la suppression de l'élève" }
+  }
+}
+
+/**
+ * Automatically generates class numbers for students in a classroom.
+ * Unassigned students get assigned sequential numbers (1..N) sorted by Name/First Name (A-Z).
+ * Students who already have a classNumber maintain their number (immutable).
+ * Additional students enrolled afterwards receive max(classNumber) + 1.
+ */
+export async function generateClassNumbers(classroomId: string): Promise<ActionResult<{ updatedCount: number }>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  if (!can(session.user.role, "update", "classroom", { schoolId: session.user.schoolId }) || session.user.role === "PLATFORM_SUPER_ADMIN") {
+    return { success: false, error: "Forbidden: Seuls les administrateurs de l'école peuvent générer les numéros de classe" }
+  }
+
+  try {
+    const classroom = await prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: { id: true, schoolId: true, schoolYear: true },
+    })
+
+    if (!classroom || classroom.schoolId !== session.user.schoolId) {
+      return { success: false, error: "Classe non trouvée" }
+    }
+
+    // Find all enrollments for this classroom
+    const enrollments = await prisma.enrollment.findMany({
+      where: { classroomId },
+      include: {
+        student: {
+          select: { id: true, lastName: true, firstName: true, classNumber: true },
+        },
+      },
+    })
+
+    if (enrollments.length === 0) {
+      return { success: true, data: { updatedCount: 0 } }
+    }
+
+    // Find max assigned class number
+    let maxNumber = 0
+    for (const e of enrollments) {
+      if (e.classNumber && e.classNumber > maxNumber) {
+        maxNumber = e.classNumber
+      }
+    }
+
+    // Filter unassigned enrollments
+    const unassigned = enrollments.filter((e) => !e.classNumber)
+
+    if (unassigned.length === 0) {
+      return { success: true, data: { updatedCount: 0 } }
+    }
+
+    // Sort unassigned alphabetically by lastName, then firstName
+    unassigned.sort((a, b) => {
+      const lastNameCompare = a.student.lastName.localeCompare(b.student.lastName, "fr", { sensitivity: "base" })
+      if (lastNameCompare !== 0) return lastNameCompare
+      const firstNameA = a.student.firstName || ""
+      const firstNameB = b.student.firstName || ""
+      return firstNameA.localeCompare(firstNameB, "fr", { sensitivity: "base" })
+    })
+
+    // Assign sequential numbers starting from maxNumber + 1
+    const updates: Array<{ enrollmentId: string; studentId: string; classNumber: number }> = []
+    let nextNum = maxNumber + 1
+    for (const item of unassigned) {
+      updates.push({
+        enrollmentId: item.id,
+        studentId: item.studentId,
+        classNumber: nextNum++,
+      })
+    }
+
+    // Update DB in transaction
+    await prisma.$transaction(
+      updates.flatMap((u) => [
+        prisma.enrollment.update({
+          where: { id: u.enrollmentId },
+          data: { classNumber: u.classNumber },
+        }),
+        prisma.student.update({
+          where: { id: u.studentId },
+          data: { classNumber: u.classNumber },
+        }),
+      ])
+    )
+
+    revalidatePath("/admin/users/students")
+    revalidatePath(`/admin/classrooms/${classroomId}`)
+
+    return { success: true, data: { updatedCount: updates.length } }
+  } catch (error: any) {
+    console.error("Error generating class numbers:", error)
+    return { success: false, error: "Erreur lors de la génération des numéros de classe" }
   }
 }
