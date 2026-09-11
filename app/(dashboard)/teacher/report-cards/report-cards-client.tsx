@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
-import { useState, useTransition, useEffect } from "react"
+import { useState, useTransition } from "react"
 import { BookOpen, Calendar, CheckSquare, Download, Loader2, Save, Square } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { saveDailyGradeSelection } from "@/lib/actions/daily-grade-selection"
@@ -36,15 +36,6 @@ export function ReportCardsClient({
   const [selectedAssessments, setSelectedAssessments] = useState<Set<string>>(
     new Set(selectionData?.assessments.filter((a) => a.selected).map((a) => a.assessmentId) ?? [])
   )
-
-  // Sync selections when selectionData changes (on filter change)
-  useEffect(() => {
-    setSelectedAssessments(
-      new Set(selectionData?.assessments.filter((a) => a.selected).map((a) => a.assessmentId) ?? [])
-    )
-    setSaveStatus("idle")
-    setSaveError(null)
-  }, [selectionData])
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const [saveError, setSaveError] = useState<string | null>(null)

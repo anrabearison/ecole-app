@@ -107,13 +107,19 @@ export default async function TeacherReportCardsPage({
       params.subjectId,
       params.periodId,
     )
+    if (!selectionResult.success) {
+      console.error('Failed to load daily assessments:', selectionResult.error)
+    }
     if (selectionResult.success) {
       selectionData = selectionResult.data
     }
   }
 
+  const clientKey = [params.classroomId, params.subjectId, params.periodId].filter(Boolean).join('-') || 'empty'
+
   return (
     <ReportCardsClient
+      key={clientKey}
       classrooms={classrooms}
       periods={periods}
       subjectsForClassroom={subjectsForClassroom}

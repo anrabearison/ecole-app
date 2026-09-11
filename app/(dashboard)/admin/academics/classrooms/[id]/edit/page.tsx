@@ -9,6 +9,7 @@ import { listTeachers } from "@/lib/actions/teacher"
 import { classroomUpdateSchema, type ClassroomUpdateInput } from "@/lib/validations/classroom"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
+import { ClassNumberSection } from "./class-number-section"
 
 export default function EditClassroomPage() {
   const router = useRouter()
@@ -145,10 +146,10 @@ export default function EditClassroomPage() {
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Modifier la classe</h1>
+    <div className="p-8 space-y-8 max-w-2xl">
+      <h1 className="text-3xl font-bold text-gray-900">Modifier la classe</h1>
 
-      <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl">
+      <div className="bg-white rounded-lg shadow-md p-6">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
             {error}
@@ -304,6 +305,9 @@ export default function EditClassroomPage() {
           </div>
         </form>
       </div>
+
+      {/* Class Numbers Section — admin only */}
+      <ClassNumberSection classroomId={id} />
     </div>
   )
 }
