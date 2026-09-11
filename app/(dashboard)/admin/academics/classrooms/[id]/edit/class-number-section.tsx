@@ -3,6 +3,7 @@
 import { useState, useEffect, useTransition } from "react"
 import { Hash, Loader2, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { generateClassNumbers } from "@/lib/actions/student"
 import { listStudents } from "@/lib/actions/student"
 
@@ -99,13 +100,16 @@ export function ClassNumberSection({ classroomId }: ClassNumberSectionProps) {
           </div>
         </div>
 
-        <Button
-          id="generate-class-numbers-btn"
+        <ConfirmActionButton
           type="button"
-          onClick={handleGenerate}
+          onConfirm={handleGenerate}
           disabled={isPending || loading || students.length === 0 || allAssigned}
           size="sm"
           className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:opacity-50"
+          variant="create"
+          title="Générer les numéros de classe"
+          message="Êtes-vous sûr de vouloir générer les numéros de classe ? Cette action assignera un numéro définitif aux élèves non assignés."
+          confirmLabel="Oui, générer"
         >
           {isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -113,7 +117,7 @@ export function ClassNumberSection({ classroomId }: ClassNumberSectionProps) {
             <RefreshCw className="w-4 h-4" />
           )}
           Générer les numéros
-        </Button>
+        </ConfirmActionButton>
       </div>
 
       {/* Status feedback */}

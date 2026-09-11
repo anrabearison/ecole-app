@@ -158,6 +158,7 @@ export default async function StudentDetailPage({
               { label: "Nom", value: student.lastName },
               { label: "Email", value: student.user.email || "—" },
               { label: "Numéro matricule", value: student.registrationNumber },
+              { label: "Numéro de classe", value: student.classNumber ? String(student.classNumber) : "—" },
               { label: "Sexe", value: student.sex === "MALE" ? "Masculin" : student.sex === "FEMALE" ? "Féminin" : "—" },
               {
                 label: "Statut scolaire",
