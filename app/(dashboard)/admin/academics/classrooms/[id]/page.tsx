@@ -4,11 +4,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
-import { ClassroomDeliberationSection } from "./deliberation-section"
-import { ClassroomGradesSection } from "./grades-section"
-import { CollapsibleSection } from "./collapsible-section"
-import { StudentsSection } from "./students-section"
-import { ArrowLeft, Pencil, Users, BookOpen, FileText, GraduationCap } from "lucide-react"
+import { ClassroomDetailClient } from "./classroom-detail-client"
+import { ArrowLeft, Pencil, BookOpen } from "lucide-react"
 import { listPeriods } from "@/lib/actions/period"
 
 export default async function ClassroomDetailPage({
@@ -126,13 +123,6 @@ export default async function ClassroomDetailPage({
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Seuil de passage</p>
           <p className="text-base font-semibold text-indigo-700 mt-1">{classroom.passingThreshold.toFixed(1)}/20</p>
         </div>
-        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-4 flex items-start gap-3">
-          <Users className="w-4 h-4 text-indigo-500 mt-1" />
-          <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Élèves</p>
-            <p className="text-base font-semibold text-gray-900 mt-1">{classroom._count.students}</p>
-          </div>
-        </div>
         {classroom.homeroomTeachers.length > 0 && (
           <div className="col-span-2 bg-white rounded-xl border border-gray-200 shadow-xs p-4 flex items-start gap-3">
             <BookOpen className="w-4 h-4 text-indigo-500 mt-1" />
@@ -153,20 +143,7 @@ export default async function ClassroomDetailPage({
         )}
       </div>
 
-      {/* Notes & Bulletins */}
-      <CollapsibleSection title="Notes & Bulletins" icon={<FileText className="w-4 h-4" />} defaultOpen={true}>
-        <ClassroomGradesSection classroomId={id} periods={periods} />
-      </CollapsibleSection>
-
-      {/* Élèves */}
-      <CollapsibleSection title="Élèves" icon={<Users className="w-4 h-4" />} defaultOpen={false}>
-        <StudentsSection classroomId={id} />
-      </CollapsibleSection>
-
-      {/* Délibération annuelle */}
-      <CollapsibleSection title="Délibération annuelle" icon={<GraduationCap className="w-4 h-4" />} defaultOpen={false}>
-        <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
-      </CollapsibleSection>
+      <ClassroomDetailClient classroomId={id} schoolYear={classroom.schoolYear} periods={periods} />
     </div>
   )
 }
