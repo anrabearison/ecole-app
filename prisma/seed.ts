@@ -182,6 +182,7 @@ async function main() {
             guardianPhone: "+261340000001",
             schoolId: school.id,
             classroomId: sixieme1.id,
+            classNumber: null,
           }
         })
 
@@ -193,6 +194,7 @@ async function main() {
             classroomId: sixieme1.id,
             schoolYear: "2025-2026",
             schoolId: school.id,
+            classNumber: null,
           }
         })
       }
@@ -340,6 +342,7 @@ async function main() {
           dateOfBirth: new Date("2010-01-01"),
           guardianName: `Parent ${name.lastName}`,
           guardianPhone: "+26134000000" + index,
+          classNumber: null,
         },
         create: {
           userId: user.id,
@@ -354,6 +357,7 @@ async function main() {
           guardianPhone: "+26134000000" + index,
           schoolId: school.id,
           classroomId: sixieme1.id,
+          classNumber: null,
         },
       })
 
@@ -365,6 +369,7 @@ async function main() {
           classroomId: sixieme1.id,
           schoolYear: "2025-2026",
           schoolId: school.id,
+          classNumber: null,
         },
       })
 
@@ -417,6 +422,7 @@ async function main() {
       dateOfBirth: new Date("2010-06-15"),
       guardianName: "Parent Difficile",
       guardianPhone: "+261340000009",
+      classNumber: null,
     },
     create: {
       userId: strugglingUser.id,
@@ -431,6 +437,7 @@ async function main() {
       guardianPhone: "+261340000009",
       schoolId: school.id,
       classroomId: sixieme1.id,
+      classNumber: null,
     },
   })
 
@@ -442,6 +449,7 @@ async function main() {
       classroomId: sixieme1.id,
       schoolYear: "2025-2026",
       schoolId: school.id,
+      classNumber: null,
     },
   })
 

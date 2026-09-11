@@ -9,7 +9,7 @@ interface DeliberationRow {
   studentId: string
   studentFirstName: string
   studentLastName: string
-  classNumber: number | null
+  classNumber: string | null
   studentAverage: number
   decision: DeliberationDecision
   observations: string | null

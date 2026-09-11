@@ -11,7 +11,7 @@ type StudentRow = {
   id: string
   lastName: string
   firstName: string | null
-  classNumber: number | null
+  classNumber: string | null
 }
 
 interface ClassNumberSectionProps {
@@ -72,7 +72,12 @@ export function ClassNumberSection({ classroomId }: ClassNumberSectionProps) {
 
   // Sort students: assigned first (by classNumber), then unassigned (alphabetically)
   const sorted = [...students].sort((a, b) => {
-    if (a.classNumber !== null && b.classNumber !== null) return a.classNumber - b.classNumber
+    if (a.classNumber !== null && b.classNumber !== null) {
+      // Parse numeric part for comparison (e.g., "1G" -> 1, "2F" -> 2)
+      const numA = parseInt(a.classNumber) || 0
+      const numB = parseInt(b.classNumber) || 0
+      return numA - numB
+    }
     if (a.classNumber !== null) return -1
     if (b.classNumber !== null) return 1
     return a.lastName.localeCompare(b.lastName, "fr", { sensitivity: "base" })

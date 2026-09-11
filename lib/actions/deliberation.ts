@@ -277,7 +277,7 @@ export async function listDeliberationsForClassroom(
   studentId: string
   studentFirstName: string
   studentLastName: string
-  classNumber: number | null
+  classNumber: string | null
   studentAverage: number
   decision: DeliberationDecision
   observations: string | null
@@ -326,7 +326,7 @@ export async function listDeliberationsForClassroom(
         studentId: student.id,
         studentFirstName: student.firstName || "",
         studentLastName: student.lastName,
-        classNumber: student.classNumber,
+        classNumber: student.classNumber?.toString() || null,
         studentAverage: student.deliberations[0]?.studentAverage ?? 0,
         decision: student.deliberations[0]?.decision ?? "REPEATED",
         observations: student.deliberations[0]?.observations ?? null,
