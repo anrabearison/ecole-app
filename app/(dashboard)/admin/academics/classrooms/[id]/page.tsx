@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ClassroomDeliberationSection } from "./deliberation-section"
 import { ClassroomGradesSection } from "./grades-section"
-import { ArrowLeft, Pencil, Users, BookOpen } from "lucide-react"
+import { CollapsibleSection } from "./collapsible-section"
+import { StudentsSection } from "./students-section"
+import { ArrowLeft, Pencil, Users, BookOpen, FileText, GraduationCap } from "lucide-react"
 import { listPeriods } from "@/lib/actions/period"
 
 export default async function ClassroomDetailPage({
@@ -151,18 +153,20 @@ export default async function ClassroomDetailPage({
         )}
       </div>
 
-      <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
+      {/* Notes & Bulletins */}
+      <CollapsibleSection title="Notes & Bulletins" icon={<FileText className="w-4 h-4" />} defaultOpen={true}>
+        <ClassroomGradesSection classroomId={id} periods={periods} />
+      </CollapsibleSection>
 
-      <ClassroomGradesSection classroomId={id} periods={periods} />
+      {/* Élèves */}
+      <CollapsibleSection title="Élèves" icon={<Users className="w-4 h-4" />} defaultOpen={false}>
+        <StudentsSection classroomId={id} />
+      </CollapsibleSection>
 
-      {/* Students placeholder */}
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">Élèves</h2>
-        <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-6">
-          <p className="text-gray-500 text-sm">Aucun élève inscrit pour le moment.</p>
-          <p className="text-xs text-gray-400 mt-2">La fonctionnalité de gestion des élèves sera implémentée ultérieurement.</p>
-        </div>
-      </div>
+      {/* Délibération annuelle */}
+      <CollapsibleSection title="Délibération annuelle" icon={<GraduationCap className="w-4 h-4" />} defaultOpen={false}>
+        <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
+      </CollapsibleSection>
     </div>
   )
 }
