@@ -1,4 +1,3 @@
-"use server"
 
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
@@ -22,7 +21,7 @@ export default async function TeacherReportCardsPage({
   const periods = periodsResult.success ? periodsResult.data : []
 
   let classrooms: Array<{ id: string; name: string; schoolYear: string }> = []
-  let subjectsForClassroom: Array<{ id: string; name: string }> = []
+  let subjectsForClassroom: Array<{ id: string; name: string; dailyAssessmentCount?: number }> = []
 
   if (session.user.teacherId) {
     // Teacher: load classrooms and subjects assigned to this teacher
@@ -42,7 +41,6 @@ export default async function TeacherReportCardsPage({
     classrooms = Array.from(classroomMap.values())
 
     if (params.classroomId) {
-      // Deduplicate subjects in case of multiple assignments
       const subjectMap = new Map<string, string>()
       for (const ts of teacherSubjects) {
         if (ts.classroom.id === params.classroomId) {
@@ -78,6 +76,27 @@ export default async function TeacherReportCardsPage({
       })
       subjectsForClassroom = subjectsData
     }
+  }
+
+  // If both classroom and period are selected, count daily assessments per subject
+  if (params.classroomId && params.periodId && subjectsForClassroom.length > 0) {
+    const counts = await prisma.assessment.groupBy({
+      by: ["subjectId"],
+      where: {
+        classroomId: params.classroomId,
+        periodId: params.periodId,
+        type: "DAILY",
+        schoolId: session.user.schoolId ? session.user.schoolId : undefined,
+      },
+      _count: { id: true },
+    })
+
+    const countMap = new Map(counts.map((c) => [c.subjectId, c._count.id]))
+
+    subjectsForClassroom = subjectsForClassroom.map((s) => ({
+      ...s,
+      dailyAssessmentCount: countMap.get(s.id) || 0,
+    }))
   }
 
   // Load daily assessment selection if classroom + subject + period are all selected

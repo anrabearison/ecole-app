@@ -85,10 +85,8 @@ export function can(
         }
         return false
       case "grade":
-        // Can view only their own grades
-        if (action === "view" && context?.teacherId && context?.ownerId === context.teacherId) {
-          return true
-        }
+        // Can view grades (for assigned subjects/classrooms)
+        if (action === "view") return true
         // Can create/update/delete grades if assigned to the subject and classroom
         // (This check should be done with TeacherSubject lookup in the action)
         if ((action === "create" || action === "update" || action === "delete") && context?.teacherId) {
