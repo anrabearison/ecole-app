@@ -70,6 +70,11 @@ enum TeacherContractType {
   ENF
 }
 
+enum ClassNumberAlgorithm {
+  STANDARD
+  GENDER_SEPARATED
+}
+
 // ============================================================
 // Multi-tenant root
 // ============================================================
@@ -87,6 +92,9 @@ model School {
   afternoonStartTime String @default("14:00")
   scheduleEndTime     String @default("18:00")
   slotDurationMinutes Int    @default(60)
+
+  // Class number algorithm configuration
+  classNumberAlgorithm ClassNumberAlgorithm @default(GENDER_SEPARATED)
 
   users               User[]
   schoolGrades        SchoolGrade[]
@@ -243,7 +251,7 @@ model Student {
   // kept in sync with the latest Enrollment. Full history lives in Enrollment.
   classroomId String?
   classroom   Classroom? @relation(fields: [classroomId], references: [id])
-  classNumber Int?       // Numéro de classe attribué pour l'année en cours
+  classNumber String?     // Numéro de classe attribué pour l'année en cours
 
   enrollments   Enrollment[]
   grades        Grade[]
@@ -260,7 +268,7 @@ model Student {
 model Enrollment {
   id          String @id @default(cuid())
   schoolYear  String // "2025-2026"
-  classNumber Int?   // Numéro de classe attribué pour cette année scolaire
+  classNumber String? // Numéro de classe attribué pour cette année scolaire
 
   studentId String
   student   Student @relation(fields: [studentId], references: [id])

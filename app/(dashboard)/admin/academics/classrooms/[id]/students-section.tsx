@@ -12,7 +12,7 @@ interface StudentData {
   id: string
   firstName: string | null
   lastName: string
-  classNumber: number | null
+  classNumber: string | null
   registrationNumber: string
 }
 

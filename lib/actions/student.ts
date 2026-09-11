@@ -19,7 +19,7 @@ type StudentWithRelations = {
   status: string
   placeOfBirth: string | null
   sex: string | null
-  classNumber: number | null
+  classNumber: string | null
   user: {
     id: string
     email: string | null
@@ -764,9 +764,13 @@ export async function deleteStudent(id: string): Promise<ActionResult<void>> {
 
 /**
  * Automatically generates class numbers for students in a classroom.
- * Unassigned students get assigned sequential numbers (1..N) sorted by Name/First Name (A-Z).
+ * Unassigned students get assigned sequential numbers sorted by Name/First Name (A-Z).
  * Students who already have a classNumber maintain their number (immutable).
  * Additional students enrolled afterwards receive max(classNumber) + 1.
+ * 
+ * Supports two algorithms:
+ * - STANDARD: Sequential numbers (1, 2, 3...)
+ * - GENDER_SEPARATED: Sequential numbers with gender suffix (1G, 1F, 2G, 2F...)
  */
 export async function generateClassNumbers(classroomId: string): Promise<ActionResult<{ updatedCount: number }>> {
   const session = await auth()
@@ -793,26 +797,26 @@ export async function generateClassNumbers(classroomId: string): Promise<ActionR
       return { success: false, error: "Classe non trouvée" }
     }
 
+    // Get school configuration
+    const school = await prisma.school.findUnique({
+      where: { id: session.user.schoolId },
+      select: { classNumberAlgorithm: true },
+    })
+
+    const algorithm = school?.classNumberAlgorithm || "GENDER_SEPARATED"
+
     // Find all enrollments for this classroom
     const enrollments = await prisma.enrollment.findMany({
       where: { classroomId },
       include: {
         student: {
-          select: { id: true, lastName: true, firstName: true, classNumber: true },
+          select: { id: true, lastName: true, firstName: true, classNumber: true, sex: true },
         },
       },
     })
 
     if (enrollments.length === 0) {
       return { success: true, data: { updatedCount: 0 } }
-    }
-
-    // Find max assigned class number
-    let maxNumber = 0
-    for (const e of enrollments) {
-      if (e.classNumber && e.classNumber > maxNumber) {
-        maxNumber = e.classNumber
-      }
     }
 
     // Filter unassigned enrollments
@@ -822,24 +826,100 @@ export async function generateClassNumbers(classroomId: string): Promise<ActionR
       return { success: true, data: { updatedCount: 0 } }
     }
 
-    // Sort unassigned alphabetically by lastName, then firstName
-    unassigned.sort((a, b) => {
-      const lastNameCompare = a.student.lastName.localeCompare(b.student.lastName, "fr", { sensitivity: "base" })
-      if (lastNameCompare !== 0) return lastNameCompare
-      const firstNameA = a.student.firstName || ""
-      const firstNameB = b.student.firstName || ""
-      return firstNameA.localeCompare(firstNameB, "fr", { sensitivity: "base" })
-    })
+    let updates: Array<{ enrollmentId: string; studentId: string; classNumber: string }> = []
 
-    // Assign sequential numbers starting from maxNumber + 1
-    const updates: Array<{ enrollmentId: string; studentId: string; classNumber: number }> = []
-    let nextNum = maxNumber + 1
-    for (const item of unassigned) {
-      updates.push({
-        enrollmentId: item.id,
-        studentId: item.studentId,
-        classNumber: nextNum++,
+    if (algorithm === "GENDER_SEPARATED") {
+      // Separate by gender
+      const maleStudents = unassigned.filter((e) => e.student.sex === "MALE")
+      const femaleStudents = unassigned.filter((e) => e.student.sex === "FEMALE")
+
+      // Sort each group alphabetically
+      maleStudents.sort((a, b) => {
+        const lastNameCompare = a.student.lastName.localeCompare(b.student.lastName, "fr", { sensitivity: "base" })
+        if (lastNameCompare !== 0) return lastNameCompare
+        const firstNameA = a.student.firstName || ""
+        const firstNameB = b.student.firstName || ""
+        return firstNameA.localeCompare(firstNameB, "fr", { sensitivity: "base" })
       })
+
+      femaleStudents.sort((a, b) => {
+        const lastNameCompare = a.student.lastName.localeCompare(b.student.lastName, "fr", { sensitivity: "base" })
+        if (lastNameCompare !== 0) return lastNameCompare
+        const firstNameA = a.student.firstName || ""
+        const firstNameB = b.student.firstName || ""
+        return firstNameA.localeCompare(firstNameB, "fr", { sensitivity: "base" })
+      })
+
+      // Find max male and female numbers from all enrollments
+      let maxMaleNumber = 0
+      let maxFemaleNumber = 0
+      for (const e of enrollments) {
+        if (e.classNumber) {
+          const numStr = e.classNumber.toString()
+          const num = parseInt(numStr)
+          if (!isNaN(num)) {
+            if (numStr.endsWith("G")) {
+              maxMaleNumber = Math.max(maxMaleNumber, num)
+            } else if (numStr.endsWith("F")) {
+              maxFemaleNumber = Math.max(maxFemaleNumber, num)
+            }
+          }
+        }
+      }
+
+      // Assign male numbers
+      let nextMaleNum = maxMaleNumber + 1
+      for (const item of maleStudents) {
+        updates.push({
+          enrollmentId: item.id,
+          studentId: item.studentId,
+          classNumber: `${nextMaleNum}G`,
+        })
+        nextMaleNum++
+      }
+
+      // Assign female numbers
+      let nextFemaleNum = maxFemaleNumber + 1
+      for (const item of femaleStudents) {
+        updates.push({
+          enrollmentId: item.id,
+          studentId: item.studentId,
+          classNumber: `${nextFemaleNum}F`,
+        })
+        nextFemaleNum++
+      }
+    } else {
+      // STANDARD algorithm: sequential numbers without suffix
+      // Find max assigned class number
+      let maxNumber = 0
+      for (const e of enrollments) {
+        if (e.classNumber) {
+          const num = parseInt(e.classNumber.toString())
+          if (!isNaN(num) && num > maxNumber) {
+            maxNumber = num
+          }
+        }
+      }
+
+      // Sort unassigned alphabetically by lastName, then firstName
+      unassigned.sort((a, b) => {
+        const lastNameCompare = a.student.lastName.localeCompare(b.student.lastName, "fr", { sensitivity: "base" })
+        if (lastNameCompare !== 0) return lastNameCompare
+        const firstNameA = a.student.firstName || ""
+        const firstNameB = b.student.firstName || ""
+        return firstNameA.localeCompare(firstNameB, "fr", { sensitivity: "base" })
+      })
+
+      // Assign sequential numbers starting from maxNumber + 1
+      let nextNum = maxNumber + 1
+      for (const item of unassigned) {
+        updates.push({
+          enrollmentId: item.id,
+          studentId: item.studentId,
+          classNumber: nextNum.toString(),
+        })
+        nextNum++
+      }
     }
 
     // Update DB in transaction

@@ -13,7 +13,7 @@ export type StudentGradeData = {
   studentId: string
   studentFirstName: string | null
   studentLastName: string
-  classNumber: number | null
+  classNumber: string | null
   subjects: SubjectGradeData[]
   generalAverage: number
   totalNotes: number
@@ -309,7 +309,7 @@ export async function getClassGrades(
         studentId: student.id,
         studentFirstName: student.firstName,
         studentLastName: student.lastName,
-        classNumber: student.classNumber,
+        classNumber: student.classNumber?.toString() || null,
         subjects: subjectGrades,
         generalAverage,
         totalNotes: 0, // Will be calculated after

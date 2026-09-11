@@ -10,7 +10,7 @@ export interface ReportCardData {
   studentLastName: string
   dateOfBirth?: string
   className: string
-  classNumber?: number
+  classNumber?: string
   sex?: string
   subjects: Array<{
     name: string
