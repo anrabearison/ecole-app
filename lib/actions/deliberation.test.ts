@@ -9,10 +9,12 @@ import {
   listDeliberationsForClassroom,
   generateAnnualReportPdf,
 } from "./deliberation"
-import { generateAnnualReportPdfBuffer } from "@/lib/pdf/generate-pdf"
+import { generateAnnualReportPdfBuffer } from "@/lib/pdf/generate-pdf-react"
 
 vi.mock("@/lib/auth")
 vi.mock("@/lib/permissions", () => ({ can: vi.fn() }))
+vi.mock("./average")
+vi.mock("@/lib/pdf/generate-pdf-react")
 vi.mock("./average", () => ({ calculateGeneralAverage: vi.fn() }))
 vi.mock("@/lib/pdf/generate-pdf", () => ({ generateAnnualReportPdfBuffer: vi.fn() }))
 
@@ -164,7 +166,8 @@ describe("deliberation actions", () => {
 
       vi.mocked(prisma.period.findMany as any).mockResolvedValue([{ id: mockPeriodId, name: "Trimestre 1" }])
       vi.mocked(calculateGeneralAverage).mockResolvedValue({ success: true, data: 14 })
-      vi.mocked(generateAnnualReportPdfBuffer).mockResolvedValue(Buffer.from([1, 2, 3]))
+      const mockGeneratePdf = vi.fn().mockResolvedValue(Buffer.from([1, 2, 3]))
+      vi.mocked(generateAnnualReportPdfBuffer as any).mockImplementation(mockGeneratePdf)
 
       const result = await generateAnnualReportPdf(mockStudentId, "2025-2026")
 
