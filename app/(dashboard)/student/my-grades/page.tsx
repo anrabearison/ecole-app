@@ -38,7 +38,7 @@ export default async function StudentGradesPage({
   const selectedPeriod = periods.find((period) => period.id === selectedPeriodId) || null
 
   let studentName = ""
-  let subjectAverages: Array<{ subjectId: string; subjectName: string; coefficient: number; average: number }> = []
+  let subjectAverages: any[] = []
   let generalAverage = 0
 
   if (session.user.studentId) {

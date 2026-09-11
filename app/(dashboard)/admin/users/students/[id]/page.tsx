@@ -64,7 +64,7 @@ export default async function StudentDetailPage({
   const selectedPeriodObj = periods.find(p => p.id === selectedPeriodId)
 
   let grades: any[] = []
-  let subjectAverages: Array<{ subjectId: string; subjectName: string; coefficient: number; average: number }> = []
+  let subjectAverages: any[] = []
   let generalAverage = 0
   let scheduleSlots: any[] = []
 

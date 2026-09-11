@@ -8,12 +8,22 @@ export interface ReportCardData {
   periodName: string
   studentFirstName: string
   studentLastName: string
+  dateOfBirth?: string
   className: string
+  classNumber?: number
+  sex?: string
   subjects: Array<{
     name: string
     coefficient: number
-    average: number
+    dailyAverage: number
+    examAverage: number
+    weightedAverage: number
+    finalNote: number
+    rank: number
+    totalStudents: number
   }>
+  totalNotes: number
+  totalCoefficients: number
   generalAverage: number
   classRank: number
   totalStudents: number
@@ -22,9 +32,9 @@ export interface ReportCardData {
 
 const styles = StyleSheet.create({
   page: {
-    padding: 24,
+    padding: 20,
     fontFamily: "Helvetica",
-    fontSize: 11,
+    fontSize: 10,
     color: "#1e293b",
   },
   header: {
@@ -32,40 +42,40 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     borderBottomWidth: 2,
     borderBottomColor: "#e2e8f0",
-    paddingBottom: 16,
-    marginBottom: 20,
+    paddingBottom: 12,
+    marginBottom: 16,
   },
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
   logo: {
-    width: 80,
-    height: 80,
-    marginRight: 16,
+    width: 60,
+    height: 60,
+    marginRight: 12,
   },
   logoPlaceholder: {
-    width: 64,
-    height: 64,
+    width: 50,
+    height: 50,
     backgroundColor: "#2563eb",
     color: "#ffffff",
-    fontSize: 28,
+    fontSize: 20,
     fontWeight: "bold",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 16,
+    marginRight: 12,
   },
   schoolInfo: {
-    marginRight: 16,
+    marginRight: 12,
   },
   schoolName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "bold",
     color: "#0f172a",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   schoolAddress: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#64748b",
   },
   headerRight: {
@@ -76,28 +86,28 @@ const styles = StyleSheet.create({
     color: "#1d4ed8",
     borderWidth: 1,
     borderColor: "#bfdbfe",
-    padding: 4,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    fontSize: 10,
+    padding: 3,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    fontSize: 9,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   schoolYear: {
-    fontSize: 10,
+    fontSize: 9,
     color: "#475569",
     fontWeight: 500,
   },
   titleBanner: {
     backgroundColor: "#1e3a8a",
     color: "#ffffff",
-    padding: 12,
-    borderRadius: 8,
+    padding: 10,
+    borderRadius: 6,
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: 16,
   },
   titleText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
     textTransform: "uppercase",
   },
@@ -105,58 +115,56 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#e2e8f0",
-    borderRadius: 8,
-    padding: 14,
-    marginBottom: 24,
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 20,
     flexDirection: "row",
     justifyContent: "space-between",
+    flexWrap: "wrap",
   },
   infoGroup: {
-    marginBottom: 8,
+    marginBottom: 6,
+    marginRight: 16,
   },
   infoLabel: {
-    fontSize: 9,
+    fontSize: 8,
     textTransform: "uppercase",
     color: "#64748b",
     fontWeight: "bold",
-    marginBottom: 2,
+    marginBottom: 1,
   },
   infoValue: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#0f172a",
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "bold",
     color: "#1e293b",
-    marginBottom: 10,
-    paddingBottom: 4,
+    marginBottom: 8,
+    paddingBottom: 3,
     borderBottomWidth: 1,
     borderBottomColor: "#cbd5e1",
   },
   table: {
     width: "100%",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   tableHeader: {
     backgroundColor: "#f1f5f9",
     color: "#334155",
     fontWeight: "bold",
-    fontSize: 10,
+    fontSize: 8,
     textTransform: "uppercase",
     flexDirection: "row",
     borderBottomWidth: 2,
     borderBottomColor: "#cbd5e1",
   },
   tableHeaderCell: {
-    padding: 10,
-    flex: 1,
-  },
-  tableHeaderCellRight: {
-    padding: 10,
-    flex: 0,
-    textAlign: "right",
+    padding: 6,
+    textAlign: "center",
+    fontSize: 8,
   },
   tableRow: {
     flexDirection: "row",
@@ -167,27 +175,34 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
   },
   tableCell: {
-    padding: 10,
-    flex: 1,
+    padding: 6,
+    textAlign: "center",
+    fontSize: 9,
     color: "#334155",
   },
-  tableCellRight: {
-    padding: 10,
-    flex: 0,
-    textAlign: "right",
+  tableCellBold: {
+    padding: 6,
+    textAlign: "center",
+    fontSize: 9,
     color: "#334155",
     fontWeight: "bold",
   },
+  tableCellLeft: {
+    padding: 6,
+    textAlign: "left",
+    fontSize: 9,
+    color: "#334155",
+  },
   summaryGrid: {
     flexDirection: "row",
-    marginBottom: 24,
+    marginBottom: 20,
   },
   summaryBox: {
     flex: 1,
-    borderRadius: 8,
-    padding: 16,
+    borderRadius: 6,
+    padding: 12,
     textAlign: "center",
-    marginRight: 16,
+    marginRight: 12,
   },
   summaryBoxLast: {
     marginRight: 0,
@@ -203,14 +218,14 @@ const styles = StyleSheet.create({
     borderColor: "#bbf7d0",
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "bold",
     color: "#475569",
     textTransform: "uppercase",
-    marginBottom: 4,
+    marginBottom: 3,
   },
   summaryValue: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "bold",
   },
   summaryValueAverage: {
@@ -225,32 +240,44 @@ const styles = StyleSheet.create({
     borderColor: "#fef3c7",
     borderLeftWidth: 4,
     borderLeftColor: "#f59e0b",
-    borderRadius: 6,
-    padding: 14,
-    marginBottom: 24,
+    borderRadius: 4,
+    padding: 12,
+    marginBottom: 20,
   },
   appreciationTitle: {
-    fontSize: 10,
+    fontSize: 9,
     textTransform: "uppercase",
     color: "#b45309",
     fontWeight: "bold",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   appreciationText: {
     fontStyle: "italic",
     color: "#78350f",
-    fontSize: 11,
+    fontSize: 10,
   },
   footer: {
-    marginTop: 30,
-    paddingTop: 16,
+    marginTop: 24,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: "#e2e8f0",
     textAlign: "center",
-    fontSize: 9,
+    fontSize: 8,
     color: "#94a3b8",
   },
 })
+
+function mapAppreciationToFrench(appreciation: string): string {
+  const mapping: Record<string, string> = {
+    EXCELLENT: "Félicitation",
+    HONOR_ROLL: "Tableau d'honneur",
+    ENCOURAGEMENT: "Encouragement",
+    INSUFFICIENT: "Insuffisant",
+    WARNING: "Avertissement",
+    BLAME: "Blâme",
+  }
+  return mapping[appreciation] || appreciation
+}
 
 export function ReportCardPDF({ data }: { data: ReportCardData }) {
   return (
@@ -287,16 +314,24 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
         {/* Student Card */}
         <View style={styles.studentCard}>
           <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Nom & Prénom</Text>
+            <Text style={styles.infoLabel}>Nom & Prénoms</Text>
             <Text style={styles.infoValue}>{data.studentLastName} {data.studentFirstName}</Text>
+          </View>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Date de Naissance</Text>
+            <Text style={styles.infoValue}>{data.dateOfBirth || "………………"}</Text>
           </View>
           <View style={styles.infoGroup}>
             <Text style={styles.infoLabel}>Classe</Text>
             <Text style={styles.infoValue}>{data.className}</Text>
           </View>
           <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Année Scolaire</Text>
-            <Text style={styles.infoValue}>{data.schoolYear}</Text>
+            <Text style={styles.infoLabel}>N°</Text>
+            <Text style={styles.infoValue}>{data.classNumber || "……"}</Text>
+          </View>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Sexe</Text>
+            <Text style={styles.infoValue}>{data.sex || "……"}</Text>
           </View>
         </View>
 
@@ -306,20 +341,41 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
         {/* Subjects Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderCell}>Matière</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>Coefficient</Text>
-            <Text style={styles.tableHeaderCellRight}>Moyenne</Text>
+            <Text style={[styles.tableHeaderCell, { width: "25%" }]}>MATIÈRE</Text>
+            <Text style={[styles.tableHeaderCell, { width: "10%" }]}>MJ</Text>
+            <Text style={[styles.tableHeaderCell, { width: "10%" }]}>COMP</Text>
+            <Text style={[styles.tableHeaderCell, { width: "10%" }]}>MJ+C/2</Text>
+            <Text style={[styles.tableHeaderCell, { width: "8%" }]}>COEFF</Text>
+            <Text style={[styles.tableHeaderCell, { width: "12%" }]}>NOTE</Text>
+            <Text style={[styles.tableHeaderCell, { width: "8%" }]}>RANG</Text>
+            <Text style={[styles.tableHeaderCell, { width: "17%" }]}>APPREC</Text>
           </View>
           {data.subjects.map((subject, index) => {
             const rowStyle = index % 2 === 0 ? styles.tableRowEven : {}
             return (
               <View key={index} style={[styles.tableRow, rowStyle]}>
-                <Text style={styles.tableCell}>{subject.name}</Text>
-                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.coefficient}</Text>
-                <Text style={styles.tableCellRight}>{subject.average.toFixed(2)} / 20</Text>
+                <Text style={[styles.tableCellLeft, { width: "25%" }]}>{subject.name}</Text>
+                <Text style={[styles.tableCell, { width: "10%" }]}>{subject.dailyAverage.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { width: "10%" }]}>{subject.examAverage.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { width: "10%" }]}>{subject.weightedAverage.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { width: "8%" }]}>{subject.coefficient}</Text>
+                <Text style={[styles.tableCell, { width: "12%" }]}>{subject.finalNote.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { width: "8%" }]}>{subject.rank}</Text>
+                <Text style={[styles.tableCell, { width: "17%" }]}></Text>
               </View>
             )
           })}
+          {/* Total Row */}
+          <View style={[styles.tableRow, { backgroundColor: "#f1f5f9" }]}>
+            <Text style={[styles.tableCellBold, { width: "25%" }]}></Text>
+            <Text style={[styles.tableCell, { width: "10%" }]}></Text>
+            <Text style={[styles.tableCell, { width: "10%" }]}></Text>
+            <Text style={[styles.tableCell, { width: "10%" }]}></Text>
+            <Text style={[styles.tableCellBold, { width: "8%" }]}>{data.totalCoefficients}</Text>
+            <Text style={[styles.tableCellBold, { width: "12%" }]}>TOTAL: {data.totalNotes.toFixed(2)}</Text>
+            <Text style={[styles.tableCell, { width: "8%" }]}></Text>
+            <Text style={[styles.tableCell, { width: "17%" }]}></Text>
+          </View>
         </View>
 
         {/* Summary Grid */}
@@ -328,17 +384,21 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
             <Text style={styles.summaryLabel}>Moyenne Générale</Text>
             <Text style={[styles.summaryValue, styles.summaryValueAverage]}>{data.generalAverage.toFixed(2)} / 20</Text>
           </View>
-          <View style={[styles.summaryBox, styles.summaryBoxRank, styles.summaryBoxLast]}>
-            <Text style={styles.summaryLabel}>Classement</Text>
-            <Text style={[styles.summaryValue, styles.summaryValueRank]}>{data.classRank}e / {data.totalStudents}</Text>
+          <View style={[styles.summaryBox, styles.summaryBoxRank]}>
+            <Text style={styles.summaryLabel}>Rang</Text>
+            <Text style={[styles.summaryValue, styles.summaryValueRank]}>{data.classRank} / {data.totalStudents} ÉLÈVES</Text>
+          </View>
+          <View style={[styles.summaryBox, styles.summaryBoxAverage, styles.summaryBoxLast]}>
+            <Text style={styles.summaryLabel}>Nombre de jours d'absence</Text>
+            <Text style={[styles.summaryValue, styles.summaryValueAverage]}>………….jours</Text>
           </View>
         </View>
 
-        {/* Appreciation */}
+        {/* Council Decision */}
         {data.appreciation && (
           <View style={styles.appreciationBox}>
-            <Text style={styles.appreciationTitle}>Appréciation Générale</Text>
-            <Text style={styles.appreciationText}>"{data.appreciation}"</Text>
+            <Text style={styles.appreciationTitle}>DÉCISION DU CONSEIL</Text>
+            <Text style={styles.appreciationText}>{mapAppreciationToFrench(data.appreciation)}</Text>
           </View>
         )}
 
