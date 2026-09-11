@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { getStudentSubjectAverages, calculateGeneralAverage, calculateClassRank } from "./average"
 import { getReportCardComment } from "./report-card-comment"
 
-import { generateReportCardPdfBuffer } from "@/lib/pdf/generate-pdf"
+import { generateReportCardPdfBuffer } from "@/lib/pdf/generate-pdf-react"
 
 // Mock auth
 vi.mock("@/lib/auth")

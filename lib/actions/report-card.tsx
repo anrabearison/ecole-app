@@ -5,9 +5,7 @@ import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages } from "./average"
-import { generateReportCardPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf"
-import { generatePdfFromHtml } from "@/lib/pdf/browser"
-import { renderReportCardHtml } from "@/lib/pdf/report-card-template"
+import { generateReportCardPdfBuffer, generateClassReportPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf-react"
 import { getReportCardComment } from "./report-card-comment"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
 import { getEffectiveCoefficient } from "@/lib/actions/subject-coefficient"
@@ -104,7 +102,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     const reportCardData: ReportCardData = {
       schoolName: student.school.name,
       schoolAddress: student.school.address || undefined,
-      schoolLogoBase64: (student.school as any).logoUrl || undefined,
+      schoolLogoUrl: (student.school as any).logoUrl || undefined,
       schoolYear: period.schoolYear,
       periodName: period.name,
       studentFirstName: student.firstName || "",
@@ -213,7 +211,7 @@ export async function generateClassReportCardsPdf(
     if (classroom.track) className += ` ${classroom.track.name}`
     if (classroom.section) className += ` ${classroom.section}`
 
-    const schoolLogoBase64 = (classroom.school as any).logoUrl || undefined
+    const schoolLogoUrl = (classroom.school as any).logoUrl || undefined
 
     // 6. Pre-compute class averages for ranking
     const classAverages: Array<{ studentId: string; average: number }> = []
@@ -224,8 +222,8 @@ export async function generateClassReportCardsPdf(
     classAverages.sort((a, b) => b.average - a.average)
     const totalStudents = classAverages.length
 
-    // 7. Build HTML for each student — all in a single document, separated by page breaks
-    const allPages: string[] = []
+    // 7. Build report card data for each student
+    const reportCards: ReportCardData[] = []
 
     for (const student of students) {
       const schoolGradeId = student.classroom?.schoolGradeId ?? null
@@ -283,7 +281,7 @@ export async function generateClassReportCardsPdf(
       const reportCardData: ReportCardData = {
         schoolName: classroom.school.name,
         schoolAddress: classroom.school.address || undefined,
-        schoolLogoBase64,
+        schoolLogoUrl,
         schoolYear: period.schoolYear,
         periodName: period.name,
         studentFirstName: student.firstName || "",
@@ -296,33 +294,16 @@ export async function generateClassReportCardsPdf(
         appreciation,
       }
 
-      allPages.push(renderReportCardHtml(reportCardData))
+      reportCards.push(reportCardData)
     }
 
-    // 8. Combine all pages into a single HTML document with page breaks
-    const combinedHtml = `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Bulletins de la classe ${className} — ${period.name}</title>
-  <style>
-    @page { margin: 0; }
-    .page-wrapper { page-break-after: always; }
-    .page-wrapper:last-child { page-break-after: avoid; }
-  </style>
-</head>
-<body style="margin:0;padding:0;">
-  ${allPages.map((html) => {
-    // Extract just the <body> content from each individual bulletin HTML
-    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-    return `<div class="page-wrapper">${bodyMatch ? bodyMatch[1] : html}</div>`
-  }).join("\n")}
-</body>
-</html>`
-
-    // 9. Generate PDF
-    const pdfBuffer = await generatePdfFromHtml(combinedHtml)
+    // 8. Generate PDF using react-pdf
+    const pdfBuffer = await generateClassReportPdfBuffer({
+      className,
+      periodName: period.name,
+      schoolYear: period.schoolYear,
+      reportCards,
+    })
     const pdfBase64 = pdfBuffer.toString("base64")
 
     const periodSafe = period.name.replace(/\s+/g, "_")

@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { calculateGeneralAverage } from "./average"
 import { deliberationObservationSchema } from "@/lib/validations/deliberation"
-import { generateAnnualReportPdfBuffer, type AnnualReportData } from "@/lib/pdf/generate-pdf"
+import { generateAnnualReportPdfBuffer, type AnnualReportData } from "@/lib/pdf/generate-pdf-react"
 import type { DeliberationDecision } from "@prisma/client"
 
 export type DeliberationWithRelations = {
@@ -437,7 +437,7 @@ export async function generateAnnualReportPdf(
     const reportData: AnnualReportData = {
       schoolName: student.school.name,
       schoolAddress: student.school.address || undefined,
-      schoolLogoBase64: (student.school as any).logoUrl || undefined,
+      schoolLogoUrl: (student.school as any).logoUrl || undefined,
       schoolYear,
       studentFirstName: student.firstName || "",
       studentLastName: student.lastName,
