@@ -8,9 +8,10 @@ import { getClassGrades } from "@/lib/actions/class-grades"
 interface GradesPreviewProps {
   classroomId: string
   periodId: string
+  subjectId?: string
 }
 
-export function GradesPreview({ classroomId, periodId }: GradesPreviewProps) {
+export function GradesPreview({ classroomId, periodId, subjectId }: GradesPreviewProps) {
   const [data, setData] = useState<ClassGradesResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -102,7 +103,9 @@ export function GradesPreview({ classroomId, periodId }: GradesPreviewProps) {
           </div>
 
           <div className="divide-y divide-gray-100">
-            {student.subjects.map((subject) => (
+            {student.subjects
+              .filter((subject) => !subjectId || subject.subjectId === subjectId)
+              .map((subject) => (
               <div key={subject.subjectId} className="px-5 py-4">
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-sm font-medium text-gray-900">{subject.subjectName}</h4>

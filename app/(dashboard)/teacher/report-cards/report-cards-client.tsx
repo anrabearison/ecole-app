@@ -360,7 +360,7 @@ export function ReportCardsClient({
       {showGradesPreview && selectedClassroomId && selectedPeriodId && (
         <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-5">
           <h2 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Prévisualisation des notes</h2>
-          <GradesPreview classroomId={selectedClassroomId} periodId={selectedPeriodId} />
+          <GradesPreview classroomId={selectedClassroomId} periodId={selectedPeriodId} subjectId={selectedSubjectId} />
         </div>
       )}
     </div>
