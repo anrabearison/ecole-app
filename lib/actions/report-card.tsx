@@ -4,7 +4,8 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
-import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages } from "./average"
+import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages, calculateSubjectRank } from "./average"
+import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
 import { generateReportCardPdfBuffer, generateClassReportPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf-react"
 import { getReportCardComment } from "./report-card-comment"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
@@ -43,7 +44,14 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     // Fetch student with classroom and school
     const student = await prisma.student.findUnique({
       where: { id: studentId },
-      include: {
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        dateOfBirth: true,
+        classNumber: true,
+        sex: true,
+        classroomId: true,
         classroom: {
           include: {
             schoolGrade: true,
@@ -80,7 +88,10 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     }
 
     // Calculate class rank
-    const classRankResult = await calculateClassRank(studentId, student.classroomId!, periodId)
+    if (!student.classroomId) {
+      return { success: false, error: "L'élève n'est pas assigné à une classe" }
+    }
+    const classRankResult = await calculateClassRank(studentId, student.classroomId, periodId)
     if (!classRankResult.success) {
       return { success: false, error: "Erreur lors du calcul du classement" }
     }
@@ -98,6 +109,93 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       className += ` ${student.classroom.section}`
     }
 
+    // Build daily selection map for this student
+    if (!student.classroomId) {
+      return { success: false, error: "L'élève n'est pas assigné à une classe" }
+    }
+
+    const dailyAssessments = await prisma.assessment.findMany({
+      where: { classroomId: student.classroomId, periodId, schoolId: session.user.schoolId, type: "DAILY" },
+      select: { subjectId: true },
+      distinct: ["subjectId"],
+    })
+
+    const dailySelectionMap = new Map<string, string[] | null>()
+    for (const { subjectId } of dailyAssessments) {
+      const selectedIds = await getSelectedDailyAssessmentIds(student.classroomId, subjectId, periodId, session.user.schoolId)
+      dailySelectionMap.set(subjectId, selectedIds)
+    }
+
+    // Build subjects with detailed data
+    const subjectsWithDetails = []
+    for (const sa of subjectAveragesResult.data) {
+      const selectedDailyIds = dailySelectionMap.get(sa.subjectId)
+      const subjectAvgResult = await calculateSubjectAverage(studentId, sa.subjectId, periodId, selectedDailyIds)
+
+      // Get individual daily and exam averages
+      const grades = await prisma.grade.findMany({
+        where: {
+          studentId,
+          assessment: {
+            subjectId: sa.subjectId,
+            periodId,
+            schoolId: session.user.schoolId,
+          },
+        },
+        include: {
+          assessment: {
+            select: { id: true, type: true },
+          },
+        },
+      })
+
+      let dailySum = 0
+      let dailyCount = 0
+      let examSum = 0
+      let examCount = 0
+
+      for (const grade of grades) {
+        const isSelected =
+          selectedDailyIds === undefined || selectedDailyIds === null
+            ? true
+            : selectedDailyIds.includes(grade.assessment.id)
+
+        if (grade.assessment.type === "EXAM") {
+          examSum += grade.value
+          examCount++
+        } else if (isSelected) {
+          dailySum += grade.value
+          dailyCount++
+        }
+      }
+
+      const dailyAverage = dailyCount > 0 ? dailySum / dailyCount : 0
+      const examAverage = examCount > 0 ? examSum / examCount : 0
+      const weightedAverage = sa.average
+      const finalNote = sa.coefficient * weightedAverage
+
+      // Calculate subject rank
+      const subjectRankResult = await calculateSubjectRank(studentId, sa.subjectId, student.classroomId, periodId, dailySelectionMap)
+
+      subjectsWithDetails.push({
+        name: sa.subjectName,
+        coefficient: sa.coefficient,
+        dailyAverage,
+        examAverage,
+        weightedAverage,
+        finalNote,
+        rank: subjectRankResult.success ? subjectRankResult.data.rank : 0,
+        totalStudents: subjectRankResult.success ? subjectRankResult.data.totalStudents : 0,
+      })
+    }
+
+    // Calculate total notes and coefficients
+    const totalNotes = calculateTotalNotes(subjectAveragesResult.data)
+    const totalCoefficients = calculateTotalCoefficients(subjectAveragesResult.data)
+
+    // Calculate appreciation
+    const calculatedAppreciation = calculateAppreciation(generalAverageResult.data)
+
     // Prepare report card data
     const reportCardData: ReportCardData = {
       schoolName: student.school.name,
@@ -107,16 +205,17 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       periodName: period.name,
       studentFirstName: student.firstName || "",
       studentLastName: student.lastName,
+      dateOfBirth: student.dateOfBirth ? student.dateOfBirth.toISOString().split("T")[0] : undefined,
       className,
-      subjects: subjectAveragesResult.data.map((sa) => ({
-        name: sa.subjectName,
-        coefficient: sa.coefficient,
-        average: sa.average,
-      })),
+      classNumber: student.classNumber || undefined,
+      sex: student.sex || undefined,
+      subjects: subjectsWithDetails,
+      totalNotes,
+      totalCoefficients,
       generalAverage: generalAverageResult.data,
       classRank: classRankResult.data.rank,
       totalStudents: classRankResult.data.totalStudents,
-      appreciation,
+      appreciation: calculatedAppreciation || undefined,
     }
 
     // Generate PDF
@@ -230,7 +329,16 @@ export async function generateClassReportCardsPdf(
       const trackId = student.classroom?.trackId ?? null
 
       // Subject averages with daily selection applied
-      const subjectAverages: Array<{ name: string; coefficient: number; average: number }> = []
+      const subjectAverages: Array<{
+        name: string
+        coefficient: number
+        dailyAverage: number
+        examAverage: number
+        weightedAverage: number
+        finalNote: number
+        rank: number
+        totalStudents: number
+      }> = []
 
       // Get all subjects with grades for this student in this period
       const grades = await prisma.grade.findMany({
@@ -262,7 +370,49 @@ export async function generateClassReportCardsPdf(
             : Promise.resolve(subject.coefficient),
         ])
         if (avgResult.success) {
-          subjectAverages.push({ name: subject.name, coefficient: coeff, average: avgResult.data })
+          // Get individual daily and exam averages
+          const subjectGrades = grades.filter(
+            (g) => g.assessment?.subject?.id === subject.id
+          )
+
+          let dailySum = 0
+          let dailyCount = 0
+          let examSum = 0
+          let examCount = 0
+
+          for (const grade of subjectGrades) {
+            const isSelected =
+              selectedDailyIds === undefined || selectedDailyIds === null
+                ? true
+                : selectedDailyIds.includes(grade.assessment.id)
+
+            if (grade.assessment.type === "EXAM") {
+              examSum += grade.value
+              examCount++
+            } else if (isSelected) {
+              dailySum += grade.value
+              dailyCount++
+            }
+          }
+
+          const dailyAverage = dailyCount > 0 ? dailySum / dailyCount : 0
+          const examAverage = examCount > 0 ? examSum / examCount : 0
+          const weightedAverage = avgResult.data
+          const finalNote = coeff * weightedAverage
+
+          // Calculate subject rank
+          const subjectRankResult = await calculateSubjectRank(student.id, subject.id, classroomId, periodId, dailySelectionMap)
+
+          subjectAverages.push({
+            name: subject.name,
+            coefficient: coeff,
+            dailyAverage,
+            examAverage,
+            weightedAverage,
+            finalNote,
+            rank: subjectRankResult.success ? subjectRankResult.data.rank : 0,
+            totalStudents: subjectRankResult.success ? subjectRankResult.data.totalStudents : 0,
+          })
         }
       }
 
@@ -274,9 +424,32 @@ export async function generateClassReportCardsPdf(
       const rankIndex = classAverages.findIndex((c) => c.studentId === student.id)
       const classRank = rankIndex >= 0 ? rankIndex + 1 : 0
 
-      // Appreciation comment
-      const commentResult = await getReportCardComment(student.id, periodId)
-      const appreciation = commentResult.success && commentResult.data ? commentResult.data.comment : undefined
+      // Calculate appreciation
+      const calculatedAppreciation = calculateAppreciation(generalAverage)
+
+      // Calculate total notes and coefficients
+      const totalNotes = calculateTotalNotes(subjectAverages.map((s) => ({
+        subjectId: "",
+        subjectName: s.name,
+        coefficient: s.coefficient,
+        average: s.weightedAverage,
+      })))
+      const totalCoefficients = calculateTotalCoefficients(subjectAverages.map((s) => ({
+        subjectId: "",
+        subjectName: s.name,
+        coefficient: s.coefficient,
+        average: s.weightedAverage,
+      })))
+
+      // Get student details for the report card
+      const studentDetails = await prisma.student.findUnique({
+        where: { id: student.id },
+        select: {
+          dateOfBirth: true,
+          classNumber: true,
+          sex: true,
+        },
+      })
 
       const reportCardData: ReportCardData = {
         schoolName: classroom.school.name,
@@ -286,12 +459,17 @@ export async function generateClassReportCardsPdf(
         periodName: period.name,
         studentFirstName: student.firstName || "",
         studentLastName: student.lastName,
+        dateOfBirth: studentDetails?.dateOfBirth ? studentDetails.dateOfBirth.toISOString().split("T")[0] : undefined,
         className,
+        classNumber: studentDetails?.classNumber || undefined,
+        sex: studentDetails?.sex || undefined,
         subjects: subjectAverages,
+        totalNotes,
+        totalCoefficients,
         generalAverage,
         classRank,
         totalStudents,
-        appreciation,
+        appreciation: calculatedAppreciation || undefined,
       }
 
       reportCards.push(reportCardData)

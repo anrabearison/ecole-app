@@ -5,7 +5,8 @@ import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
-import { calculateSubjectAverage, calculateGeneralAverage } from "./average"
+import { calculateSubjectAverage, calculateGeneralAverage, calculateSubjectRank } from "./average"
+import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
 import { getEffectiveCoefficient } from "./subject-coefficient"
 
 export type StudentGradeData = {
@@ -15,6 +16,11 @@ export type StudentGradeData = {
   classNumber: number | null
   subjects: SubjectGradeData[]
   generalAverage: number
+  totalNotes: number
+  totalCoefficients: number
+  appreciation: string
+  classRank: number
+  totalStudents: number
 }
 
 export type SubjectGradeData = {
@@ -26,6 +32,9 @@ export type SubjectGradeData = {
   dailyAverage: number
   examAverage: number
   weightedAverage: number
+  finalNote: number
+  rank: number
+  totalStudents: number
 }
 
 export type DailyGradeItem = {
@@ -260,13 +269,16 @@ export async function getClassGrades(
 
         const examAverage = examCount > 0 ? examSum / examCount : 0
 
-        // Calculate weighted average
+        // Calculate weighted average (MJ+COMP)/2 with 50/50 weights
         const weightedAverage = examAverage * period.examWeight + dailyAverage * period.dailyWeight
 
         // Get effective coefficient
         const effectiveCoefficient = schoolGradeId
           ? await getEffectiveCoefficient(subjectId, schoolGradeId, trackId, schoolId)
           : 1.0
+
+        // Calculate final note: COEF * (MJ+COMP)/2
+        const finalNote = effectiveCoefficient * weightedAverage
 
         // Get subject name
         const subject = await prisma.subject.findUnique({
@@ -283,6 +295,9 @@ export async function getClassGrades(
           dailyAverage,
           examAverage,
           weightedAverage,
+          finalNote,
+          rank: 0, // Will be calculated after all students are processed
+          totalStudents: 0, // Will be calculated after all students are processed
         })
       }
 
@@ -297,7 +312,69 @@ export async function getClassGrades(
         classNumber: student.classNumber,
         subjects: subjectGrades,
         generalAverage,
+        totalNotes: 0, // Will be calculated after
+        totalCoefficients: 0, // Will be calculated after
+        appreciation: "", // Will be calculated after
+        classRank: 0, // Will be calculated after
+        totalStudents: students.length,
       })
+    }
+
+    // Calculate subject ranks for all students
+    for (const subjectId of subjectIds) {
+      const subjectRankMap = new Map<string, number>()
+      const studentSubjectAverages: Array<{ studentId: string; average: number }> = []
+
+      for (const student of students) {
+        const selectedDailyIds = dailySelectionMap.get(subjectId)
+        const avgResult = await calculateSubjectAverage(student.id, subjectId, periodId, selectedDailyIds)
+        if (avgResult.success) {
+          studentSubjectAverages.push({
+            studentId: student.id,
+            average: avgResult.data,
+          })
+        }
+      }
+
+      // Sort by average descending and assign ranks
+      studentSubjectAverages.sort((a, b) => b.average - a.average)
+      studentSubjectAverages.forEach((item, index) => {
+        subjectRankMap.set(item.studentId, index + 1)
+      })
+
+      // Assign ranks to student data
+      for (const studentData of studentGradeData) {
+        const subjectData = studentData.subjects.find((s) => s.subjectId === subjectId)
+        if (subjectData) {
+          subjectData.rank = subjectRankMap.get(studentData.studentId) || 0
+          subjectData.totalStudents = students.length
+        }
+      }
+    }
+
+    // Calculate class rank based on general average
+    const studentGeneralAverages = studentGradeData.map((s) => ({
+      studentId: s.studentId,
+      average: s.generalAverage,
+    }))
+    studentGeneralAverages.sort((a, b) => b.average - a.average)
+    const classRankMap = new Map<string, number>()
+    studentGeneralAverages.forEach((item, index) => {
+      classRankMap.set(item.studentId, index + 1)
+    })
+
+    // Calculate total notes, total coefficients, and appreciation for each student
+    for (const studentData of studentGradeData) {
+      const subjectAverages = studentData.subjects.map((s) => ({
+        subjectId: s.subjectId,
+        subjectName: s.subjectName,
+        coefficient: s.coefficient,
+        average: s.weightedAverage,
+      }))
+      studentData.totalNotes = calculateTotalNotes(subjectAverages)
+      studentData.totalCoefficients = calculateTotalCoefficients(subjectAverages)
+      studentData.appreciation = calculateAppreciation(studentData.generalAverage)
+      studentData.classRank = classRankMap.get(studentData.studentId) || 0
     }
 
     return {

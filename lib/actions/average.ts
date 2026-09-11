@@ -24,6 +24,13 @@ export type ClassRank = {
   totalStudents: number
 }
 
+export type SubjectRank = {
+  studentId: string
+  subjectId: string
+  rank: number
+  totalStudents: number
+}
+
 /**
  * Calculate subject average for a student in a period.
  * Weighted average based on Period.examWeight/dailyWeight.
@@ -427,3 +434,77 @@ export async function getStudentSubjectAverages(
     return { success: false, error: "Erreur lors de la récupération des moyennes matière" }
   }
 }
+
+/**
+ * Calculate subject rank for a student in a classroom for a period
+ */
+export async function calculateSubjectRank(
+  studentId: string,
+  subjectId: string,
+  classroomId: string,
+  periodId: string,
+  dailySelectionMap?: Map<string, string[] | null>
+): Promise<ActionResult<SubjectRank>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  if (!can(session.user.role, "view", "grade", {
+    studentId: session.user.studentId || undefined,
+    schoolId: session.user.schoolId || undefined
+  })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  try {
+    // Get all students in the classroom
+    const students = await prisma.student.findMany({
+      where: {
+        classroomId,
+        schoolId: session.user.schoolId,
+      },
+      select: { id: true },
+    })
+
+    // Calculate subject average for each student
+    const studentAverages: Array<{ studentId: string; average: number }> = []
+
+    for (const student of students) {
+      const selectedDailyIds = dailySelectionMap?.get(subjectId)
+      const avgResult = await calculateSubjectAverage(student.id, subjectId, periodId, selectedDailyIds)
+      if (avgResult.success) {
+        studentAverages.push({
+          studentId: student.id,
+          average: avgResult.data,
+        })
+      }
+    }
+
+    // Sort by average descending and assign ranks
+    studentAverages.sort((a, b) => b.average - a.average)
+
+    const studentRank = studentAverages.findIndex((s) => s.studentId === studentId) + 1
+    const totalStudents = studentAverages.length
+
+    return {
+      success: true,
+      data: {
+        studentId,
+        subjectId,
+        rank: studentRank > 0 ? studentRank : 0,
+        totalStudents,
+      },
+    }
+  } catch (error) {
+    console.error("Error calculating subject rank:", error)
+    return { success: false, error: "Erreur lors du calcul du rang matière" }
+  }
+}
+
+

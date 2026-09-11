@@ -46,6 +46,12 @@ enum Weekday {
 enum DeliberationDecision {
   PROMOTED
   REPEATED
+  EXCELLENT
+  HONOR_ROLL
+  ENCOURAGEMENT
+  INSUFFICIENT
+  WARNING
+  BLAME
 }
 
 enum StudentStatus {

@@ -8,12 +8,22 @@ export interface ReportCardData {
   periodName: string
   studentFirstName: string
   studentLastName: string
+  dateOfBirth?: string
   className: string
+  classNumber?: number
+  sex?: string
   subjects: Array<{
     name: string
     coefficient: number
-    average: number
+    dailyAverage: number
+    examAverage: number
+    weightedAverage: number
+    finalNote: number
+    rank: number
+    totalStudents: number
   }>
+  totalNotes: number
+  totalCoefficients: number
   generalAverage: number
   classRank: number
   totalStudents: number
@@ -252,6 +262,18 @@ const styles = StyleSheet.create({
   },
 })
 
+function mapAppreciationToFrench(appreciation: string): string {
+  const mapping: Record<string, string> = {
+    EXCELLENT: "Félicitation",
+    HONOR_ROLL: "Tableau d'honneur",
+    ENCOURAGEMENT: "Encouragement",
+    INSUFFICIENT: "Insuffisant",
+    WARNING: "Avertissement",
+    BLAME: "Blâme",
+  }
+  return mapping[appreciation] || appreciation
+}
+
 export function ReportCardPDF({ data }: { data: ReportCardData }) {
   return (
     <Document>
@@ -287,16 +309,24 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
         {/* Student Card */}
         <View style={styles.studentCard}>
           <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Nom & Prénom</Text>
+            <Text style={styles.infoLabel}>Nom & Prénoms</Text>
             <Text style={styles.infoValue}>{data.studentLastName} {data.studentFirstName}</Text>
+          </View>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Date de Naissance</Text>
+            <Text style={styles.infoValue}>{data.dateOfBirth || "………………"}</Text>
           </View>
           <View style={styles.infoGroup}>
             <Text style={styles.infoLabel}>Classe</Text>
             <Text style={styles.infoValue}>{data.className}</Text>
           </View>
           <View style={styles.infoGroup}>
-            <Text style={styles.infoLabel}>Année Scolaire</Text>
-            <Text style={styles.infoValue}>{data.schoolYear}</Text>
+            <Text style={styles.infoLabel}>N°</Text>
+            <Text style={styles.infoValue}>{data.classNumber || "……"}</Text>
+          </View>
+          <View style={styles.infoGroup}>
+            <Text style={styles.infoLabel}>Sexe</Text>
+            <Text style={styles.infoValue}>{data.sex || "……"}</Text>
           </View>
         </View>
 
@@ -306,20 +336,41 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
         {/* Subjects Table */}
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={styles.tableHeaderCell}>Matière</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>Coefficient</Text>
-            <Text style={styles.tableHeaderCellRight}>Moyenne</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>MATIÈRE</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>MJ</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>COMP</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>MJ+C/2</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>COEFF</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>NOTES DÉFIN</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>RANG</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 0, textAlign: "center" }]}>APPREC/EMARG</Text>
           </View>
           {data.subjects.map((subject, index) => {
             const rowStyle = index % 2 === 0 ? styles.tableRowEven : {}
             return (
               <View key={index} style={[styles.tableRow, rowStyle]}>
-                <Text style={styles.tableCell}>{subject.name}</Text>
+                <Text style={[styles.tableCell, { flex: 2 }]}>{subject.name}</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.dailyAverage.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.examAverage.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.weightedAverage.toFixed(2)}</Text>
                 <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.coefficient}</Text>
-                <Text style={styles.tableCellRight}>{subject.average.toFixed(2)} / 20</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.finalNote.toFixed(2)}</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}>{subject.rank}</Text>
+                <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
               </View>
             )
           })}
+          {/* Total Row */}
+          <View style={[styles.tableRow, { backgroundColor: "#f1f5f9" }]}>
+            <Text style={[styles.tableCell, { flex: 2, fontWeight: "bold" }]}></Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center", fontWeight: "bold" }]}>{data.totalCoefficients}</Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center", fontWeight: "bold" }]}>TOTAL : {data.totalNotes.toFixed(2)}</Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
+            <Text style={[styles.tableCell, { flex: 0, textAlign: "center" }]}></Text>
+          </View>
         </View>
 
         {/* Summary Grid */}
@@ -328,17 +379,21 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
             <Text style={styles.summaryLabel}>Moyenne Générale</Text>
             <Text style={[styles.summaryValue, styles.summaryValueAverage]}>{data.generalAverage.toFixed(2)} / 20</Text>
           </View>
-          <View style={[styles.summaryBox, styles.summaryBoxRank, styles.summaryBoxLast]}>
-            <Text style={styles.summaryLabel}>Classement</Text>
-            <Text style={[styles.summaryValue, styles.summaryValueRank]}>{data.classRank}e / {data.totalStudents}</Text>
+          <View style={[styles.summaryBox, styles.summaryBoxRank]}>
+            <Text style={styles.summaryLabel}>Rang</Text>
+            <Text style={[styles.summaryValue, styles.summaryValueRank]}>{data.classRank} / {data.totalStudents} ÉLÈVES</Text>
+          </View>
+          <View style={[styles.summaryBox, styles.summaryBoxAverage, styles.summaryBoxLast]}>
+            <Text style={styles.summaryLabel}>Nombre de jours d'absence</Text>
+            <Text style={[styles.summaryValue, styles.summaryValueAverage]}>………….jours</Text>
           </View>
         </View>
 
-        {/* Appreciation */}
+        {/* Council Decision */}
         {data.appreciation && (
           <View style={styles.appreciationBox}>
-            <Text style={styles.appreciationTitle}>Appréciation Générale</Text>
-            <Text style={styles.appreciationText}>"{data.appreciation}"</Text>
+            <Text style={styles.appreciationTitle}>DÉCISION DU CONSEIL</Text>
+            <Text style={styles.appreciationText}>{mapAppreciationToFrench(data.appreciation)}</Text>
           </View>
         )}
 
