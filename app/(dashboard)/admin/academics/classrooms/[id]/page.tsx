@@ -5,7 +5,9 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { ClassroomDeliberationSection } from "./deliberation-section"
+import { ClassroomGradesSection } from "./grades-section"
 import { ArrowLeft, Pencil, Users, BookOpen } from "lucide-react"
+import { listPeriods } from "@/lib/actions/period"
 
 export default async function ClassroomDetailPage({
   params,
@@ -39,6 +41,9 @@ export default async function ClassroomDetailPage({
       </div>
     )
   }
+
+  const periodsResult = await listPeriods()
+  const periods = periodsResult.success ? periodsResult.data : []
 
   const cycleNames: Record<string, string> = {
     PRIMARY: "Primaire",
@@ -147,6 +152,8 @@ export default async function ClassroomDetailPage({
       </div>
 
       <ClassroomDeliberationSection classroomId={id} schoolYear={classroom.schoolYear} />
+
+      <ClassroomGradesSection classroomId={id} periods={periods} />
 
       {/* Students placeholder */}
       <div>

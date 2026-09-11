@@ -2,11 +2,12 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation"
 import { useState, useTransition } from "react"
-import { BookOpen, Calendar, CheckSquare, Download, Loader2, Save, Square } from "lucide-react"
+import { BookOpen, Calendar, CheckSquare, Loader2, Save, Square, BarChart3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { saveDailyGradeSelection } from "@/lib/actions/daily-grade-selection"
 import type { DailyGradeSelectionResult } from "@/lib/actions/daily-grade-selection"
 import type { PeriodWithRelations } from "@/lib/actions/period"
+import { GradesPreview } from "./grades-preview"
 
 type Classroom = { id: string; name: string; schoolYear: string }
 type Subject = { id: string; name: string; dailyAssessmentCount?: number }
@@ -39,9 +40,8 @@ export function ReportCardsClient({
 
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [downloadStatus, setDownloadStatus] = useState<"idle" | "loading" | "error">("idle")
-  const [downloadError, setDownloadError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [showGradesPreview, setShowGradesPreview] = useState(false)
 
   const updateFilters = (updates: Record<string, string | undefined>) => {
     const current = new URLSearchParams()
@@ -110,42 +110,6 @@ export function ReportCardsClient({
     }
   }
 
-  const handleDownloadClassPdf = async () => {
-    if (!selectedClassroomId || !selectedPeriodId) return
-
-    setDownloadStatus("loading")
-    setDownloadError(null)
-
-    try {
-      const { generateClassReportCardsPdf } = await import("@/lib/actions/report-card")
-      const result = await generateClassReportCardsPdf(selectedClassroomId, selectedPeriodId)
-
-      if (!result.success) {
-        setDownloadStatus("error")
-        setDownloadError(result.error)
-        return
-      }
-
-      // Trigger download
-      const byteCharacters = atob(result.data.pdfBase64)
-      const byteNumbers = new Array(byteCharacters.length)
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i)
-      }
-      const blob = new Blob([new Uint8Array(byteNumbers)], { type: "application/pdf" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = result.data.fileName
-      a.click()
-      URL.revokeObjectURL(url)
-      setDownloadStatus("idle")
-    } catch (e: any) {
-      setDownloadStatus("error")
-      setDownloadError(e?.message || "Erreur inattendue")
-    }
-  }
-
   const hasFilters = selectedClassroomId && selectedPeriodId
   const canSave = selectedClassroomId && selectedSubjectId && selectedPeriodId && selectionData
 
@@ -154,33 +118,22 @@ export function ReportCardsClient({
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Bulletins de classe</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Configuration des bulletins</h1>
           <p className="text-gray-500 mt-1 text-sm sm:text-base">
-            Sélectionnez les évaluations journalières à inclure dans les bulletins, puis générez le PDF de la classe.
+            Sélectionnez les évaluations journalières à inclure dans les bulletins. L'admin générera les bulletins officiels pour la classe.
           </p>
         </div>
         {hasFilters && (
           <Button
-            id="generate-class-pdf-btn"
-            onClick={handleDownloadClassPdf}
-            disabled={downloadStatus === "loading"}
-            className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm self-start sm:self-auto"
+            onClick={() => setShowGradesPreview(!showGradesPreview)}
+            variant="outline"
+            className="gap-2"
           >
-            {downloadStatus === "loading" ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Download className="w-4 h-4" />
-            )}
-            Générer bulletin de classe
+            <BarChart3 className="w-4 h-4" />
+            {showGradesPreview ? "Masquer les notes" : "Voir les notes"}
           </Button>
         )}
       </div>
-
-      {downloadStatus === "error" && downloadError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          ❌ {downloadError}
-        </div>
-      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-5">
@@ -400,6 +353,14 @@ export function ReportCardsClient({
           <p className="text-xs text-indigo-600 mt-3 font-medium">
             💡 Allez dans "Notes &gt; Saisir des notes" pour ajouter des devoirs/notes journalières.
           </p>
+        </div>
+      )}
+
+      {/* Grades Preview */}
+      {showGradesPreview && selectedClassroomId && selectedPeriodId && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-xs p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4 uppercase tracking-wide">Prévisualisation des notes</h2>
+          <GradesPreview classroomId={selectedClassroomId} periodId={selectedPeriodId} />
         </div>
       )}
     </div>

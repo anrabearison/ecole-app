@@ -112,20 +112,19 @@ describe("permissions", () => {
   })
 
   describe("TEACHER", () => {
-    it("should have access to their own grades only", () => {
+    it("should have view access to all grades (additional validation in action layer)", () => {
       const role: Role = "TEACHER"
       const teacherId = "teacher-123"
-      
-      // Can view their own grades
+
+      // Can view all grades (subject/classroom assignment validated in action)
+      expect(can(role, "view", "grade")).toBe(true)
       expect(can(role, "view", "grade", { ownerId: teacherId, teacherId })).toBe(true)
-      
-      // Cannot view other teachers' grades
-      expect(can(role, "view", "grade", { ownerId: "other-teacher", teacherId })).toBe(false)
-      
+      expect(can(role, "view", "grade", { ownerId: "other-teacher", teacherId })).toBe(true)
+
       // Can create/update grades (additional validation needed in action)
       expect(can(role, "create", "grade", { teacherId })).toBe(true)
       expect(can(role, "update", "grade", { teacherId })).toBe(true)
-      
+
       // Can delete grades (additional validation needed in action)
       expect(can(role, "delete", "grade", { teacherId })).toBe(true)
     })
