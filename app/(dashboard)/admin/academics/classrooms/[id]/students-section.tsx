@@ -13,6 +13,7 @@ interface StudentData {
   firstName: string | null
   lastName: string
   classNumber: number | null
+  registrationNumber: string
 }
 
 export function StudentsSection({ classroomId }: StudentsSectionProps) {
@@ -73,6 +74,7 @@ export function StudentsSection({ classroomId }: StudentsSectionProps) {
         <thead>
           <tr className="border-b border-gray-200">
             <th className="text-left py-2 px-3 font-medium text-gray-600">N°</th>
+            <th className="text-left py-2 px-3 font-medium text-gray-600">N° Matricule</th>
             <th className="text-left py-2 px-3 font-medium text-gray-600">Nom</th>
             <th className="text-left py-2 px-3 font-medium text-gray-600">Prénom</th>
           </tr>
@@ -81,6 +83,7 @@ export function StudentsSection({ classroomId }: StudentsSectionProps) {
           {students.map((student) => (
             <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
               <td className="py-2 px-3 text-gray-600">{student.classNumber || "-"}</td>
+              <td className="py-2 px-3 text-gray-600">{student.registrationNumber}</td>
               <td className="py-2 px-3 font-medium text-gray-900">{student.lastName}</td>
               <td className="py-2 px-3 text-gray-600">{student.firstName || "-"}</td>
             </tr>
