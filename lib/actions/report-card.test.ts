@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest"
 import { generateReportCardPdf } from "./report-card"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { getStudentSubjectAverages, calculateGeneralAverage, calculateClassRank } from "./average"
+import { getStudentSubjectAverages, calculateGeneralAverage, calculateClassRank, calculateSubjectAverage, calculateSubjectRank } from "./average"
 import { getReportCardComment } from "./report-card-comment"
 
 import { generateReportCardPdfBuffer } from "@/lib/pdf/generate-pdf-react"
@@ -20,11 +20,27 @@ vi.mock("@/lib/pdf/generate-pdf", () => ({
   generateReportCardPdfBuffer: vi.fn().mockResolvedValue(Buffer.from("mock pdf content")),
 }))
 
+vi.mock("@/lib/pdf/generate-pdf-react", () => ({
+  generateReportCardPdfBuffer: vi.fn().mockResolvedValue(Buffer.from("mock pdf content")),
+}))
+
+// Mock daily grade selection
+vi.mock("./daily-grade-selection", () => ({
+  getSelectedDailyAssessmentIds: vi.fn().mockResolvedValue(null),
+}))
+
+// Mock subject coefficient
+vi.mock("./subject-coefficient", () => ({
+  getEffectiveCoefficient: vi.fn().mockResolvedValue(1.0),
+}))
+
 // Mock average functions
 vi.mock("./average", () => ({
   getStudentSubjectAverages: vi.fn(),
   calculateGeneralAverage: vi.fn(),
   calculateClassRank: vi.fn(),
+  calculateSubjectAverage: vi.fn(),
+  calculateSubjectRank: vi.fn(),
 }))
 
 // Mock report-card-comment
@@ -62,6 +78,7 @@ describe("report-card actions", () => {
         id: mockStudentId,
         firstName: "Jean",
         lastName: "Dupont",
+        classroomId: mockClassroomId,
         classroom: {
           schoolGrade: { name: "6ème" },
           track: null,
@@ -80,12 +97,32 @@ describe("report-card actions", () => {
         schoolYear: "2025-2026",
       })
 
+      // Mock the daily grade selection query
+      vi.mocked(prisma.assessment.findMany).mockImplementation(() => Promise.resolve([]))
+
+      vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
+        id: "subject-1",
+        language: "FRENCH",
+      })
+
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([])
+
       vi.mocked(getStudentSubjectAverages).mockResolvedValue({
         success: true,
         data: [
           { subjectId: "subject-1", subjectName: "Mathématiques", coefficient: 1.0, average: 15.5 },
           { subjectId: "subject-2", subjectName: "Français", coefficient: 1.0, average: 14.0 },
         ],
+      })
+
+      vi.mocked(calculateSubjectAverage).mockResolvedValue({
+        success: true,
+        data: 15.5,
+      })
+
+      vi.mocked(calculateSubjectRank).mockResolvedValue({
+        success: true,
+        data: { rank: 1, totalStudents: 25 },
       })
 
       vi.mocked(calculateGeneralAverage).mockResolvedValue({
@@ -128,6 +165,7 @@ describe("report-card actions", () => {
         id: mockStudentId,
         firstName: "Jean",
         lastName: "Dupont",
+        classroomId: mockClassroomId,
         classroom: {
           schoolGrade: { name: "6ème" },
           track: null,
@@ -146,9 +184,28 @@ describe("report-card actions", () => {
         schoolYear: "2025-2026",
       })
 
+      vi.mocked(prisma.assessment.findMany as any).mockResolvedValue([])
+
+      vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
+        id: "subject-1",
+        language: "FRENCH",
+      })
+
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([])
+
       vi.mocked(getStudentSubjectAverages).mockResolvedValue({
         success: true,
         data: [],
+      })
+
+      vi.mocked(calculateSubjectAverage).mockResolvedValue({
+        success: true,
+        data: 0,
+      })
+
+      vi.mocked(calculateSubjectRank).mockResolvedValue({
+        success: true,
+        data: { rank: 0, totalStudents: 0 },
       })
 
       vi.mocked(calculateGeneralAverage).mockResolvedValue({
@@ -202,6 +259,7 @@ describe("report-card actions", () => {
         id: mockStudentId,
         firstName: "Jean",
         lastName: "Dupont",
+        classroomId: mockClassroomId,
         classroom: {
           schoolGrade: { name: "6ème" },
           track: null,
@@ -215,6 +273,22 @@ describe("report-card actions", () => {
       })
 
       vi.mocked(prisma.period.findUnique as any).mockResolvedValue(null)
+
+      // Mock other queries that are now required (they won't be reached due to early return)
+      vi.mocked(prisma.assessment.findMany as any).mockResolvedValue([])
+      vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
+        id: "subject-1",
+        language: "FRENCH",
+      })
+      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([])
+      vi.mocked(calculateSubjectAverage).mockResolvedValue({
+        success: true,
+        data: 0,
+      })
+      vi.mocked(calculateSubjectRank).mockResolvedValue({
+        success: true,
+        data: { rank: 0, totalStudents: 0 },
+      })
 
       const result = await generateReportCardPdf(mockStudentId, mockPeriodId)
 

@@ -21,6 +21,7 @@ export interface ReportCardData {
     finalNote: number
     rank: number
     totalStudents: number
+    appreciation: string
   }>
   totalNotes: number
   totalCoefficients: number
@@ -361,7 +362,7 @@ export function ReportCardPDF({ data }: { data: ReportCardData }) {
                 <Text style={[styles.tableCell, { width: "8%" }]}>{subject.coefficient}</Text>
                 <Text style={[styles.tableCell, { width: "12%" }]}>{subject.finalNote.toFixed(2)}</Text>
                 <Text style={[styles.tableCell, { width: "8%" }]}>{subject.rank}</Text>
-                <Text style={[styles.tableCell, { width: "17%" }]}></Text>
+                <Text style={[styles.tableCell, { width: "17%" }]}>{subject.appreciation}</Text>
               </View>
             )
           })}

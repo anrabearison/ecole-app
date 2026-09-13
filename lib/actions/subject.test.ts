@@ -23,8 +23,8 @@ describe("Subject Actions", () => {
   describe("listSubjects", () => {
     it("should return subjects for the school", async () => {
       const mockSubjects = [
-        { id: "1", name: "Mathématiques", schoolId: "school-1" },
-        { id: "2", name: "Français", schoolId: "school-1" },
+        { id: "1", name: "Mathématiques", language: "FRENCH", schoolId: "school-1" },
+        { id: "2", name: "Français", language: "FRENCH", schoolId: "school-1" },
       ]
 
       vi.mocked(prisma.subject.findMany).mockResolvedValue(mockSubjects as any)
@@ -40,7 +40,7 @@ describe("Subject Actions", () => {
       expect(prisma.subject.findMany).toHaveBeenCalledWith({
         where: { schoolId: "school-1" },
         orderBy: { name: "asc" },
-        select: { id: true, name: true },
+        select: { id: true, name: true, language: true },
         skip: 0,
         take: 20,
       })
@@ -59,10 +59,11 @@ describe("Subject Actions", () => {
       vi.mocked(prisma.subject.create).mockResolvedValue({
         id: "new-subject",
         name: "Histoire",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
 
-      const result = await createSubject({ name: "Histoire", coefficient: 1.0 })
+      const result = await createSubject({ name: "Histoire", coefficient: 1.0, language: "FRENCH" })
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -72,6 +73,7 @@ describe("Subject Actions", () => {
         data: {
           name: "Histoire",
           coefficient: 1.0,
+          language: "FRENCH",
           schoolId: "school-1",
         },
       })
@@ -81,10 +83,11 @@ describe("Subject Actions", () => {
       vi.mocked(prisma.subject.findFirst).mockResolvedValue({
         id: "existing",
         name: "Histoire",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
 
-      const result = await createSubject({ name: "Histoire", coefficient: 1.0 })
+      const result = await createSubject({ name: "Histoire", coefficient: 1.0, language: "FRENCH" })
 
       expect(result.success).toBe(false)
       if (!result.success) {
@@ -99,16 +102,18 @@ describe("Subject Actions", () => {
       vi.mocked(prisma.subject.findUnique).mockResolvedValue({
         id: "subject-1",
         name: "Maths",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
       vi.mocked(prisma.subject.findFirst).mockResolvedValue(null)
       vi.mocked(prisma.subject.update).mockResolvedValue({
         id: "subject-1",
         name: "Mathématiques Avancées",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
 
-      const result = await updateSubject("subject-1", { name: "Mathématiques Avancées", coefficient: 1.0 })
+      const result = await updateSubject("subject-1", { name: "Mathématiques Avancées", coefficient: 1.0, language: "FRENCH" })
 
       expect(result.success).toBe(true)
       if (result.success) {
@@ -116,7 +121,7 @@ describe("Subject Actions", () => {
       }
       expect(prisma.subject.update).toHaveBeenCalledWith({
         where: { id: "subject-1" },
-        data: { name: "Mathématiques Avancées", coefficient: 1.0 },
+        data: { name: "Mathématiques Avancées", coefficient: 1.0, language: "FRENCH" },
       })
     })
 
@@ -124,15 +129,17 @@ describe("Subject Actions", () => {
       vi.mocked(prisma.subject.findUnique).mockResolvedValue({
         id: "subject-1",
         name: "Maths",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
       vi.mocked(prisma.subject.findFirst).mockResolvedValue({
         id: "subject-2",
         name: "Histoire",
+        language: "FRENCH",
         schoolId: "school-1",
       } as any)
 
-      const result = await updateSubject("subject-1", { name: "Histoire", coefficient: 1.0 })
+      const result = await updateSubject("subject-1", { name: "Histoire", coefficient: 1.0, language: "FRENCH" })
 
       expect(result.success).toBe(false)
       expect(prisma.subject.update).not.toHaveBeenCalled()

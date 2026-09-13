@@ -6,7 +6,7 @@ import { can } from "@/lib/permissions"
 import { subjectSchema, type SubjectInput } from "@/lib/validations/subject"
 import type { ActionResult, PaginatedActionResult } from "@/lib/utils"
 
-export async function listSubjects(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; name: string }>>> {
+export async function listSubjects(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; name: string; language: string }>>> {
   try {
     const session = await auth()
     if (!session?.user?.schoolId) {
@@ -35,6 +35,7 @@ export async function listSubjects(opts?: { search?: string; page?: number; page
         select: {
           id: true,
           name: true,
+          language: true,
         },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -92,6 +93,7 @@ export async function createSubject(data: SubjectInput): Promise<ActionResult<{ 
       data: {
         name: parsed.data.name,
         coefficient: parsed.data.coefficient,
+        language: parsed.data.language,
         schoolId: session.user.schoolId,
       },
     })
@@ -146,6 +148,7 @@ export async function updateSubject(id: string, data: SubjectInput): Promise<Act
       data: {
         name: parsed.data.name,
         coefficient: parsed.data.coefficient,
+        language: parsed.data.language,
       },
     })
 

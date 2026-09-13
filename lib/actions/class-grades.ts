@@ -7,6 +7,7 @@ import type { ActionResult } from "@/lib/utils"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
 import { calculateSubjectAverage, calculateGeneralAverage, calculateSubjectRank } from "./average"
 import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
+import { calculateSubjectAppreciation } from "@/lib/utils/subject-appreciation"
 import { getEffectiveCoefficient } from "./subject-coefficient"
 
 export type StudentGradeData = {
@@ -35,6 +36,7 @@ export type SubjectGradeData = {
   finalNote: number
   rank: number
   totalStudents: number
+  appreciation: string
 }
 
 export type DailyGradeItem = {
@@ -280,11 +282,14 @@ export async function getClassGrades(
         // Calculate final note: COEF * (MJ+COMP)/2
         const finalNote = effectiveCoefficient * weightedAverage
 
-        // Get subject name
+        // Get subject name and language
         const subject = await prisma.subject.findUnique({
           where: { id: subjectId },
-          select: { name: true },
+          select: { name: true, language: true },
         })
+
+        // Calculate subject appreciation based on language
+        const appreciation = calculateSubjectAppreciation(weightedAverage, subject?.language || "FRENCH")
 
         subjectGrades.push({
           subjectId,
@@ -298,6 +303,7 @@ export async function getClassGrades(
           finalNote,
           rank: 0, // Will be calculated after all students are processed
           totalStudents: 0, // Will be calculated after all students are processed
+          appreciation,
         })
       }
 
