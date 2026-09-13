@@ -1,0 +1,91 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`GOLDEN MASTER — Calculs de bulletins (non-régression) > SNAPSHOT GLOBAL — résultats complets de la classe > toutes les moyennes par matière correspondent aux valeurs de référence 1`] = `
+[
+  {
+    "classRank": "1/5",
+    "generalAverage": 15.66,
+    "studentId": "gm-student-alice",
+    "subjectAverages": {
+      "gm-subj-eps": 18,
+      "gm-subj-french": 14,
+      "gm-subj-history": 17,
+      "gm-subj-maths": 16.2,
+    },
+    "subjectRanks": {
+      "gm-subj-eps": "1/5",
+      "gm-subj-french": "2/5",
+      "gm-subj-history": "1/5",
+      "gm-subj-maths": "1/5",
+    },
+  },
+  {
+    "classRank": "4/5",
+    "generalAverage": 10.5,
+    "studentId": "gm-student-bob",
+    "subjectAverages": {
+      "gm-subj-eps": 12,
+      "gm-subj-french": 11.4,
+      "gm-subj-history": 10.2,
+      "gm-subj-maths": 9,
+    },
+    "subjectRanks": {
+      "gm-subj-eps": "3/5",
+      "gm-subj-french": "4/5",
+      "gm-subj-history": "4/5",
+      "gm-subj-maths": "4/5",
+    },
+  },
+  {
+    "classRank": "5/5",
+    "generalAverage": 6.459999999999999,
+    "studentId": "gm-student-clara",
+    "subjectAverages": {
+      "gm-subj-eps": 7,
+      "gm-subj-french": 6.4,
+      "gm-subj-history": 5.800000000000001,
+      "gm-subj-maths": 6.800000000000001,
+    },
+    "subjectRanks": {
+      "gm-subj-eps": "4/5",
+      "gm-subj-french": "5/5",
+      "gm-subj-history": "5/5",
+      "gm-subj-maths": "5/5",
+    },
+  },
+  {
+    "classRank": "2/5",
+    "generalAverage": 14.666666666666666,
+    "studentId": "gm-student-david",
+    "subjectAverages": {
+      "gm-subj-eps": 0,
+      "gm-subj-french": 15.8,
+      "gm-subj-history": 13.1,
+      "gm-subj-maths": 14.2,
+    },
+    "subjectRanks": {
+      "gm-subj-eps": "5/5",
+      "gm-subj-french": "1/5",
+      "gm-subj-history": "3/5",
+      "gm-subj-maths": "2/5",
+    },
+  },
+  {
+    "classRank": "3/5",
+    "generalAverage": 13.559999999999999,
+    "studentId": "gm-student-eve",
+    "subjectAverages": {
+      "gm-subj-eps": 15.7,
+      "gm-subj-french": 13.7,
+      "gm-subj-history": 14.7,
+      "gm-subj-maths": 11.9,
+    },
+    "subjectRanks": {
+      "gm-subj-eps": "2/5",
+      "gm-subj-french": "3/5",
+      "gm-subj-history": "2/5",
+      "gm-subj-maths": "3/5",
+    },
+  },
+]
+`;

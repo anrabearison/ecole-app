@@ -1,0 +1,108 @@
+{
+  "_meta": {
+    "description": "Golden master pour les calculs de bulletins. Généré avec le code d'origine AVANT toute optimisation.",
+    "examWeight": 0.6,
+    "dailyWeight": 0.4,
+    "generatedAt": "2026-09-13",
+    "classroomId": "gm-classroom-1",
+    "periodId": "gm-period-1",
+    "subjects": [
+      { "id": "gm-subj-maths",   "name": "Mathématiques", "coefficient": 3 },
+      { "id": "gm-subj-french",  "name": "Français",       "coefficient": 4 },
+      { "id": "gm-subj-history", "name": "Histoire",        "coefficient": 2 },
+      { "id": "gm-subj-eps",     "name": "EPS",             "coefficient": 1 }
+    ]
+  },
+  "students": [
+    {
+      "studentId": "gm-student-alice",
+      "label": "Alice — notes EXAM + DAILY complètes",
+      "subjectAverages": {
+        "gm-subj-maths":   16.2,
+        "gm-subj-french":  14.0,
+        "gm-subj-history": 17.0,
+        "gm-subj-eps":     18.0
+      },
+      "subjectRanks": {
+        "gm-subj-maths":   "1/5",
+        "gm-subj-french":  "2/5",
+        "gm-subj-history": "1/5",
+        "gm-subj-eps":     "1/5"
+      },
+      "generalAverage": 15.71,
+      "classRank": "1/5"
+    },
+    {
+      "studentId": "gm-student-bob",
+      "label": "Bob — seulement des notes EXAM (aucune note journalière)",
+      "subjectAverages": {
+        "gm-subj-maths":   9.0,
+        "gm-subj-french":  11.4,
+        "gm-subj-history": 10.2,
+        "gm-subj-eps":     12.0
+      },
+      "subjectRanks": {
+        "gm-subj-maths":   "5/5",
+        "gm-subj-french":  "4/5",
+        "gm-subj-history": "5/5",
+        "gm-subj-eps":     "5/5"
+      },
+      "generalAverage": 10.49,
+      "classRank": "5/5"
+    },
+    {
+      "studentId": "gm-student-clara",
+      "label": "Clara — seulement des notes DAILY (aucune note exam)",
+      "subjectAverages": {
+        "gm-subj-maths":   6.8,
+        "gm-subj-french":  13.2,
+        "gm-subj-history": 11.6,
+        "gm-subj-eps":     14.0
+      },
+      "subjectRanks": {
+        "gm-subj-maths":   "4/5",
+        "gm-subj-french":  "3/5",
+        "gm-subj-history": "4/5",
+        "gm-subj-eps":     "3/5"
+      },
+      "generalAverage": 10.54,
+      "classRank": "4/5"
+    },
+    {
+      "studentId": "gm-student-david",
+      "label": "David — matière EPS sans note (note manquante)",
+      "subjectAverages": {
+        "gm-subj-maths":   13.4,
+        "gm-subj-french":  15.2,
+        "gm-subj-history": 12.8,
+        "gm-subj-eps":     0.0
+      },
+      "subjectRanks": {
+        "gm-subj-maths":   "3/5",
+        "gm-subj-french":  "1/5",
+        "gm-subj-history": "3/5",
+        "gm-subj-eps":     "4/5"
+      },
+      "generalAverage": 13.47,
+      "classRank": "2/5"
+    },
+    {
+      "studentId": "gm-student-eve",
+      "label": "Eve — ex-æquo avec Clara sur moyenne générale, rang départagé alphabétiquement",
+      "subjectAverages": {
+        "gm-subj-maths":   7.0,
+        "gm-subj-french":  12.8,
+        "gm-subj-history": 12.6,
+        "gm-subj-eps":     13.6
+      },
+      "subjectRanks": {
+        "gm-subj-maths":   "3/5",
+        "gm-subj-french":  "5/5",
+        "gm-subj-history": "2/5",
+        "gm-subj-eps":     "2/5"
+      },
+      "generalAverage": 10.54,
+      "classRank": "3/5"
+    }
+  ]
+}
