@@ -197,6 +197,13 @@ export async function getClassGrades(
     const dailyAssessmentLookup = new Map(dailyAssessments.map((a) => [a.id, a]))
     const examAssessmentLookup = new Map(examAssessments.map((a) => [a.id, a]))
 
+    // Batch fetch all subjects in one query
+    const subjects = subjectIds.length > 0 ? await prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
+      select: { id: true, name: true, language: true },
+    }) : []
+    const subjectMap = new Map(subjects.map(s => [s.id, s]))
+
     // Process each student
     const studentGradeData: StudentGradeData[] = []
 
@@ -282,11 +289,8 @@ export async function getClassGrades(
         // Calculate final note: COEF * (MJ+COMP)/2
         const finalNote = effectiveCoefficient * weightedAverage
 
-        // Get subject name and language
-        const subject = await prisma.subject.findUnique({
-          where: { id: subjectId },
-          select: { name: true, language: true },
-        })
+        // Get subject name and language from pre-fetched map
+        const subject = subjectMap.get(subjectId)
 
         // Calculate subject appreciation based on language
         const appreciation = calculateSubjectAppreciation(weightedAverage, subject?.language || "FRENCH")

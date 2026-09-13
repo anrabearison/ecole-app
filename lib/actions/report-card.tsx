@@ -121,10 +121,49 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       distinct: ["subjectId"],
     })
 
+    // Batch fetch all daily selection IDs in parallel
+    const dailySelectionPromises = dailyAssessments.map(({ subjectId }) =>
+      getSelectedDailyAssessmentIds(student.classroomId, subjectId, periodId, session.user.schoolId)
+    )
+    const dailySelectionResults = await Promise.all(dailySelectionPromises)
     const dailySelectionMap = new Map<string, string[] | null>()
-    for (const { subjectId } of dailyAssessments) {
-      const selectedIds = await getSelectedDailyAssessmentIds(student.classroomId, subjectId, periodId, session.user.schoolId)
-      dailySelectionMap.set(subjectId, selectedIds)
+    dailyAssessments.forEach(({ subjectId }, index) => {
+      dailySelectionMap.set(subjectId, dailySelectionResults[index])
+    })
+
+    // Batch fetch all subject languages in one query
+    const subjectIds = subjectAveragesResult.data.map(sa => sa.subjectId)
+    const subjects = subjectIds.length > 0 ? await prisma.subject.findMany({
+      where: { id: { in: subjectIds } },
+      select: { id: true, language: true },
+    }) : []
+    const subjectLanguageMap = new Map(subjects.map(s => [s.id, s.language]))
+
+    // Batch fetch all grades for all subjects in one query
+    const allGrades = await prisma.grade.findMany({
+      where: {
+        studentId,
+        assessment: {
+          subjectId: { in: subjectIds },
+          periodId,
+          schoolId: session.user.schoolId,
+        },
+      },
+      include: {
+        assessment: {
+          select: { id: true, type: true, subjectId: true },
+        },
+      },
+    })
+
+    // Build grade lookup by subjectId
+    const gradeLookup = new Map<string, typeof allGrades>()
+    for (const grade of allGrades) {
+      const subjectId = grade.assessment.subjectId
+      if (!gradeLookup.has(subjectId)) {
+        gradeLookup.set(subjectId, [])
+      }
+      gradeLookup.get(subjectId)!.push(grade)
     }
 
     // Build subjects with detailed data
@@ -133,28 +172,11 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       const selectedDailyIds = dailySelectionMap.get(sa.subjectId)
       const subjectAvgResult = await calculateSubjectAverage(studentId, sa.subjectId, periodId, selectedDailyIds)
 
-      // Get subject language
-      const subject = await prisma.subject.findUnique({
-        where: { id: sa.subjectId },
-        select: { language: true },
-      })
+      // Get subject language from pre-fetched map
+      const language = subjectLanguageMap.get(sa.subjectId)
 
-      // Get individual daily and exam averages
-      const grades = await prisma.grade.findMany({
-        where: {
-          studentId,
-          assessment: {
-            subjectId: sa.subjectId,
-            periodId,
-            schoolId: session.user.schoolId,
-          },
-        },
-        include: {
-          assessment: {
-            select: { id: true, type: true },
-          },
-        },
-      })
+      // Get grades from pre-fetched lookup
+      const grades = gradeLookup.get(sa.subjectId) || []
 
       let dailySum = 0
       let dailyCount = 0
@@ -185,7 +207,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       const subjectRankResult = await calculateSubjectRank(studentId, sa.subjectId, student.classroomId, periodId, dailySelectionMap)
 
       // Calculate subject appreciation based on language
-      const appreciation = calculateSubjectAppreciation(weightedAverage, subject?.language || "FRENCH")
+      const appreciation = calculateSubjectAppreciation(weightedAverage, language || "FRENCH")
 
       subjectsWithDetails.push({
         name: sa.subjectName,
@@ -332,7 +354,46 @@ export async function generateClassReportCardsPdf(
     classAverages.sort((a, b) => b.average - a.average)
     const totalStudents = classAverages.length
 
-    // 7. Build report card data for each student
+    // 7. Batch fetch all grades for all students in this classroom/period
+    const allGrades = await prisma.grade.findMany({
+      where: {
+        studentId: { in: students.map(s => s.id) },
+        assessment: { periodId, schoolId },
+      },
+      include: {
+        assessment: {
+          include: { subject: { select: { id: true, name: true, coefficient: true } } },
+        },
+      },
+    })
+
+    // Build grade lookup: studentId -> grades
+    const gradeLookup = new Map<string, typeof allGrades>()
+    for (const grade of allGrades) {
+      if (!gradeLookup.has(grade.studentId)) {
+        gradeLookup.set(grade.studentId, [])
+      }
+      gradeLookup.get(grade.studentId)!.push(grade)
+    }
+
+    // Collect all unique subject IDs across all students
+    const allSubjectIds = new Set<string>()
+    for (const grades of gradeLookup.values()) {
+      for (const grade of grades) {
+        if (grade.assessment?.subject?.id) {
+          allSubjectIds.add(grade.assessment.subject.id)
+        }
+      }
+    }
+
+    // Batch fetch all subject languages
+    const subjects = await prisma.subject.findMany({
+      where: { id: { in: Array.from(allSubjectIds) } },
+      select: { id: true, language: true },
+    })
+    const subjectLanguageMap = new Map(subjects.map(s => [s.id, s.language]))
+
+    // 8. Build report card data for each student
     const reportCards: ReportCardData[] = []
 
     for (const student of students) {
@@ -352,18 +413,8 @@ export async function generateClassReportCardsPdf(
         appreciation: string
       }> = []
 
-      // Get all subjects with grades for this student in this period
-      const grades = await prisma.grade.findMany({
-        where: {
-          studentId: student.id,
-          assessment: { periodId, schoolId },
-        },
-        include: {
-          assessment: {
-            include: { subject: { select: { id: true, name: true, coefficient: true } } },
-          },
-        },
-      })
+      // Get grades from pre-fetched lookup
+      const grades = gradeLookup.get(student.id) || []
 
       const uniqueSubjects = Array.from(
         new Map(
@@ -382,11 +433,8 @@ export async function generateClassReportCardsPdf(
             : Promise.resolve(subject.coefficient),
         ])
         if (avgResult.success) {
-          // Get subject language
-          const subjectWithLanguage = await prisma.subject.findUnique({
-            where: { id: subject.id },
-            select: { language: true },
-          })
+          // Get subject language from pre-fetched map
+          const language = subjectLanguageMap.get(subject.id)
 
           // Get individual daily and exam averages
           const subjectGrades = grades.filter(
@@ -422,7 +470,7 @@ export async function generateClassReportCardsPdf(
           const subjectRankResult = await calculateSubjectRank(student.id, subject.id, classroomId, periodId, dailySelectionMap)
 
           // Calculate subject appreciation based on language
-          const appreciation = calculateSubjectAppreciation(weightedAverage, subjectWithLanguage?.language || "FRENCH")
+          const appreciation = calculateSubjectAppreciation(weightedAverage, language || "FRENCH")
 
           subjectAverages.push({
             name: subject.name,

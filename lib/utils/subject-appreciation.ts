@@ -15,7 +15,7 @@ const APPRECIATION_THRESHOLDS = {
 // Translations by language
 const APPRECIATION_TRANSLATIONS: Record<SubjectLanguage, Record<string, string>> = {
   FRENCH: {
-    VERY_GOOD: "Très bien",
+    VERY_GOOD: "TRES BIEN",
     GOOD: "Bien",
     FAIRLY_GOOD: "Assez bien",
     SATISFACTORY: "Passable",
