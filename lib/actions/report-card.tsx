@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages, calculateSubjectRank } from "./average"
 import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
+import { calculateSubjectAppreciation } from "@/lib/utils/subject-appreciation"
 import { generateReportCardPdfBuffer, generateClassReportPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf-react"
 import { getReportCardComment } from "./report-card-comment"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
@@ -132,6 +133,12 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       const selectedDailyIds = dailySelectionMap.get(sa.subjectId)
       const subjectAvgResult = await calculateSubjectAverage(studentId, sa.subjectId, periodId, selectedDailyIds)
 
+      // Get subject language
+      const subject = await prisma.subject.findUnique({
+        where: { id: sa.subjectId },
+        select: { language: true },
+      })
+
       // Get individual daily and exam averages
       const grades = await prisma.grade.findMany({
         where: {
@@ -177,6 +184,9 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       // Calculate subject rank
       const subjectRankResult = await calculateSubjectRank(studentId, sa.subjectId, student.classroomId, periodId, dailySelectionMap)
 
+      // Calculate subject appreciation based on language
+      const appreciation = calculateSubjectAppreciation(weightedAverage, subject?.language || "FRENCH")
+
       subjectsWithDetails.push({
         name: sa.subjectName,
         coefficient: sa.coefficient,
@@ -186,6 +196,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
         finalNote,
         rank: subjectRankResult.success ? subjectRankResult.data.rank : 0,
         totalStudents: subjectRankResult.success ? subjectRankResult.data.totalStudents : 0,
+        appreciation,
       })
     }
 
@@ -338,6 +349,7 @@ export async function generateClassReportCardsPdf(
         finalNote: number
         rank: number
         totalStudents: number
+        appreciation: string
       }> = []
 
       // Get all subjects with grades for this student in this period
@@ -370,6 +382,12 @@ export async function generateClassReportCardsPdf(
             : Promise.resolve(subject.coefficient),
         ])
         if (avgResult.success) {
+          // Get subject language
+          const subjectWithLanguage = await prisma.subject.findUnique({
+            where: { id: subject.id },
+            select: { language: true },
+          })
+
           // Get individual daily and exam averages
           const subjectGrades = grades.filter(
             (g) => g.assessment?.subject?.id === subject.id
@@ -403,6 +421,9 @@ export async function generateClassReportCardsPdf(
           // Calculate subject rank
           const subjectRankResult = await calculateSubjectRank(student.id, subject.id, classroomId, periodId, dailySelectionMap)
 
+          // Calculate subject appreciation based on language
+          const appreciation = calculateSubjectAppreciation(weightedAverage, subjectWithLanguage?.language || "FRENCH")
+
           subjectAverages.push({
             name: subject.name,
             coefficient: coeff,
@@ -412,6 +433,7 @@ export async function generateClassReportCardsPdf(
             finalNote,
             rank: subjectRankResult.success ? subjectRankResult.data.rank : 0,
             totalStudents: subjectRankResult.success ? subjectRankResult.data.totalStudents : 0,
+            appreciation,
           })
         }
       }

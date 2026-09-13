@@ -11,6 +11,14 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 
+const LANGUAGE_OPTIONS = [
+  { value: "FRENCH", label: "Français" },
+  { value: "ENGLISH", label: "Anglais" },
+  { value: "MALAGASY", label: "Malagasy" },
+  { value: "SPANISH", label: "Espagnol" },
+  { value: "GERMAN", label: "Allemand" },
+] as const
+
 export default function NewSubjectPage() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
@@ -22,6 +30,10 @@ export default function NewSubjectPage() {
     formState: { errors },
   } = useForm<SubjectInput>({
     resolver: zodResolver(subjectSchema),
+    defaultValues: {
+      coefficient: 1.0,
+      language: "FRENCH" as const,
+    },
   })
 
   const onSubmit = async (data: SubjectInput) => {
@@ -76,11 +88,28 @@ export default function NewSubjectPage() {
               type="number"
               step="0.1"
               min="0.1"
-              value={1.0}
               className="mt-1"
             />
             {errors.coefficient && (
               <p className="mt-1 text-sm text-red-600">{errors.coefficient.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="language">Langue</Label>
+            <select
+              {...register("language")}
+              id="language"
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            >
+              {LANGUAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {errors.language && (
+              <p className="mt-1 text-sm text-red-600">{errors.language.message}</p>
             )}
           </div>
 

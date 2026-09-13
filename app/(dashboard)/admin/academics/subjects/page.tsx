@@ -67,6 +67,9 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
                   <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                     Nom de la matière
                   </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
+                    Langue
+                  </th>
                   <th className="px-4 py-3.5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider sm:px-6">
                     Actions
                   </th>
@@ -77,6 +80,9 @@ export default async function SubjectsPage({ searchParams }: { searchParams?: { 
                   <tr key={subject.id} className="hover:bg-gray-50/80 transition-colors">
                     <td className="px-4 py-4 sm:px-6">
                       <div className="text-sm font-semibold text-gray-900">{subject.name}</div>
+                    </td>
+                    <td className="px-4 py-4 sm:px-6">
+                      <div className="text-sm text-gray-600 capitalize">{subject.language}</div>
                     </td>
                     <td className="px-4 py-4 sm:px-6 text-right">
                       <div className="flex items-center justify-end gap-2">

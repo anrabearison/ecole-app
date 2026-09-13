@@ -59,8 +59,16 @@ async function main() {
       (name) =>
         prisma.subject.findFirst({ where: { schoolId: school.id, name } }).then(async (existing) => {
           if (!existing) {
+            // Determine language based on subject name
+            let language: "FRENCH" | "ENGLISH" | "MALAGASY" | "SPANISH" | "GERMAN" = "FRENCH"
+            if (name.toLowerCase().includes("français")) language = "FRENCH"
+            else if (name.toLowerCase().includes("anglais")) language = "ENGLISH"
+            else if (name.toLowerCase().includes("malagasy")) language = "MALAGASY"
+            else if (name.toLowerCase().includes("espagnol")) language = "SPANISH"
+            else if (name.toLowerCase().includes("allemand")) language = "GERMAN"
+
             await prisma.subject.create({
-              data: { name, schoolId: school.id },
+              data: { name, schoolId: school.id, language },
             })
           }
         })
@@ -463,14 +471,24 @@ async function main() {
 
   // Set homeroom teacher on sixieme1 classroom
   if (mainTeacherId) {
-    await prisma.classroomHomeroomTeacher.create({
-      data: {
-        classroomId: sixieme1.id,
-        teacherId: mainTeacherId,
-        schoolId: school.id,
-        isPrimary: true
+    const existing = await prisma.classroomHomeroomTeacher.findUnique({
+      where: {
+        classroomId_teacherId: {
+          classroomId: sixieme1.id,
+          teacherId: mainTeacherId
+        }
       }
     })
+    if (!existing) {
+      await prisma.classroomHomeroomTeacher.create({
+        data: {
+          classroomId: sixieme1.id,
+          teacherId: mainTeacherId,
+          schoolId: school.id,
+          isPrimary: true
+        }
+      })
+    }
   }
 
   // Assign each teacher to different subjects
