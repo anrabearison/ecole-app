@@ -105,7 +105,18 @@ describe("report-card actions", () => {
         language: "FRENCH",
       })
 
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([])
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([
+        { id: "subject-1", language: "FRENCH" },
+        { id: "subject-2", language: "FRENCH" },
+      ])
+
+      vi.mocked(prisma.grade.findMany as any).mockImplementation((args: any) => {
+        // Return empty array for the batch query with where: { studentId, assessment: { subjectId: { in: [...] } } } }
+        if (args.where?.assessment?.subjectId?.in) {
+          return Promise.resolve([])
+        }
+        return Promise.resolve([])
+      })
 
       vi.mocked(getStudentSubjectAverages).mockResolvedValue({
         success: true,
@@ -191,7 +202,15 @@ describe("report-card actions", () => {
         language: "FRENCH",
       })
 
-      vi.mocked(prisma.grade.findMany as any).mockResolvedValue([])
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([])
+
+      vi.mocked(prisma.grade.findMany as any).mockImplementation((args: any) => {
+        // Return empty array for the batch query with where: { studentId, assessment: { subjectId: { in: [...] } } } }
+        if (args.where?.assessment?.subjectId?.in) {
+          return Promise.resolve([])
+        }
+        return Promise.resolve([])
+      })
 
       vi.mocked(getStudentSubjectAverages).mockResolvedValue({
         success: true,

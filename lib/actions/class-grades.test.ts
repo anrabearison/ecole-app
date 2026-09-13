@@ -103,6 +103,10 @@ describe("class-grades actions", () => {
         language: "FRENCH",
       })
 
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([
+        { id: "subject-1", name: "Mathématiques", language: "FRENCH" },
+      ])
+
       const result = await getClassGrades(mockClassroomId, mockPeriodId)
 
       expect(result.success).toBe(true)
@@ -170,6 +174,10 @@ describe("class-grades actions", () => {
         language: "MALAGASY",
       })
 
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([
+        { id: "subject-1", name: "Malagasy", language: "MALAGASY" },
+      ])
+
       const result = await getClassGrades(mockClassroomId, mockPeriodId)
 
       expect(result.success).toBe(true)
@@ -205,6 +213,8 @@ describe("class-grades actions", () => {
 
       vi.mocked(prisma.period.findUnique as any).mockResolvedValue(null)
 
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([])
+
       const result = await getClassGrades(mockClassroomId, mockPeriodId)
 
       expect(result.success).toBe(false)
@@ -234,6 +244,8 @@ describe("class-grades actions", () => {
       })
 
       vi.mocked(prisma.student.findMany as any).mockResolvedValue([])
+
+      vi.mocked(prisma.subject.findMany as any).mockResolvedValue([])
 
       const result = await getClassGrades(mockClassroomId, mockPeriodId)
 
