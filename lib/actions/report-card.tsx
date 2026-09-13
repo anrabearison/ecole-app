@@ -115,15 +115,22 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
       return { success: false, error: "L'élève n'est pas assigné à une classe" }
     }
 
+    if (!session.user.schoolId) {
+      return { success: false, error: "School ID is required" }
+    }
+
+    const classroomId = student.classroomId
+    const schoolId = session.user.schoolId
+
     const dailyAssessments = await prisma.assessment.findMany({
-      where: { classroomId: student.classroomId, periodId, schoolId: session.user.schoolId, type: "DAILY" },
+      where: { classroomId, periodId, schoolId, type: "DAILY" },
       select: { subjectId: true },
       distinct: ["subjectId"],
     })
 
     // Batch fetch all daily selection IDs in parallel
     const dailySelectionPromises = dailyAssessments.map(({ subjectId }) =>
-      getSelectedDailyAssessmentIds(student.classroomId, subjectId, periodId, session.user.schoolId)
+      getSelectedDailyAssessmentIds(classroomId, subjectId, periodId, schoolId)
     )
     const dailySelectionResults = await Promise.all(dailySelectionPromises)
     const dailySelectionMap = new Map<string, string[] | null>()
@@ -134,7 +141,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
     // Batch fetch all subject languages in one query
     const subjectIds = subjectAveragesResult.data.map(sa => sa.subjectId)
     const subjects = subjectIds.length > 0 ? await prisma.subject.findMany({
-      where: { id: { in: subjectIds } },
+      where: { id: { in: subjectIds }, schoolId },
       select: { id: true, language: true },
     }) : []
     const subjectLanguageMap = new Map(subjects.map(s => [s.id, s.language]))
@@ -146,7 +153,7 @@ export async function generateReportCardPdf(studentId: string, periodId: string)
         assessment: {
           subjectId: { in: subjectIds },
           periodId,
-          schoolId: session.user.schoolId,
+          schoolId,
         },
       },
       include: {
@@ -332,11 +339,15 @@ export async function generateClassReportCardsPdf(
       distinct: ["subjectId"],
     })
 
+    // Batch fetch all daily selection IDs in parallel
+    const dailySelectionPromises = dailyAssessments.map(({ subjectId }) =>
+      getSelectedDailyAssessmentIds(classroomId, subjectId, periodId, schoolId)
+    )
+    const dailySelectionResults = await Promise.all(dailySelectionPromises)
     const dailySelectionMap = new Map<string, string[] | null>()
-    for (const { subjectId } of dailyAssessments) {
-      const selectedIds = await getSelectedDailyAssessmentIds(classroomId, subjectId, periodId, schoolId)
-      dailySelectionMap.set(subjectId, selectedIds)
-    }
+    dailyAssessments.forEach(({ subjectId }, index) => {
+      dailySelectionMap.set(subjectId, dailySelectionResults[index])
+    })
 
     // 5. Build class name
     let className = classroom.schoolGrade?.name || ""
@@ -388,7 +399,7 @@ export async function generateClassReportCardsPdf(
 
     // Batch fetch all subject languages
     const subjects = await prisma.subject.findMany({
-      where: { id: { in: Array.from(allSubjectIds) } },
+      where: { id: { in: Array.from(allSubjectIds) }, schoolId },
       select: { id: true, language: true },
     })
     const subjectLanguageMap = new Map(subjects.map(s => [s.id, s.language]))

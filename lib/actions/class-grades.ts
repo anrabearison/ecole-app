@@ -199,7 +199,7 @@ export async function getClassGrades(
 
     // Batch fetch all subjects in one query
     const subjects = subjectIds.length > 0 ? await prisma.subject.findMany({
-      where: { id: { in: subjectIds } },
+      where: { id: { in: subjectIds }, schoolId },
       select: { id: true, name: true, language: true },
     }) : []
     const subjectMap = new Map(subjects.map(s => [s.id, s]))
