@@ -26,9 +26,9 @@ type FilterMode = typeof FilterMode[keyof typeof FilterMode]
 
 type ClassroomOption = {
   id: string
-  schoolGrade: { name: string }
   section: string
   schoolYear: string
+  schoolGrade: { name: string }
 }
 
 type TeacherOption = {
@@ -66,9 +66,9 @@ export default function AdminSchedulePage() {
   useEffect(() => {
     async function loadData() {
       const [classroomsResult, teachersResult, roomsResult, settingsResult] = await Promise.all([
-        listClassrooms({ page: 1, pageSize: 1000 }),
-        listTeachers({ page: 1, pageSize: 1000 }),
-        listRooms({ page: 1, pageSize: 1000 }),
+        listClassrooms({ page: 1, pageSize: 100 }),
+        listTeachers({ page: 1, pageSize: 100 }),
+        listRooms({ page: 1, pageSize: 100 }),
         getSchoolScheduleSettings(),
       ])
       

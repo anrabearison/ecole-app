@@ -629,3 +629,76 @@ export async function deleteClassroom(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Erreur lors de la suppression de la classe" }
   }
 }
+
+/**
+ * Optimized version for dropdown selects - only includes necessary fields
+ */
+export async function listClassroomsForSelect(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    if (search) {
+      where.OR = [
+        { section: { contains: search, mode: "insensitive" } },
+        { schoolYear: { contains: search, mode: "insensitive" } },
+      ]
+    }
+
+    const [classrooms, total] = await Promise.all([
+      prisma.classroom.findMany({
+        where,
+        select: {
+          id: true,
+          section: true,
+          schoolYear: true,
+          schoolGrade: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { schoolYear: "desc" },
+          { section: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.classroom.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: classrooms,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
+  } catch (error: any) {
+    console.error("Error listing classrooms for select:", error)
+    return { success: false, error: "Erreur lors du chargement des classes" }
+  }
+}

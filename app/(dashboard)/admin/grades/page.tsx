@@ -26,10 +26,10 @@ export default async function AdminGradesPage({
       page: parseInt(params.page || '1', 10) || 1,
       pageSize: 20,
     }),
-    listClassrooms({ page: 1, pageSize: 1000 }),
-    listSubjects({ page: 1, pageSize: 1000 }),
-    listTeachers({ page: 1, pageSize: 1000 }),
-    listPeriods({ page: 1, pageSize: 1000 }),
+    listClassrooms({ page: 1, pageSize: 100 }),
+    listSubjects({ page: 1, pageSize: 100 }),
+    listTeachers({ page: 1, pageSize: 100 }),
+    listPeriods({ page: 1, pageSize: 100 }),
   ])
 
   if (!gradesResult.success) {
