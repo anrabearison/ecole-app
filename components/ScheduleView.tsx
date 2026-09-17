@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo, useState, useEffect } from "react"
 import { Pencil, Trash2 } from "lucide-react"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
 import type { ScheduleSettings } from "@/lib/actions/school"
@@ -53,62 +54,80 @@ export function ScheduleView({ slots, scheduleSettings, onEdit, onDelete }: Sche
   const settings = scheduleSettings || DEFAULT_SETTINGS
   const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } = settings
 
-  // Group slots by day
-  const slotsByDay: Record<string, ScheduleSlotWithRelations[]> = {}
-  WEEKDAYS.forEach((day) => {
-    slotsByDay[day] = slots.filter((slot) => slot.day === day)
-  })
+  // Detect mobile view for better UX
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
-  // Build time slot ranges
-  const startMins = timeToMinutes(scheduleStartTime)
-  const morningEndMins = timeToMinutes(morningEndTime)
-  const afternoonStartMins = timeToMinutes(afternoonStartTime)
-  const endMins = timeToMinutes(scheduleEndTime)
-
-  type TimeInterval = {
-    startStr: string
-    endStr: string
-    startMins: number
-    endMins: number
-    isBreak: boolean
-  }
-
-  const intervals: TimeInterval[] = []
-
-  // Morning slots
-  for (let t = startMins; t < morningEndMins; t += slotDurationMinutes) {
-    const nextT = Math.min(t + slotDurationMinutes, morningEndMins)
-    intervals.push({
-      startStr: minutesToTime(t),
-      endStr: minutesToTime(nextT),
-      startMins: t,
-      endMins: nextT,
-      isBreak: false,
+  // Memoize slots grouping by day to avoid recalculating on every render
+  const slotsByDay = useMemo(() => {
+    const grouped: Record<string, ScheduleSlotWithRelations[]> = {}
+    WEEKDAYS.forEach((day) => {
+      grouped[day] = slots.filter((slot) => slot.day === day)
     })
-  }
+    return grouped
+  }, [slots])
 
-  // Break slot (if morningEnd < afternoonStart)
-  if (morningEndMins < afternoonStartMins) {
-    intervals.push({
-      startStr: minutesToTime(morningEndMins),
-      endStr: minutesToTime(afternoonStartMins),
-      startMins: morningEndMins,
-      endMins: afternoonStartMins,
-      isBreak: true,
-    })
-  }
+  // Build time slot ranges (memoized to avoid recalculating)
+  const intervals = useMemo(() => {
+    const startMins = timeToMinutes(scheduleStartTime)
+    const morningEndMins = timeToMinutes(morningEndTime)
+    const afternoonStartMins = timeToMinutes(afternoonStartTime)
+    const endMins = timeToMinutes(scheduleEndTime)
 
-  // Afternoon slots
-  for (let t = afternoonStartMins; t < endMins; t += slotDurationMinutes) {
-    const nextT = Math.min(t + slotDurationMinutes, endMins)
-    intervals.push({
-      startStr: minutesToTime(t),
-      endStr: minutesToTime(nextT),
-      startMins: t,
-      endMins: nextT,
-      isBreak: false,
-    })
-  }
+    type TimeInterval = {
+      startStr: string
+      endStr: string
+      startMins: number
+      endMins: number
+      isBreak: boolean
+    }
+
+    const intervals: TimeInterval[] = []
+
+    // Morning slots
+    for (let t = startMins; t < morningEndMins; t += slotDurationMinutes) {
+      const nextT = Math.min(t + slotDurationMinutes, morningEndMins)
+      intervals.push({
+        startStr: minutesToTime(t),
+        endStr: minutesToTime(nextT),
+        startMins: t,
+        endMins: nextT,
+        isBreak: false,
+      })
+    }
+
+    // Break slot (if morningEnd < afternoonStart)
+    if (morningEndMins < afternoonStartMins) {
+      intervals.push({
+        startStr: minutesToTime(morningEndMins),
+        endStr: minutesToTime(afternoonStartMins),
+        startMins: morningEndMins,
+        endMins: afternoonStartMins,
+        isBreak: true,
+      })
+    }
+
+    // Afternoon slots
+    for (let t = afternoonStartMins; t < endMins; t += slotDurationMinutes) {
+      const nextT = Math.min(t + slotDurationMinutes, endMins)
+      intervals.push({
+        startStr: minutesToTime(t),
+        endStr: minutesToTime(nextT),
+        startMins: t,
+        endMins: nextT,
+        isBreak: false,
+      })
+    }
+
+    return intervals
+  }, [scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes])
 
   return (
     <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
@@ -187,9 +206,9 @@ export function ScheduleView({ slots, scheduleSettings, onEdit, onDelete }: Sche
                         </div>
                       </div>
 
-                      {/* Admin action buttons — visible on hover */}
+                      {/* Admin action buttons — visible on hover (desktop) or always (mobile) */}
                       {(onEdit || onDelete) && (
-                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <div className={`absolute top-1 right-1 flex gap-1 transition-opacity duration-150 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                           {onEdit && (
                             <button
                               onClick={() => onEdit(matchingSlot)}

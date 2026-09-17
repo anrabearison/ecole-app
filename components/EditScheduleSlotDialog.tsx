@@ -17,6 +17,7 @@ import {
 } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
+import { useToast } from "@/lib/hooks/useToast"
 
 interface EditScheduleSlotDialogProps {
   slot: ScheduleSlotWithRelations
@@ -26,6 +27,7 @@ interface EditScheduleSlotDialogProps {
 
 export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditScheduleSlotDialogProps) {
   const overlayRef = useRef<HTMLDivElement | null>(null)
+  const { error: showError } = useToast()
 
   const [warnings, setWarnings] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -50,6 +52,7 @@ export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditSchedu
   const { register, control, handleSubmit, formState: { errors }, setValue, reset, watch } =
     useForm<ScheduleSlotUpdateInput>({
       resolver: zodResolver(scheduleSlotUpdateSchema),
+      mode: "onChange", // Enable real-time validation
       defaultValues: {
         classroomId: slot.classroomId,
         subjectId: slot.subjectId,
@@ -208,7 +211,7 @@ export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditSchedu
         onSuccess()
       }
     } else {
-      alert(result.error)
+      showError(result.error)
     }
   }
 
@@ -237,8 +240,23 @@ export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditSchedu
         {/* Body */}
         <div className="px-6 py-5 max-h-[70vh] overflow-y-auto">
           {isLoadingData ? (
-            <div className="flex items-center justify-center py-10 text-gray-500 text-sm">
-              Chargement des données...
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                <div className="h-10 bg-gray-200 rounded"></div>
+              </div>
             </div>
           ) : (
             <>
@@ -284,6 +302,9 @@ export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditSchedu
                       </option>
                     ))}
                   </select>
+                  {!watchedClassroomId && (
+                    <p className="text-xs text-gray-500 mt-1">Sélectionnez d'abord une classe</p>
+                  )}
                   {errors.subjectId && <p className="text-red-600 text-xs mt-1">{errors.subjectId.message}</p>}
                 </div>
 
