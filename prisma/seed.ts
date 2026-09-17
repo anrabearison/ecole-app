@@ -11,6 +11,9 @@ if (!process.env.DATABASE_URL) {
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
+// Use lower bcrypt cost for faster seeding in development
+const BCRYPT_COST = process.env.NODE_ENV === 'production' ? 10 : 4
+
 async function main() {
   // School has no unique constraint on name — use findFirst + create to stay idempotent
   let school = await prisma.school.findFirst({ where: { name: "Sekoly Test" } })
@@ -144,7 +147,7 @@ async function main() {
 
   await Promise.all(
     devSeedAccounts.map(async (account) => {
-      const passwordHash = await bcrypt.hash(account.password, 10)
+      const passwordHash = await bcrypt.hash(account.password, BCRYPT_COST)
       const user = await prisma.user.upsert({
         where: { email: account.email },
         update: {},
@@ -219,7 +222,7 @@ async function main() {
 
   const mockTeachers = await Promise.all(
     teacherNames.map(async (name, index) => {
-      const passwordHash = await bcrypt.hash(teacherPasswords[index], 10)
+      const passwordHash = await bcrypt.hash(teacherPasswords[index], BCRYPT_COST)
       // Second teacher (index 1) will have no email to test CIN-only login
       const email = index === 1 ? null : `teacher${index + 2}@sekoly-test.mg`
 
@@ -296,7 +299,7 @@ async function main() {
 
   const mockStudents = await Promise.all(
     studentNames.map(async (name, index) => {
-      const passwordHash = await bcrypt.hash(studentPasswords[index], 10)
+      const passwordHash = await bcrypt.hash(studentPasswords[index], BCRYPT_COST)
       const registrationNumber = `2025-00${index + 2}`
       // Third student (index 2) will have no email to test matricule-only login
       const email = index === 2 ? null : `student${index + 2}@sekoly-test.mg`
@@ -387,7 +390,7 @@ async function main() {
 
   // Create a struggling student with grades < 10 for all assessments
   const strugglingStudentPassword = "student123"
-  const strugglingStudentPasswordHash = await bcrypt.hash(strugglingStudentPassword, 10)
+  const strugglingStudentPasswordHash = await bcrypt.hash(strugglingStudentPassword, BCRYPT_COST)
   const strugglingStudentEmail = "student-struggling@sekoly-test.mg"
   const strugglingRegistrationNumber = "2025-007"
 
@@ -511,24 +514,28 @@ async function main() {
     })
   }
 
-  // Create assessments and grades for all students, subjects, and periods
+  // Create assessments and grades for all students, subjects, and periods (optimized with batch operations)
   const allStudents = await prisma.student.findMany({ 
     where: { classroomId: sixieme1.id },
     include: { user: true }
   })
 
+  console.log(`Creating assessments for ${subjects.length} subjects × ${periods.length} periods × ${allStudents.length} students...`)
+
+  // Get all teacher-subject assignments once
+  const teacherSubjects = await prisma.teacherSubject.findMany({
+    where: { classroomId: sixieme1.id }
+  })
+
+  // Batch create assessments and grades
+  const assessmentsToCreate: any[] = []
+  const gradesToCreate: any[] = []
+
   for (const subject of subjects) {
+    const teacherSubject = teacherSubjects.find(ts => ts.subjectId === subject.id)
+    if (!teacherSubject) continue
+
     for (const period of periods) {
-      // Find the teacher assigned to this subject in this classroom
-      const teacherSubject = await prisma.teacherSubject.findFirst({
-        where: {
-          subjectId: subject.id,
-          classroomId: sixieme1.id,
-        },
-      })
-
-      if (!teacherSubject) continue
-
       // Create 2-3 daily assessments per period
       for (let i = 0; i < 3; i++) {
         const assessmentId = `assess-daily-${subject.id}-${period.id}-${i}`
@@ -538,39 +545,32 @@ async function main() {
         } else if (period.name === "Trimestre 3") {
           gradeDate.setMonth(gradeDate.getMonth() + 6)
         }
-        gradeDate.setDate(gradeDate.getDate() + i * 7) // Different dates for each grade
+        gradeDate.setDate(gradeDate.getDate() + i * 7)
 
-        await prisma.assessment.upsert({
-          where: { id: assessmentId },
-          update: {},
-          create: {
-            id: assessmentId,
-            title: `Evaluation quotidienne N°${i + 1}`,
-            type: "DAILY",
-            date: gradeDate,
-            periodId: period.id,
-            classroomId: sixieme1.id,
-            subjectId: subject.id,
-            teacherId: teacherSubject.teacherId,
-            schoolId: school.id,
-          },
+        assessmentsToCreate.push({
+          id: assessmentId,
+          title: `Evaluation quotidienne N°${i + 1}`,
+          type: "DAILY",
+          date: gradeDate,
+          periodId: period.id,
+          classroomId: sixieme1.id,
+          subjectId: subject.id,
+          teacherId: teacherSubject.teacherId,
+          schoolId: school.id,
         })
 
+        // Create grades for all students for this assessment
         for (const student of allStudents) {
           const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
           const dailyGrade = isStrugglingStudent 
             ? 4 + Math.floor(Math.random() * 5) // 4-9 for struggling student
             : 10 + Math.floor(Math.random() * 10) // 10-20 for regular students
 
-          await prisma.grade.upsert({
-            where: { id: `daily-${student.id}-${subject.id}-${period.id}-${i}` },
-            update: {},
-            create: {
-              id: `daily-${student.id}-${subject.id}-${period.id}-${i}`,
-              value: dailyGrade,
-              studentId: student.id,
-              assessmentId,
-            },
+          gradesToCreate.push({
+            id: `daily-${student.id}-${subject.id}-${period.id}-${i}`,
+            value: dailyGrade,
+            studentId: student.id,
+            assessmentId,
           })
         }
       }
@@ -583,43 +583,50 @@ async function main() {
       } else if (period.name === "Trimestre 3") {
         examDate.setMonth(examDate.getMonth() + 6)
       }
-      examDate.setDate(examDate.getDate() + 21) // Exam at end of period
+      examDate.setDate(examDate.getDate() + 21)
 
-      await prisma.assessment.upsert({
-        where: { id: examAssessmentId },
-        update: {},
-        create: {
-          id: examAssessmentId,
-          title: `Examen ${period.name}`,
-          type: "EXAM",
-          date: examDate,
-          periodId: period.id,
-          classroomId: sixieme1.id,
-          subjectId: subject.id,
-          teacherId: teacherSubject.teacherId,
-          schoolId: school.id,
-        },
+      assessmentsToCreate.push({
+        id: examAssessmentId,
+        title: `Examen ${period.name}`,
+        type: "EXAM",
+        date: examDate,
+        periodId: period.id,
+        classroomId: sixieme1.id,
+        subjectId: subject.id,
+        teacherId: teacherSubject.teacherId,
+        schoolId: school.id,
       })
 
+      // Create exam grades for all students
       for (const student of allStudents) {
         const isStrugglingStudent = student.user.email === "student-struggling@sekoly-test.mg"
         const examGrade = isStrugglingStudent
           ? 3 + Math.floor(Math.random() * 6) // 3-9 for struggling student
           : 8 + Math.floor(Math.random() * 12) // 8-20 for regular students
 
-        await prisma.grade.upsert({
-          where: { id: `exam-${student.id}-${subject.id}-${period.id}` },
-          update: {},
-          create: {
-            id: `exam-${student.id}-${subject.id}-${period.id}`,
-            value: examGrade,
-            studentId: student.id,
-            assessmentId: examAssessmentId,
-          },
+        gradesToCreate.push({
+          id: `exam-${student.id}-${subject.id}-${period.id}`,
+          value: examGrade,
+          studentId: student.id,
+          assessmentId: examAssessmentId,
         })
       }
     }
   }
+
+  // Batch create assessments
+  console.log(`Creating ${assessmentsToCreate.length} assessments...`)
+  await prisma.assessment.createMany({
+    data: assessmentsToCreate,
+    skipDuplicates: true,
+  })
+
+  // Batch create grades
+  console.log(`Creating ${gradesToCreate.length} grades...`)
+  await prisma.grade.createMany({
+    data: gradesToCreate,
+    skipDuplicates: true,
+  })
 
   const teacherUser = await prisma.user.findUnique({ where: { email: "prof@sekoly-test.mg" }, include: { teacher: true } })
   const mathSubject = await prisma.subject.findFirst({ where: { name: "Mathématiques", schoolId: school.id } })
