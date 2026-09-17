@@ -12,6 +12,7 @@ import { getSchoolScheduleSettings } from "@/lib/actions/school"
 import { scheduleSlotSchema, generateTimeSlots, timeToMinutes, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/lib/hooks/useToast"
+import { ConfirmDialog } from "@/components/ConfirmDialog"
 
 export default function NewScheduleSlotPage() {
   const router = useRouter()
@@ -19,6 +20,8 @@ export default function NewScheduleSlotPage() {
   const { success: showSuccess, error: showError } = useToast()
   const [warnings, setWarnings] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [pendingData, setPendingData] = useState<ScheduleSlotInput | null>(null)
   const [classrooms, setClassrooms] = useState<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>([])
   const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
   const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>>([])
@@ -123,11 +126,18 @@ export default function NewScheduleSlotPage() {
 
   const isEPS = watchedSubjectId && teacherSubjects.find(ts => ts.subject.id === watchedSubjectId)?.subject.name === "EPS"
 
-  const onSubmit = async (data: ScheduleSlotInput) => {
+  const onSubmit = (data: ScheduleSlotInput) => {
+    setPendingData(data)
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmCreate = async () => {
+    if (!pendingData) return
+    
     setIsSubmitting(true)
     setWarnings([])
 
-    const result = await createScheduleSlot(data)
+    const result = await createScheduleSlot(pendingData)
 
     if (result.success) {
       showSuccess("Créneau créé avec succès")
@@ -143,9 +153,16 @@ export default function NewScheduleSlotPage() {
     }
 
     setIsSubmitting(false)
+    setShowConfirmDialog(false)
+    setPendingData(null)
   }
 
-  const handleCancel = () => {
+  const handleCancelCreate = () => {
+    setShowConfirmDialog(false)
+    setPendingData(null)
+  }
+
+  const handleCancelForm = () => {
     const mode = searchParams.get("mode") || "classroom"
     const selectedId = searchParams.get("selectedId") || ""
     router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
@@ -153,6 +170,23 @@ export default function NewScheduleSlotPage() {
 
   const getDisplayName = (classroom: { schoolGrade: { name: string }; section: string; schoolYear: string }) => {
     return `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
+  }
+
+  const getConfirmationMessage = () => {
+    if (!pendingData) return ""
+    const classroom = classrooms.find(c => c.id === pendingData.classroomId)
+    const subject = availableSubjects.find(s => s.id === pendingData.subjectId)
+    const teacher = availableTeachers.find(t => t.id === pendingData.teacherId)
+    const dayLabel = {
+      MONDAY: "Lundi",
+      TUESDAY: "Mardi", 
+      WEDNESDAY: "Mercredi",
+      THURSDAY: "Jeudi",
+      FRIDAY: "Vendredi",
+      SATURDAY: "Samedi"
+    }[pendingData.day]
+    
+    return `Créer le créneau "${subject?.name}" pour ${getDisplayName(classroom!)} le ${dayLabel} de ${pendingData.startTime} à ${pendingData.endTime} ?`
   }
 
   // Get unique subjects from teacher-subject assignments for the selected classroom
@@ -312,7 +346,7 @@ export default function NewScheduleSlotPage() {
         )}
 
         <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={handleCancelForm} disabled={isSubmitting}>
             Annuler
           </Button>
           <Button type="submit" disabled={isSubmitting || !watchedClassroomId || teacherSubjects.length === 0}>
@@ -320,6 +354,16 @@ export default function NewScheduleSlotPage() {
           </Button>
         </div>
       </form>
+
+      {showConfirmDialog && pendingData && (
+        <ConfirmDialog
+          variant="create"
+          message={getConfirmationMessage()}
+          onConfirm={handleConfirmCreate}
+          onCancel={handleCancelCreate}
+          isLoading={isSubmitting}
+        />
+      )}
     </div>
   )
 }
