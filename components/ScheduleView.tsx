@@ -1,14 +1,26 @@
 "use client"
 
+import { Pencil, Trash2 } from "lucide-react"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
 import type { ScheduleSettings } from "@/lib/actions/school"
 
 interface ScheduleViewProps {
   slots: ScheduleSlotWithRelations[]
   scheduleSettings?: ScheduleSettings
+  /** Called when the admin clicks the edit button on a slot */
+  onEdit?: (slot: ScheduleSlotWithRelations) => void
+  /** Called when the admin clicks the delete button on a slot */
+  onDelete?: (slot: ScheduleSlotWithRelations) => void
 }
 
 const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"] as const
+
+// CSS constants for consistency and maintainability
+const SLOT_CELL_CLASSES = "border-b border-r border-gray-300 px-3 py-2 bg-blue-50/80 border-l-4 border-l-blue-600 h-16 text-left shadow-xs relative group"
+const ACTION_BUTTON_CLASSES = "p-1 rounded bg-white/90 border hover:transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1"
+const EDIT_BUTTON_CLASSES = `${ACTION_BUTTON_CLASSES} border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 focus:ring-blue-500`
+const DELETE_BUTTON_CLASSES = `${ACTION_BUTTON_CLASSES} border-red-200 text-red-500 hover:bg-red-600 hover:text-white hover:border-red-600 focus:ring-red-500`
+
 const WEEKDAY_LABELS: Record<string, string> = {
   MONDAY: "Lundi",
   TUESDAY: "Mardi",
@@ -37,7 +49,7 @@ function minutesToTime(mins: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
 }
 
-export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
+export function ScheduleView({ slots, scheduleSettings, onEdit, onDelete }: ScheduleViewProps) {
   const settings = scheduleSettings || DEFAULT_SETTINGS
   const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } = settings
 
@@ -162,7 +174,7 @@ export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
                   return (
                     <td
                       key={`${day}-${idx}`}
-                      className="border-b border-r border-gray-300 px-3 py-2 bg-blue-50/80 border-l-4 border-l-blue-600 h-16 text-left shadow-xs"
+                      className={SLOT_CELL_CLASSES}
                     >
                       <div className="text-xs space-y-0.5">
                         <div className="font-bold text-blue-900">{matchingSlot.subject.name}</div>
@@ -174,6 +186,32 @@ export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
                           {matchingSlot.room && ` • ${matchingSlot.room.name}`}
                         </div>
                       </div>
+
+                      {/* Admin action buttons — visible on hover */}
+                      {(onEdit || onDelete) && (
+                        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(matchingSlot)}
+                              title="Modifier ce créneau"
+                              aria-label={`Modifier le créneau de ${matchingSlot.subject.name} le ${matchingSlot.day} de ${matchingSlot.startTime} à ${matchingSlot.endTime}`}
+                              className={EDIT_BUTTON_CLASSES}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(matchingSlot)}
+                              title="Supprimer ce créneau"
+                              aria-label={`Supprimer le créneau de ${matchingSlot.subject.name} le ${matchingSlot.day} de ${matchingSlot.startTime} à ${matchingSlot.endTime}`}
+                              className={DELETE_BUTTON_CLASSES}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   )
                 })}

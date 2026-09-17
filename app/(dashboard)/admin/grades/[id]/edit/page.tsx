@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/Skeleton"
-import { useToast } from "@/components/Toast"
+import { useToast } from "@/lib/hooks/useToast"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, BookOpen, AlertCircle } from "lucide-react"
 
@@ -20,7 +20,7 @@ export default function EditGradePage() {
   const params = useParams()
   const id = params.id as string | undefined
   const [formError, setFormError] = useState<string | null>(null)
-  const { showToast } = useToast()
+  const { success, error: showError } = useToast()
   const queryClient = useQueryClient()
 
   // Fetch grade data
@@ -65,7 +65,7 @@ export default function EditGradePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["grade", id] })
       queryClient.invalidateQueries({ queryKey: ["grades"] })
-      showToast("success", "Note mise à jour avec succès")
+      success("Note mise à jour avec succès")
       router.push(`/admin/grades/${id}`)
     },
     onError: (err: Error) => {
