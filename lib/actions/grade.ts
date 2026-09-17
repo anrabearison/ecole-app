@@ -56,6 +56,54 @@ export type GradeWithRelations = {
   createdAt: Date
 }
 
+// Optimized include for grade detail pages - only necessary relations
+const gradeDetailInclude = {
+  student: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+    },
+  },
+  assessment: {
+    include: {
+      subject: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      teacher: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+      },
+      classroom: {
+        select: {
+          id: true,
+          section: true,
+          schoolYear: true,
+          schoolGrade: {
+            select: {
+              id: true,
+              name: true,
+              cycle: true,
+            },
+          },
+        },
+      },
+      period: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  },
+}
+
 const assessmentInclude = {
   student: {
     select: {
@@ -714,11 +762,11 @@ export async function getGradeById(id: string): Promise<ActionResult<GradeWithRe
   try {
     // Fetch the grade first so we can check ownership for teachers
     const rawGrade = await prisma.grade.findFirst({
-      where: { 
-        id, 
+      where: {
+        id,
         assessment: { schoolId: session.user.schoolId },
       },
-      include: assessmentInclude,
+      include: gradeDetailInclude,
     })
 
     if (!rawGrade) {

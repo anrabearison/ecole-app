@@ -119,19 +119,27 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
     return { success: false, error: "Unauthorized" }
   }
 
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
   if (!session.user.schoolId) {
     return { success: false, error: "School ID is required" }
   }
 
   try {
-    const classroom = await prisma.classroom.findUnique({
-      where: { id },
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id,
+        schoolId: session.user.schoolId,
+      },
       include: {
         schoolGrade: {
           select: {
             id: true,
             name: true,
             cycle: true,
+            order: true,
           },
         },
         track: {
@@ -159,22 +167,18 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
       },
     })
 
+    if (!classroom) {
+      return { success: false, error: "Classe non trouvée" }
+    }
+
     if (classroom?.homeroomTeachers) {
       classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
     }
 
-    if (!classroom) {
-      return { success: false, error: "Classroom not found" }
-    }
-
-    if (classroom.schoolId !== session.user.schoolId) {
-      return { success: false, error: "Forbidden" }
-    }
-
-    return { success: true, data: classroom }
+    return { success: true, data: classroom as ClassroomWithRelations }
   } catch (error: any) {
-    console.error("Error getting classroom by id:", error)
-    return { success: false, error: "Erreur lors de la récupération de la classe" }
+    console.error("Error fetching classroom by ID:", error)
+    return { success: false, error: "Erreur lors du chargement de la classe" }
   }
 }
 
