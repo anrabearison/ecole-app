@@ -635,6 +635,50 @@ export async function deleteClassroom(id: string): Promise<ActionResult<void>> {
 }
 
 /**
+ * Get student count for a classroom - optimized with _count
+ */
+export async function getClassroomStudentCount(classroomId: string): Promise<ActionResult<number>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id: classroomId,
+        schoolId: session.user.schoolId,
+      },
+      select: {
+        _count: {
+          select: {
+            students: true,
+          },
+        },
+      },
+    })
+
+    if (!classroom) {
+      return { success: false, error: "Classe non trouvée" }
+    }
+
+    return { success: true, data: classroom._count.students }
+  } catch (error: any) {
+    console.error("Error getting classroom student count:", error)
+    return { success: false, error: "Erreur lors du chargement du nombre d'élèves" }
+  }
+}
+
+/**
  * Optimized version for dropdown selects - only includes necessary fields
  */
 export async function listClassroomsForSelect(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>> {

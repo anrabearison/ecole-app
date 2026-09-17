@@ -20,11 +20,20 @@ vi.mock("./daily-grade-selection", () => ({
 vi.mock("./average", () => ({
   calculateSubjectAverage: vi.fn().mockResolvedValue({ success: true, data: 15.5 }),
   calculateGeneralAverage: vi.fn().mockResolvedValue({ success: true, data: 14.75 }),
+  calculateSubjectAveragesBatch: vi.fn().mockResolvedValue({ 
+    success: true, 
+    data: new Map([["student-1", new Map([["subject-1", 15.5]])]]) 
+  }),
+  calculateGeneralAveragesBatch: vi.fn().mockResolvedValue({ 
+    success: true, 
+    data: new Map([["student-1", 14.75]]) 
+  }),
 }))
 
 // Mock subject coefficient
 vi.mock("./subject-coefficient", () => ({
   getEffectiveCoefficient: vi.fn().mockResolvedValue(1.0),
+  getEffectiveCoefficientsBatch: vi.fn().mockResolvedValue(new Map([["subject-1", 1.0]])),
 }))
 
 const mockSchoolId = "school-1"

@@ -5,10 +5,10 @@ import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
-import { calculateSubjectAverage, calculateGeneralAverage, calculateSubjectRank } from "./average"
+import { calculateSubjectAverage, calculateGeneralAverage, calculateSubjectRank, calculateSubjectAveragesBatch, calculateGeneralAveragesBatch } from "./average"
 import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
 import { calculateSubjectAppreciation } from "@/lib/utils/subject-appreciation"
-import { getEffectiveCoefficient } from "./subject-coefficient"
+import { getEffectiveCoefficient, getEffectiveCoefficientsBatch } from "./subject-coefficient"
 
 export type StudentGradeData = {
   studentId: string
@@ -150,11 +150,16 @@ export async function getClassGrades(
 
     const subjectIds = assessments.map((a) => a.subjectId)
 
-    // Build daily selection map for all subjects
+    // Batch fetch daily selection map for all subjects (optimization: avoid N+1)
     const dailySelectionMap = new Map<string, string[] | null>()
-    for (const subjectId of subjectIds) {
-      const selectedIds = await getSelectedDailyAssessmentIds(classroomId, subjectId, periodId, schoolId)
-      dailySelectionMap.set(subjectId, selectedIds)
+    if (subjectIds.length > 0) {
+      const selectionPromises = subjectIds.map((subjectId) =>
+        getSelectedDailyAssessmentIds(classroomId, subjectId, periodId, schoolId)
+      )
+      const selections = await Promise.all(selectionPromises)
+      subjectIds.forEach((subjectId, index) => {
+        dailySelectionMap.set(subjectId, selections[index])
+      })
     }
 
     // Get all DAILY assessments for this classroom/period
@@ -206,6 +211,42 @@ export async function getClassGrades(
 
     // Process each student
     const studentGradeData: StudentGradeData[] = []
+
+    // Calculate general averages for all students in batch (optimization: avoid N+1)
+    const generalAveragesResult = await calculateGeneralAveragesBatch(
+      students.map(s => s.id),
+      periodId,
+      dailySelectionMap,
+      schoolId
+    )
+
+    const generalAverageMap = generalAveragesResult.success ? generalAveragesResult.data : new Map()
+
+    // Collect all unique (subjectId, schoolGradeId, trackId) combinations for batch coefficient fetch
+    const coefficientKeys: Array<{ subjectId: string; schoolGradeId: string | null; trackId: string | null }> = []
+    for (const student of students) {
+      const schoolGradeId = student.classroom?.schoolGradeId ?? null
+      const trackId = student.classroom?.trackId ?? null
+      for (const subjectId of subjectIds) {
+        coefficientKeys.push({ subjectId, schoolGradeId, trackId })
+      }
+    }
+
+    // Batch fetch all coefficients (optimization: avoid N+1)
+    const coefficientMap = new Map<string, number>()
+    if (coefficientKeys.length > 0) {
+      const uniqueSubjectIds = [...new Set(coefficientKeys.map(k => k.subjectId))]
+      const schoolGradeId = students[0]?.classroom?.schoolGradeId ?? null
+      const trackId = students[0]?.classroom?.trackId ?? null
+      
+      // Since all students are in the same classroom, they share the same schoolGradeId and trackId
+      if (schoolGradeId) {
+        const batchResult = await getEffectiveCoefficientsBatch(uniqueSubjectIds, schoolGradeId, trackId, schoolId)
+        batchResult.forEach((coeff, subjectId) => {
+          coefficientMap.set(subjectId, coeff)
+        })
+      }
+    }
 
     for (const student of students) {
       const schoolGradeId = student.classroom?.schoolGradeId ?? null
@@ -281,10 +322,8 @@ export async function getClassGrades(
         // Calculate weighted average (MJ+COMP)/2 with 50/50 weights
         const weightedAverage = examAverage * period.examWeight + dailyAverage * period.dailyWeight
 
-        // Get effective coefficient
-        const effectiveCoefficient = schoolGradeId
-          ? await getEffectiveCoefficient(subjectId, schoolGradeId, trackId, schoolId)
-          : 1.0
+        // Get effective coefficient from batch-fetched map
+        const effectiveCoefficient = coefficientMap.get(subjectId) || 1.0
 
         // Calculate final note: COEF * (MJ+COMP)/2
         const finalNote = effectiveCoefficient * weightedAverage
@@ -311,9 +350,8 @@ export async function getClassGrades(
         })
       }
 
-      // Calculate general average
-      const generalAvgResult = await calculateGeneralAverage(student.id, periodId, dailySelectionMap)
-      const generalAverage = generalAvgResult.success ? generalAvgResult.data : 0
+      // Calculate general average from batch result
+      const generalAverage = generalAverageMap.get(student.id) || 0
 
       studentGradeData.push({
         studentId: student.id,
@@ -330,27 +368,37 @@ export async function getClassGrades(
       })
     }
 
-    // Calculate subject ranks for all students
+    // Calculate subject ranks for all students (optimization: use batch calculation)
     for (const subjectId of subjectIds) {
       const subjectRankMap = new Map<string, number>()
-      const studentSubjectAverages: Array<{ studentId: string; average: number }> = []
 
-      for (const student of students) {
-        const selectedDailyIds = dailySelectionMap.get(subjectId)
-        const avgResult = await calculateSubjectAverage(student.id, subjectId, periodId, selectedDailyIds)
-        if (avgResult.success) {
+      // Use batch calculation instead of individual calls
+      const batchResult = await calculateSubjectAveragesBatch(
+        students.map(s => s.id),
+        [subjectId],
+        periodId,
+        dailySelectionMap,
+        schoolId
+      )
+
+      if (batchResult.success) {
+        const studentSubjectAverages: Array<{ studentId: string; average: number }> = []
+        
+        for (const student of students) {
+          const subjectMap = batchResult.data.get(student.id)
+          const average = subjectMap?.get(subjectId) || 0
           studentSubjectAverages.push({
             studentId: student.id,
-            average: avgResult.data,
+            average,
           })
         }
-      }
 
-      // Sort by average descending and assign ranks
-      studentSubjectAverages.sort((a, b) => b.average - a.average)
-      studentSubjectAverages.forEach((item, index) => {
-        subjectRankMap.set(item.studentId, index + 1)
-      })
+        // Sort by average descending and assign ranks
+        studentSubjectAverages.sort((a, b) => b.average - a.average)
+        studentSubjectAverages.forEach((item, index) => {
+          subjectRankMap.set(item.studentId, index + 1)
+        })
+      }
 
       // Assign ranks to student data
       for (const studentData of studentGradeData) {
