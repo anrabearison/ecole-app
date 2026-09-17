@@ -4,13 +4,13 @@ import { auth } from "@/lib/auth"
 import { can } from "@/lib/permissions"
 import { prisma } from "@/lib/prisma"
 import type { ActionResult } from "@/lib/utils"
-import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages, calculateSubjectRank } from "./average"
+import { calculateSubjectAverage, calculateGeneralAverage, calculateClassRank, getStudentSubjectAverages, calculateSubjectRank, calculateSubjectAveragesBatch, calculateGeneralAveragesBatch } from "./average"
 import { calculateAppreciation, calculateTotalNotes, calculateTotalCoefficients } from "@/lib/utils/calculations"
 import { calculateSubjectAppreciation } from "@/lib/utils/subject-appreciation"
 import { generateReportCardPdfBuffer, generateClassReportPdfBuffer, type ReportCardData } from "@/lib/pdf/generate-pdf-react"
 import { getReportCardComment } from "./report-card-comment"
 import { getSelectedDailyAssessmentIds } from "./daily-grade-selection"
-import { getEffectiveCoefficient } from "@/lib/actions/subject-coefficient"
+import { getEffectiveCoefficient, getEffectiveCoefficientsBatch } from "@/lib/actions/subject-coefficient"
 
 /**
  * Generate a PDF report card for a student in a period
@@ -320,11 +320,19 @@ export async function generateClassReportCardsPdf(
       return { success: false, error: "Période non trouvée" }
     }
 
-    // 3. Load all students in the classroom
+    // 3. Load all students in the classroom with full details (optimization: one query)
     const students = await prisma.student.findMany({
       where: { classroomId, schoolId },
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: { id: true, firstName: true, lastName: true, classroom: { select: { schoolGradeId: true, trackId: true } } },
+      select: { 
+        id: true, 
+        firstName: true, 
+        lastName: true, 
+        dateOfBirth: true,
+        classNumber: true,
+        sex: true,
+        classroom: { select: { schoolGradeId: true, trackId: true } } 
+      },
     })
 
     if (students.length === 0) {
@@ -356,11 +364,19 @@ export async function generateClassReportCardsPdf(
 
     const schoolLogoUrl = (classroom.school as any).logoUrl || undefined
 
-    // 6. Pre-compute class averages for ranking
+    // 6. Pre-compute class averages for ranking using batch calculation (optimization: avoid N+1)
+    const generalAveragesResult = await calculateGeneralAveragesBatch(
+      students.map(s => s.id),
+      periodId,
+      dailySelectionMap,
+      schoolId
+    )
+
     const classAverages: Array<{ studentId: string; average: number }> = []
-    for (const student of students) {
-      const avgResult = await calculateGeneralAverage(student.id, periodId, dailySelectionMap)
-      classAverages.push({ studentId: student.id, average: avgResult.success ? avgResult.data : 0 })
+    if (generalAveragesResult.success) {
+      generalAveragesResult.data.forEach((average, studentId) => {
+        classAverages.push({ studentId, average })
+      })
     }
     classAverages.sort((a, b) => b.average - a.average)
     const totalStudents = classAverages.length
@@ -404,6 +420,26 @@ export async function generateClassReportCardsPdf(
     })
     const subjectLanguageMap = new Map(subjects.map(s => [s.id, s.language]))
 
+    // Batch fetch all subject coefficients (optimization: avoid N+1)
+    const schoolGradeId = students[0]?.classroom?.schoolGradeId ?? null
+    const trackId = students[0]?.classroom?.trackId ?? null
+    const coefficientMap = new Map<string, number>()
+    if (schoolGradeId) {
+      const batchResult = await getEffectiveCoefficientsBatch(Array.from(allSubjectIds), schoolGradeId, trackId, schoolId)
+      batchResult.forEach((coeff, subjectId) => {
+        coefficientMap.set(subjectId, coeff)
+      })
+    }
+
+    // Batch calculate all subject averages for all students (optimization: avoid N+1)
+    const subjectAveragesBatchResult = await calculateSubjectAveragesBatch(
+      students.map(s => s.id),
+      Array.from(allSubjectIds),
+      periodId,
+      dailySelectionMap,
+      schoolId
+    )
+
     // 8. Build report card data for each student
     const reportCards: ReportCardData[] = []
 
@@ -435,15 +471,19 @@ export async function generateClassReportCardsPdf(
         ).values()
       )
 
+      // Use batch-calculated subject averages (optimization: avoid N+1)
+      const studentSubjectMap = subjectAveragesBatchResult.success 
+        ? subjectAveragesBatchResult.data.get(student.id) 
+        : new Map()
+
       for (const subject of uniqueSubjects) {
         const selectedDailyIds = dailySelectionMap.get(subject.id)
-        const [avgResult, coeff] = await Promise.all([
-          calculateSubjectAverage(student.id, subject.id, periodId, selectedDailyIds),
-          schoolGradeId
-            ? getEffectiveCoefficient(subject.id, schoolGradeId, trackId, schoolId)
-            : Promise.resolve(subject.coefficient),
-        ])
-        if (avgResult.success) {
+        
+        // Use pre-calculated average from batch
+        const weightedAverage = studentSubjectMap?.get(subject.id) || 0
+        const coeff = coefficientMap.get(subject.id) || subject.coefficient || 1.0
+
+        if (weightedAverage > 0 || grades.some(g => g.assessment?.subject?.id === subject.id)) {
           // Get subject language from pre-fetched map
           const language = subjectLanguageMap.get(subject.id)
 
@@ -474,11 +514,11 @@ export async function generateClassReportCardsPdf(
 
           const dailyAverage = dailyCount > 0 ? dailySum / dailyCount : 0
           const examAverage = examCount > 0 ? examSum / examCount : 0
-          const weightedAverage = avgResult.data
           const finalNote = coeff * weightedAverage
 
-          // Calculate subject rank
-          const subjectRankResult = await calculateSubjectRank(student.id, subject.id, classroomId, periodId, dailySelectionMap)
+          // Skip subject rank calculation for PDF generation (not displayed in PDF)
+          const rank = 0
+          const totalStudentsInSubject = 0
 
           // Calculate subject appreciation based on language
           const appreciation = calculateSubjectAppreciation(weightedAverage, language || "FRENCH")
@@ -490,16 +530,17 @@ export async function generateClassReportCardsPdf(
             examAverage,
             weightedAverage,
             finalNote,
-            rank: subjectRankResult.success ? subjectRankResult.data.rank : 0,
-            totalStudents: subjectRankResult.success ? subjectRankResult.data.totalStudents : 0,
+            rank,
+            totalStudents: totalStudentsInSubject,
             appreciation,
           })
         }
       }
 
-      // General average (using dailySelectionMap)
-      const generalAvgResult = await calculateGeneralAverage(student.id, periodId, dailySelectionMap)
-      const generalAverage = generalAvgResult.success ? generalAvgResult.data : 0
+      // General average from batch result (optimization: avoid N+1)
+      const generalAverage = generalAveragesResult.success 
+        ? (generalAveragesResult.data.get(student.id) || 0)
+        : 0
 
       // Rank
       const rankIndex = classAverages.findIndex((c) => c.studentId === student.id)
@@ -522,16 +563,6 @@ export async function generateClassReportCardsPdf(
         average: s.weightedAverage,
       })))
 
-      // Get student details for the report card
-      const studentDetails = await prisma.student.findUnique({
-        where: { id: student.id },
-        select: {
-          dateOfBirth: true,
-          classNumber: true,
-          sex: true,
-        },
-      })
-
       const reportCardData: ReportCardData = {
         schoolName: classroom.school.name,
         schoolAddress: classroom.school.address || undefined,
@@ -540,10 +571,10 @@ export async function generateClassReportCardsPdf(
         periodName: period.name,
         studentFirstName: student.firstName || "",
         studentLastName: student.lastName,
-        dateOfBirth: studentDetails?.dateOfBirth ? studentDetails.dateOfBirth.toISOString().split("T")[0] : undefined,
+        dateOfBirth: student.dateOfBirth ? student.dateOfBirth.toISOString().split("T")[0] : undefined,
         className,
-        classNumber: studentDetails?.classNumber?.toString() || undefined,
-        sex: studentDetails?.sex || undefined,
+        classNumber: student.classNumber?.toString() || undefined,
+        sex: student.sex || undefined,
         subjects: subjectAverages,
         totalNotes,
         totalCoefficients,
