@@ -80,6 +80,96 @@ export async function getEffectiveCoefficient(
   return subject?.coefficient ?? 1.0
 }
 
+/**
+ * Batch version of getEffectiveCoefficient to avoid N+1 queries.
+ * Returns a Map of subjectId -> effective coefficient for multiple subjects at once.
+ * 
+ * Uses the same fallback chain as getEffectiveCoefficient but with optimized queries.
+ */
+export async function getEffectiveCoefficientsBatch(
+  subjectIds: string[],
+  schoolGradeId: string,
+  trackId: string | null,
+  schoolId: string
+): Promise<Map<string, number>> {
+  const delegate = getSubjectCoefficientDelegate()
+  const result = new Map<string, number>()
+
+  if (!delegate || subjectIds.length === 0) {
+    // Fallback: fetch all subjects individually if delegate not available
+    for (const subjectId of subjectIds) {
+      const coeff = await getEffectiveCoefficient(subjectId, schoolGradeId, trackId, schoolId)
+      result.set(subjectId, coeff)
+    }
+    return result
+  }
+
+  // 1. Fetch all coefficients for this school grade (both track-specific and default)
+  const allCoefficients = await delegate.findMany({
+    where: {
+      schoolGradeId,
+      schoolId,
+      subjectId: { in: subjectIds },
+    },
+    select: {
+      subjectId: true,
+      trackId: true,
+      coefficient: true,
+    },
+  })
+
+  // 2. Fetch all subjects for fallback
+  const subjects = await prisma.subject.findMany({
+    where: {
+      id: { in: subjectIds },
+      schoolId,
+    },
+    select: {
+      id: true,
+      coefficient: true,
+    },
+  })
+
+  // 3. Build a map of subjects for easy lookup
+  const subjectMap = new Map(subjects.map(s => [s.id, s.coefficient]))
+
+  // 4. Resolve coefficients for each subject using the same fallback logic
+  for (const subjectId of subjectIds) {
+    let coefficient: number | undefined
+
+    if (trackId) {
+      // Try track-specific first
+      const trackSpecific = allCoefficients.find(
+        (c: { subjectId: string; trackId: string | null; coefficient: number }) => 
+          c.subjectId === subjectId && c.trackId === trackId
+      )
+      if (trackSpecific) {
+        coefficient = trackSpecific.coefficient
+      }
+    }
+
+    // Try grade-level default (trackId = null)
+    if (coefficient === undefined) {
+      const gradeDefault = allCoefficients.find(
+        (c: { subjectId: string; trackId: string | null; coefficient: number }) => 
+          c.subjectId === subjectId && c.trackId === null
+      )
+      if (gradeDefault) {
+        coefficient = gradeDefault.coefficient
+      }
+    }
+
+    // Fallback to Subject.coefficient
+    if (coefficient === undefined) {
+      coefficient = subjectMap.get(subjectId) ?? 1.0
+    }
+
+    result.set(subjectId, coefficient)
+  }
+
+  return result
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // List coefficients for a school grade (and optional track filter)
 // ─────────────────────────────────────────────────────────────────────────────
