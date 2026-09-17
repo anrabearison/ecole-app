@@ -206,7 +206,9 @@ export function EditScheduleSlotDialog({ slot, onSuccess, onCancel }: EditSchedu
     if (result.success) {
       if (result.warnings && result.warnings.length > 0) {
         setWarnings(result.warnings)
-        setTimeout(() => onSuccess(), 2000)
+        setTimeout(() => {
+          onSuccess()
+        }, 2000)
       } else {
         onSuccess()
       }

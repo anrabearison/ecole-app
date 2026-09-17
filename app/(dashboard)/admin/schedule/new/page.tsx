@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { createScheduleSlot } from "@/lib/actions/schedule-slot"
@@ -10,11 +11,14 @@ import { listTeacherSubjectsByClassroom } from "@/lib/actions/teacher-subject"
 import { getSchoolScheduleSettings } from "@/lib/actions/school"
 import { scheduleSlotSchema, generateTimeSlots, timeToMinutes, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/lib/hooks/useToast"
 
 export default function NewScheduleSlotPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { success: showSuccess, error: showError } = useToast()
   const [warnings, setWarnings] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [classrooms, setClassrooms] = useState<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>([])
   const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
   const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>>([])
@@ -122,31 +126,29 @@ export default function NewScheduleSlotPage() {
   const onSubmit = async (data: ScheduleSlotInput) => {
     setIsSubmitting(true)
     setWarnings([])
-    setSuccess(false)
 
     const result = await createScheduleSlot(data)
 
     if (result.success) {
-      setSuccess(true)
+      showSuccess("Créneau créé avec succès")
       if (result.warnings) {
         setWarnings(result.warnings)
       }
-      // Reset form but keep classroomId for convenience
-      const currentClassroomId = data.classroomId
-      reset({
-        classroomId: currentClassroomId,
-        subjectId: "",
-        teacherId: "",
-        day: "MONDAY",
-        startTime: "",
-        endTime: "",
-        roomId: "",
-      })
+      // Navigate back to schedule page preserving the state
+      const mode = searchParams.get("mode") || "classroom"
+      const selectedId = searchParams.get("selectedId") || ""
+      router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
     } else {
-      alert(result.error)
+      showError(result.error)
     }
 
     setIsSubmitting(false)
+  }
+
+  const handleCancel = () => {
+    const mode = searchParams.get("mode") || "classroom"
+    const selectedId = searchParams.get("selectedId") || ""
+    router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
   }
 
   const getDisplayName = (classroom: { schoolGrade: { name: string }; section: string; schoolYear: string }) => {
@@ -168,12 +170,6 @@ export default function NewScheduleSlotPage() {
   return (
     <div className="p-6 max-w-2xl">
       <h1 className="text-2xl font-bold mb-6">Créer un créneau d&apos;emploi du temps</h1>
-
-      {success && (
-        <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded">
-          <p className="text-green-800 font-medium">Créneau créé avec succès</p>
-        </div>
-      )}
 
       {warnings.length > 0 && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
@@ -315,9 +311,14 @@ export default function NewScheduleSlotPage() {
           </div>
         )}
 
-        <Button type="submit" disabled={isSubmitting || !watchedClassroomId || teacherSubjects.length === 0}>
-          {isSubmitting ? "Création..." : "Créer le créneau"}
-        </Button>
+        <div className="flex gap-3">
+          <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+            Annuler
+          </Button>
+          <Button type="submit" disabled={isSubmitting || !watchedClassroomId || teacherSubjects.length === 0}>
+            {isSubmitting ? "Création..." : "Créer le créneau"}
+          </Button>
+        </div>
       </form>
     </div>
   )

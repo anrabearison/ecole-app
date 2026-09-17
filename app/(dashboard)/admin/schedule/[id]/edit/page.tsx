@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { updateScheduleSlot, listScheduleSlotsForAdmin } from "@/lib/actions/schedule-slot"
@@ -17,10 +17,13 @@ import {
 } from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
+import { useToast } from "@/lib/hooks/useToast"
 
 export default function EditScheduleSlotPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const { success: showSuccess, error: showError } = useToast()
 
   const [slot, setSlot] = useState<ScheduleSlotWithRelations | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -144,15 +147,25 @@ export default function EditScheduleSlotPage() {
     const result = await updateScheduleSlot(id, data)
 
     if (result.success) {
+      showSuccess("Créneau modifié avec succès")
       if (result.warnings && result.warnings.length > 0) {
         setWarnings(result.warnings)
       }
-      router.push("/admin/schedule")
+      // Navigate back to schedule page preserving the state
+      const mode = searchParams.get("mode") || "classroom"
+      const selectedId = searchParams.get("selectedId") || ""
+      router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
     } else {
-      alert(result.error)
+      showError(result.error)
     }
 
     setIsSubmitting(false)
+  }
+
+  const handleCancel = () => {
+    const mode = searchParams.get("mode") || "classroom"
+    const selectedId = searchParams.get("selectedId") || ""
+    router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
   }
 
   if (loadError) {
@@ -178,7 +191,7 @@ export default function EditScheduleSlotPage() {
     <div className="p-6 max-w-2xl">
       <div className="flex items-center gap-3 mb-6">
         <button
-          onClick={() => router.push("/admin/schedule")}
+          onClick={handleCancel}
           className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
         >
           ← Retour
@@ -305,9 +318,6 @@ export default function EditScheduleSlotPage() {
         )}
 
         <div className="flex gap-3 pt-2">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Enregistrement..." : "Enregistrer les modifications"}
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -315,6 +325,9 @@ export default function EditScheduleSlotPage() {
             disabled={isSubmitting}
           >
             Annuler
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Enregistrement..." : "Enregistrer les modifications"}
           </Button>
         </div>
       </form>

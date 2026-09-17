@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { listTeachers } from "@/lib/actions/teacher"
@@ -42,8 +43,16 @@ type RoomOption = {
 }
 
 export default function AdminSchedulePage() {
-  const [mode, setMode] = useState<FilterMode>(FilterMode.CLASSROOM)
-  const [selectedId, setSelectedId] = useState<string>("")
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toasts, addToast, removeToast, success, error: showError } = useToast()
+  
+  // Initialize from URL parameters
+  const initialMode = (searchParams.get("mode") as FilterMode) || FilterMode.CLASSROOM
+  const initialSelectedId = searchParams.get("selectedId") || ""
+  
+  const [mode, setMode] = useState<FilterMode>(initialMode)
+  const [selectedId, setSelectedId] = useState<string>(initialSelectedId)
   const [slots, setSlots] = useState<ScheduleSlotWithRelations[]>([])
   const [scheduleSettings, setScheduleSettings] = useState<ScheduleSettings | undefined>(undefined)
   const [loading, setLoading] = useState(false)
@@ -53,7 +62,6 @@ export default function AdminSchedulePage() {
   const [slotToDelete, setSlotToDelete] = useState<ScheduleSlotWithRelations | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const [slotToEdit, setSlotToEdit] = useState<ScheduleSlotWithRelations | null>(null)
-  const { toasts, addToast, removeToast, success, error: showError } = useToast()
 
   useEffect(() => {
     async function loadData() {
@@ -139,6 +147,14 @@ export default function AdminSchedulePage() {
     setMode(newMode)
     setSelectedId("")
     setSlots([])
+    // Update URL without full page reload
+    router.push(`/admin/schedule?mode=${newMode}`)
+  }
+
+  const handleSelectedIdChange = (newId: string) => {
+    setSelectedId(newId)
+    // Update URL without full page reload
+    router.push(`/admin/schedule?mode=${mode}&selectedId=${newId}`)
   }
 
   const handleEditSuccess = async () => {
@@ -184,7 +200,7 @@ export default function AdminSchedulePage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Emploi du temps</h1>
         <Link
-          href="/admin/schedule/new"
+          href={`/admin/schedule/new?mode=${mode}&selectedId=${selectedId}`}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium text-sm"
         >
           + Nouveau créneau
@@ -231,7 +247,7 @@ export default function AdminSchedulePage() {
         <div>
           <select
             value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
+            onChange={(e) => handleSelectedIdChange(e.target.value)}
             className="w-full max-w-md border rounded px-3 py-2"
           >
             <option value="">Sélectionner {getModeLabel().toLowerCase()}</option>
