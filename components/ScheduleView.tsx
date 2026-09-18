@@ -1,14 +1,27 @@
 "use client"
 
+import { useMemo, useState, useEffect } from "react"
+import { Pencil, Trash2 } from "lucide-react"
 import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
 import type { ScheduleSettings } from "@/lib/actions/school"
 
 interface ScheduleViewProps {
   slots: ScheduleSlotWithRelations[]
   scheduleSettings?: ScheduleSettings
+  /** Called when the admin clicks the edit button on a slot */
+  onEdit?: (slot: ScheduleSlotWithRelations) => void
+  /** Called when the admin clicks the delete button on a slot */
+  onDelete?: (slot: ScheduleSlotWithRelations) => void
 }
 
 const WEEKDAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"] as const
+
+// CSS constants for consistency and maintainability
+const SLOT_CELL_CLASSES = "border-b border-r border-gray-300 px-3 py-2 bg-blue-50/80 border-l-4 border-l-blue-600 h-16 text-left shadow-xs relative group"
+const ACTION_BUTTON_CLASSES = "p-1 rounded bg-white/90 border hover:transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-1"
+const EDIT_BUTTON_CLASSES = `${ACTION_BUTTON_CLASSES} border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white hover:border-blue-600 focus:ring-blue-500`
+const DELETE_BUTTON_CLASSES = `${ACTION_BUTTON_CLASSES} border-red-200 text-red-500 hover:bg-red-600 hover:text-white hover:border-red-600 focus:ring-red-500`
+
 const WEEKDAY_LABELS: Record<string, string> = {
   MONDAY: "Lundi",
   TUESDAY: "Mardi",
@@ -37,66 +50,84 @@ function minutesToTime(mins: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
 }
 
-export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
+export function ScheduleView({ slots, scheduleSettings, onEdit, onDelete }: ScheduleViewProps) {
   const settings = scheduleSettings || DEFAULT_SETTINGS
   const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } = settings
 
-  // Group slots by day
-  const slotsByDay: Record<string, ScheduleSlotWithRelations[]> = {}
-  WEEKDAYS.forEach((day) => {
-    slotsByDay[day] = slots.filter((slot) => slot.day === day)
-  })
+  // Detect mobile view for better UX
+  const [isMobile, setIsMobile] = useState(false)
+  
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
-  // Build time slot ranges
-  const startMins = timeToMinutes(scheduleStartTime)
-  const morningEndMins = timeToMinutes(morningEndTime)
-  const afternoonStartMins = timeToMinutes(afternoonStartTime)
-  const endMins = timeToMinutes(scheduleEndTime)
-
-  type TimeInterval = {
-    startStr: string
-    endStr: string
-    startMins: number
-    endMins: number
-    isBreak: boolean
-  }
-
-  const intervals: TimeInterval[] = []
-
-  // Morning slots
-  for (let t = startMins; t < morningEndMins; t += slotDurationMinutes) {
-    const nextT = Math.min(t + slotDurationMinutes, morningEndMins)
-    intervals.push({
-      startStr: minutesToTime(t),
-      endStr: minutesToTime(nextT),
-      startMins: t,
-      endMins: nextT,
-      isBreak: false,
+  // Memoize slots grouping by day to avoid recalculating on every render
+  const slotsByDay = useMemo(() => {
+    const grouped: Record<string, ScheduleSlotWithRelations[]> = {}
+    WEEKDAYS.forEach((day) => {
+      grouped[day] = slots.filter((slot) => slot.day === day)
     })
-  }
+    return grouped
+  }, [slots])
 
-  // Break slot (if morningEnd < afternoonStart)
-  if (morningEndMins < afternoonStartMins) {
-    intervals.push({
-      startStr: minutesToTime(morningEndMins),
-      endStr: minutesToTime(afternoonStartMins),
-      startMins: morningEndMins,
-      endMins: afternoonStartMins,
-      isBreak: true,
-    })
-  }
+  // Build time slot ranges (memoized to avoid recalculating)
+  const intervals = useMemo(() => {
+    const startMins = timeToMinutes(scheduleStartTime)
+    const morningEndMins = timeToMinutes(morningEndTime)
+    const afternoonStartMins = timeToMinutes(afternoonStartTime)
+    const endMins = timeToMinutes(scheduleEndTime)
 
-  // Afternoon slots
-  for (let t = afternoonStartMins; t < endMins; t += slotDurationMinutes) {
-    const nextT = Math.min(t + slotDurationMinutes, endMins)
-    intervals.push({
-      startStr: minutesToTime(t),
-      endStr: minutesToTime(nextT),
-      startMins: t,
-      endMins: nextT,
-      isBreak: false,
-    })
-  }
+    type TimeInterval = {
+      startStr: string
+      endStr: string
+      startMins: number
+      endMins: number
+      isBreak: boolean
+    }
+
+    const intervals: TimeInterval[] = []
+
+    // Morning slots
+    for (let t = startMins; t < morningEndMins; t += slotDurationMinutes) {
+      const nextT = Math.min(t + slotDurationMinutes, morningEndMins)
+      intervals.push({
+        startStr: minutesToTime(t),
+        endStr: minutesToTime(nextT),
+        startMins: t,
+        endMins: nextT,
+        isBreak: false,
+      })
+    }
+
+    // Break slot (if morningEnd < afternoonStart)
+    if (morningEndMins < afternoonStartMins) {
+      intervals.push({
+        startStr: minutesToTime(morningEndMins),
+        endStr: minutesToTime(afternoonStartMins),
+        startMins: morningEndMins,
+        endMins: afternoonStartMins,
+        isBreak: true,
+      })
+    }
+
+    // Afternoon slots
+    for (let t = afternoonStartMins; t < endMins; t += slotDurationMinutes) {
+      const nextT = Math.min(t + slotDurationMinutes, endMins)
+      intervals.push({
+        startStr: minutesToTime(t),
+        endStr: minutesToTime(nextT),
+        startMins: t,
+        endMins: nextT,
+        isBreak: false,
+      })
+    }
+
+    return intervals
+  }, [scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes])
 
   return (
     <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm bg-white">
@@ -162,7 +193,7 @@ export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
                   return (
                     <td
                       key={`${day}-${idx}`}
-                      className="border-b border-r border-gray-300 px-3 py-2 bg-blue-50/80 border-l-4 border-l-blue-600 h-16 text-left shadow-xs"
+                      className={SLOT_CELL_CLASSES}
                     >
                       <div className="text-xs space-y-0.5">
                         <div className="font-bold text-blue-900">{matchingSlot.subject.name}</div>
@@ -174,6 +205,32 @@ export function ScheduleView({ slots, scheduleSettings }: ScheduleViewProps) {
                           {matchingSlot.room && ` • ${matchingSlot.room.name}`}
                         </div>
                       </div>
+
+                      {/* Admin action buttons — visible on hover (desktop) or always (mobile) */}
+                      {(onEdit || onDelete) && (
+                        <div className={`absolute top-1 right-1 flex gap-1 transition-opacity duration-150 ${isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                          {onEdit && (
+                            <button
+                              onClick={() => onEdit(matchingSlot)}
+                              title="Modifier ce créneau"
+                              aria-label={`Modifier le créneau de ${matchingSlot.subject.name} le ${matchingSlot.day} de ${matchingSlot.startTime} à ${matchingSlot.endTime}`}
+                              className={EDIT_BUTTON_CLASSES}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                          )}
+                          {onDelete && (
+                            <button
+                              onClick={() => onDelete(matchingSlot)}
+                              title="Supprimer ce créneau"
+                              aria-label={`Supprimer le créneau de ${matchingSlot.subject.name} le ${matchingSlot.day} de ${matchingSlot.startTime} à ${matchingSlot.endTime}`}
+                              className={DELETE_BUTTON_CLASSES}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   )
                 })}

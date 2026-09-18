@@ -1,4 +1,4 @@
-import { deleteClassroom, listClassrooms } from "@/lib/actions/classroom"
+import { deleteClassroom, getClassroomById } from "@/lib/actions/classroom"
 import { auth } from "@/lib/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
@@ -18,7 +18,7 @@ export default async function ClassroomDetailPage({
 
   if (!session?.user) redirect("/login")
 
-  const result = await listClassrooms()
+  const result = await getClassroomById(id)
 
   if (!result.success) {
     return (
@@ -28,18 +28,7 @@ export default async function ClassroomDetailPage({
     )
   }
 
-  const classroom = result.data.find((c) => c.id === id)
-
-  if (!classroom) {
-    return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <p className="text-gray-600">Classe non trouvée</p>
-        <Link href="/admin/academics/classrooms">
-          <Button className="mt-4">Retour</Button>
-        </Link>
-      </div>
-    )
-  }
+  const classroom = result.data
 
   const periodsResult = await listPeriods()
   const periods = periodsResult.success ? periodsResult.data : []

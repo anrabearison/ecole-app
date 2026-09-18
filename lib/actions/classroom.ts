@@ -119,19 +119,27 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
     return { success: false, error: "Unauthorized" }
   }
 
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
   if (!session.user.schoolId) {
     return { success: false, error: "School ID is required" }
   }
 
   try {
-    const classroom = await prisma.classroom.findUnique({
-      where: { id },
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id,
+        schoolId: session.user.schoolId,
+      },
       include: {
         schoolGrade: {
           select: {
             id: true,
             name: true,
             cycle: true,
+            order: true,
           },
         },
         track: {
@@ -159,22 +167,18 @@ export async function getClassroomById(id: string): Promise<ActionResult<Classro
       },
     })
 
+    if (!classroom) {
+      return { success: false, error: "Classe non trouvée" }
+    }
+
     if (classroom?.homeroomTeachers) {
       classroom.homeroomTeachers.sort((a: any, b: any) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
     }
 
-    if (!classroom) {
-      return { success: false, error: "Classroom not found" }
-    }
-
-    if (classroom.schoolId !== session.user.schoolId) {
-      return { success: false, error: "Forbidden" }
-    }
-
-    return { success: true, data: classroom }
+    return { success: true, data: classroom as ClassroomWithRelations }
   } catch (error: any) {
-    console.error("Error getting classroom by id:", error)
-    return { success: false, error: "Erreur lors de la récupération de la classe" }
+    console.error("Error fetching classroom by ID:", error)
+    return { success: false, error: "Erreur lors du chargement de la classe" }
   }
 }
 
@@ -627,5 +631,122 @@ export async function deleteClassroom(id: string): Promise<ActionResult<void>> {
   } catch (error: any) {
     console.error("Error deleting classroom:", error)
     return { success: false, error: "Erreur lors de la suppression de la classe" }
+  }
+}
+
+/**
+ * Get student count for a classroom - optimized with _count
+ */
+export async function getClassroomStudentCount(classroomId: string): Promise<ActionResult<number>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const classroom = await prisma.classroom.findFirst({
+      where: {
+        id: classroomId,
+        schoolId: session.user.schoolId,
+      },
+      select: {
+        _count: {
+          select: {
+            students: true,
+          },
+        },
+      },
+    })
+
+    if (!classroom) {
+      return { success: false, error: "Classe non trouvée" }
+    }
+
+    return { success: true, data: classroom._count.students }
+  } catch (error: any) {
+    console.error("Error getting classroom student count:", error)
+    return { success: false, error: "Erreur lors du chargement du nombre d'élèves" }
+  }
+}
+
+/**
+ * Optimized version for dropdown selects - only includes necessary fields
+ */
+export async function listClassroomsForSelect(opts?: { search?: string; page?: number; pageSize?: number }): Promise<PaginatedActionResult<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "classroom", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    if (search) {
+      where.OR = [
+        { section: { contains: search, mode: "insensitive" } },
+        { schoolYear: { contains: search, mode: "insensitive" } },
+      ]
+    }
+
+    const [classrooms, total] = await Promise.all([
+      prisma.classroom.findMany({
+        where,
+        select: {
+          id: true,
+          section: true,
+          schoolYear: true,
+          schoolGrade: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { schoolYear: "desc" },
+          { section: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.classroom.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: classrooms,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
+  } catch (error: any) {
+    console.error("Error listing classrooms for select:", error)
+    return { success: false, error: "Erreur lors du chargement des classes" }
   }
 }

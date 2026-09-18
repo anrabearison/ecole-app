@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
-import { useToast } from "@/components/Toast"
+import { useToast } from "@/lib/hooks/useToast"
 import { useQuery } from "@tanstack/react-query"
 import { 
   ArrowLeft, 
@@ -32,7 +32,7 @@ export default function NewStudentPage() {
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null)
   const [studentInfo, setStudentInfo] = useState<{ email?: string; name: string; registrationNumber?: string } | null>(null)
   const [copiedField, setCopiedField] = useState<string | null>(null)
-  const { showToast } = useToast()
+  const { success, error: showError } = useToast()
 
   // Fetch classrooms using TanStack Query
   const { data: classrooms = [], isLoading: isLoadingClassrooms } = useQuery({

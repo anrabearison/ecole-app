@@ -7,6 +7,7 @@ import { CollapsibleSection } from "./collapsible-section"
 import { StudentsSection } from "./students-section"
 import { Users, FileText, GraduationCap } from "lucide-react"
 import { listStudents } from "@/lib/actions/student"
+import { getClassroomStudentCount } from "@/lib/actions/classroom"
 
 interface ClassroomDetailClientProps {
   classroomId: string
@@ -22,9 +23,9 @@ export function ClassroomDetailClient({ classroomId, schoolYear, periods }: Clas
     const loadStudentCount = async () => {
       setLoadingCount(true)
       try {
-        const result = await listStudents({ classroomId, pageSize: 1000 })
+        const result = await getClassroomStudentCount(classroomId)
         if (result.success) {
-          setStudentCount(result.data.length)
+          setStudentCount(result.data)
         }
       } catch (e) {
         console.error("Error loading student count:", e)

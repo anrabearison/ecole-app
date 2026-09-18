@@ -492,3 +492,88 @@ export async function deleteTeacher(id: string): Promise<ActionResult<void>> {
     return { success: false, error: "Erreur lors de la suppression de l'enseignant" }
   }
 }
+
+/**
+ * Optimized version for dropdown selects - only includes necessary fields
+ */
+export async function listTeachersForSelect(opts?: { search?: string; page?: number; pageSize?: number; active?: boolean; classroomId?: string }): Promise<PaginatedActionResult<Array<{ id: string; firstName: string | null; lastName: string }>>> {
+  const session = await auth()
+
+  if (!session?.user) {
+    return { success: false, error: "Unauthorized" }
+  }
+
+  if (!can(session.user.role, "view", "teacher", { schoolId: session.user.schoolId || undefined })) {
+    return { success: false, error: "Forbidden" }
+  }
+
+  if (!session.user.schoolId) {
+    return { success: false, error: "School ID is required" }
+  }
+
+  try {
+    const search = opts?.search?.trim()
+    const page = opts?.page && opts.page > 0 ? opts.page : 1
+    const pageSize = opts?.pageSize && opts.pageSize > 0 ? opts.pageSize : 20
+    const active = opts?.active
+    const classroomId = opts?.classroomId
+
+    const where: any = { schoolId: session.user.schoolId }
+
+    // Filter teachers who teach in the specified classroom (via TeacherSubject)
+    if (classroomId) {
+      where.subjects = { some: { classroomId } }
+    }
+
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: "insensitive" } },
+        { lastName: { contains: search, mode: "insensitive" } },
+        { nationalIdNumber: { contains: search, mode: "insensitive" } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+      ]
+    }
+
+    if (active !== undefined) {
+      if (where.user) {
+        where.user.active = active
+      } else {
+        where.user = { active }
+      }
+    }
+
+    const [teachers, total] = await Promise.all([
+      prisma.teacher.findMany({
+        where,
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+        },
+        orderBy: [
+          { lastName: "asc" },
+          { firstName: "asc" },
+        ],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.teacher.count({ where })
+    ])
+
+    const totalPages = Math.ceil(total / pageSize)
+
+    return { 
+      success: true, 
+      data: teachers,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages
+      }
+    }
+  } catch (error: any) {
+    console.error("Error listing teachers for select:", error)
+    return { success: false, error: "Erreur lors du chargement des enseignants" }
+  }
+}

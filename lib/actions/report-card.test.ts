@@ -98,7 +98,7 @@ describe("report-card actions", () => {
       })
 
       // Mock the daily grade selection query
-      vi.mocked(prisma.assessment.findMany).mockImplementation(() => Promise.resolve([]))
+      vi.mocked(prisma.assessment.findMany).mockImplementation(() => [] as any)
 
       vi.mocked(prisma.subject.findUnique as any).mockResolvedValue({
         id: "subject-1",
@@ -133,7 +133,7 @@ describe("report-card actions", () => {
 
       vi.mocked(calculateSubjectRank).mockResolvedValue({
         success: true,
-        data: { rank: 1, totalStudents: 25 },
+        data: { studentId: "student-1", subjectId: "subject-1", rank: 1, totalStudents: 25 },
       })
 
       vi.mocked(calculateGeneralAverage).mockResolvedValue({
@@ -224,7 +224,7 @@ describe("report-card actions", () => {
 
       vi.mocked(calculateSubjectRank).mockResolvedValue({
         success: true,
-        data: { rank: 0, totalStudents: 0 },
+        data: { studentId: "student-1", subjectId: "subject-1", rank: 0, totalStudents: 0 },
       })
 
       vi.mocked(calculateGeneralAverage).mockResolvedValue({
@@ -306,7 +306,7 @@ describe("report-card actions", () => {
       })
       vi.mocked(calculateSubjectRank).mockResolvedValue({
         success: true,
-        data: { rank: 0, totalStudents: 0 },
+        data: { studentId: "student-1", subjectId: "subject-1", rank: 0, totalStudents: 0 },
       })
 
       const result = await generateReportCardPdf(mockStudentId, mockPeriodId)

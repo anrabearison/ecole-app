@@ -52,6 +52,19 @@ vi.mock("./subject-coefficient", () => ({
     }
     return Promise.resolve(map[_subjectId] ?? 1)
   }),
+  getEffectiveCoefficientsBatch: vi.fn((subjectIds: string[]) => {
+    const map: Record<string, number> = {
+      "gm-subj-maths":   3,
+      "gm-subj-french":  4,
+      "gm-subj-history": 2,
+      "gm-subj-eps":     1,
+    }
+    const result = new Map<string, number>()
+    for (const subjectId of subjectIds) {
+      result.set(subjectId, map[subjectId] ?? 1)
+    }
+    return Promise.resolve(result)
+  }),
 }))
 
 // ─────────────────────────────────────────────────────────────────────────────

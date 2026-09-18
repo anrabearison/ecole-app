@@ -1,147 +1,154 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { useForm, useWatch } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { createScheduleSlot } from "@/lib/actions/schedule-slot"
+import { updateScheduleSlot, listScheduleSlotsForAdmin } from "@/lib/actions/schedule-slot"
 import { listClassrooms } from "@/lib/actions/classroom"
 import { listRooms } from "@/lib/actions/room"
 import { listTeacherSubjectsByClassroom } from "@/lib/actions/teacher-subject"
 import { getSchoolScheduleSettings } from "@/lib/actions/school"
-import { scheduleSlotSchema, generateTimeSlots, timeToMinutes, type ScheduleSlotInput } from "@/lib/validations/schedule-slot"
+import {
+  scheduleSlotUpdateSchema,
+  generateTimeSlots,
+  timeToMinutes,
+  type ScheduleSlotUpdateInput,
+} from "@/lib/validations/schedule-slot"
 import { Button } from "@/components/ui/button"
+import type { ScheduleSlotWithRelations } from "@/lib/actions/schedule-slot"
 import { useToast } from "@/lib/hooks/useToast"
-import { ConfirmDialog } from "@/components/ConfirmDialog"
 
-export default function NewScheduleSlotPage() {
+export default function EditScheduleSlotPage() {
+  const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { success: showSuccess, error: showError } = useToast()
+
+  const [slot, setSlot] = useState<ScheduleSlotWithRelations | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [pendingData, setPendingData] = useState<ScheduleSlotInput | null>(null)
-  const [classrooms, setClassrooms] = useState<Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>>([])
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  const [classrooms, setClassrooms] = useState<
+    Array<{ id: string; section: string; schoolYear: string; schoolGrade: { name: string } }>
+  >([])
   const [rooms, setRooms] = useState<Array<{ id: string; name: string }>>([])
-  const [teacherSubjects, setTeacherSubjects] = useState<Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>>([])
-  const [noAssignmentsMessage, setNoAssignmentsMessage] = useState<string | null>(null)
+  const [teacherSubjects, setTeacherSubjects] = useState<
+    Array<{ teacher: { id: string; firstName: string | null; lastName: string }; subject: { id: string; name: string } }>
+  >([])
   const [timeSlotsOptions, setTimeSlotsOptions] = useState<{ value: string; label: string; isBreak: boolean }[]>([])
   const [slotDuration, setSlotDuration] = useState<number>(60)
 
   const {
-    control,
     register,
+    control,
     handleSubmit,
     formState: { errors },
     setValue,
     reset,
-  } = useForm<ScheduleSlotInput>({
-    resolver: zodResolver(scheduleSlotSchema),
+  } = useForm<ScheduleSlotUpdateInput>({
+    resolver: zodResolver(scheduleSlotUpdateSchema),
   })
 
   const watchedClassroomId = useWatch({ control, name: "classroomId" })
   const watchedSubjectId = useWatch({ control, name: "subjectId" })
   const watchedStartTime = useWatch({ control, name: "startTime" })
 
+  // Load static data + the slot itself
   useEffect(() => {
-    async function loadData() {
-      const [classroomsResult, roomsResult, settingsResult] = await Promise.all([
+    async function loadAll() {
+      const [classroomsResult, roomsResult, settingsResult, slotsResult] = await Promise.all([
         listClassrooms(),
         listRooms(),
         getSchoolScheduleSettings(),
+        listScheduleSlotsForAdmin(),
       ])
 
       if (classroomsResult.success) setClassrooms(classroomsResult.data)
       if (roomsResult.success) setRooms(roomsResult.data)
+
       if (settingsResult.success) {
-        const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } = settingsResult.data
+        const { scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes } =
+          settingsResult.data
         setSlotDuration(slotDurationMinutes)
-        const slotsOptions = generateTimeSlots(
-          scheduleStartTime,
-          morningEndTime,
-          afternoonStartTime,
-          scheduleEndTime,
-          slotDurationMinutes
+        setTimeSlotsOptions(
+          generateTimeSlots(scheduleStartTime, morningEndTime, afternoonStartTime, scheduleEndTime, slotDurationMinutes)
         )
-        setTimeSlotsOptions(slotsOptions)
+      }
+
+      if (slotsResult.success) {
+        const found = slotsResult.data.find((s) => s.id === id)
+        if (found) {
+          setSlot(found)
+          // Pre-fill the form
+          reset({
+            classroomId: found.classroomId,
+            subjectId: found.subjectId,
+            teacherId: found.teacherId,
+            day: found.day,
+            startTime: found.startTime,
+            endTime: found.endTime,
+            roomId: found.roomId ?? "",
+          })
+        } else {
+          setLoadError("Créneau introuvable.")
+        }
+      } else {
+        setLoadError("Erreur lors du chargement du créneau.")
       }
     }
-    loadData()
-  }, [])
+    loadAll()
+  }, [id, reset])
 
-  // Auto-set endTime when startTime is selected if endTime is empty
+  // Load teacher-subjects when classroomId changes
+  useEffect(() => {
+    async function loadTeacherSubjects() {
+      if (!watchedClassroomId) {
+        setTeacherSubjects([])
+        return
+      }
+      const result = await listTeacherSubjectsByClassroom(watchedClassroomId)
+      if (result.success) {
+        setTeacherSubjects(result.data)
+      } else {
+        setTeacherSubjects([])
+      }
+    }
+    loadTeacherSubjects()
+  }, [watchedClassroomId])
+
+  // Auto-update endTime when startTime changes
   useEffect(() => {
     if (watchedStartTime) {
       const startMins = timeToMinutes(watchedStartTime)
       const endMins = startMins + slotDuration
       const h = Math.floor(endMins / 60)
       const m = endMins % 60
-      const endTimeStr = `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`
-      setValue("endTime", endTimeStr)
+      setValue("endTime", `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`)
     }
   }, [watchedStartTime, slotDuration, setValue])
 
-  // Load teacher-subject assignments when classroom is selected
-  useEffect(() => {
-    async function loadTeacherSubjects() {
-      if (!watchedClassroomId) {
-        setTeacherSubjects([])
-        setNoAssignmentsMessage(null)
-        return
-      }
+  const availableSubjects = Array.from(new Map(teacherSubjects.map((ts) => [ts.subject.id, ts.subject])).values())
 
-      const result = await listTeacherSubjectsByClassroom(watchedClassroomId)
-      
-      if (result.success) {
-        if (result.data.length === 0) {
-          setTeacherSubjects([])
-          setNoAssignmentsMessage("Aucun enseignant n'est assigné à cette classe. Veuillez d'abord créer des assignations depuis la fiche enseignant.")
-        } else {
-          setTeacherSubjects(result.data)
-          setNoAssignmentsMessage(null)
-        }
-      } else {
-        setTeacherSubjects([])
-        setNoAssignmentsMessage(null)
-      }
-    }
-    loadTeacherSubjects()
-  }, [watchedClassroomId])
+  const availableTeachers = watchedSubjectId
+    ? teacherSubjects.filter((ts) => ts.subject.id === watchedSubjectId).map((ts) => ts.teacher)
+    : []
 
-  // Reset subject and teacher when classroom changes
-  useEffect(() => {
-    if (watchedClassroomId) {
-      setValue("subjectId", "")
-      setValue("teacherId", "")
-    }
-  }, [watchedClassroomId, setValue])
+  const isEPS = watchedSubjectId && teacherSubjects.find((ts) => ts.subject.id === watchedSubjectId)?.subject.name === "EPS"
 
-  // Reset teacher when subject changes
-  useEffect(() => {
-    if (watchedSubjectId) {
-      setValue("teacherId", "")
-    }
-  }, [watchedSubjectId, setValue])
+  const getDisplayName = (classroom: { schoolGrade: { name: string }; section: string; schoolYear: string }) =>
+    `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
 
-  const isEPS = watchedSubjectId && teacherSubjects.find(ts => ts.subject.id === watchedSubjectId)?.subject.name === "EPS"
-
-  const onSubmit = (data: ScheduleSlotInput) => {
-    setPendingData(data)
-    setShowConfirmDialog(true)
-  }
-
-  const handleConfirmCreate = async () => {
-    if (!pendingData) return
-    
+  const onSubmit = async (data: ScheduleSlotUpdateInput) => {
     setIsSubmitting(true)
     setWarnings([])
 
-    const result = await createScheduleSlot(pendingData)
+    const result = await updateScheduleSlot(id, data)
 
     if (result.success) {
-      showSuccess("Créneau créé avec succès")
-      if (result.warnings) {
+      showSuccess("Créneau modifié avec succès")
+      if (result.warnings && result.warnings.length > 0) {
         setWarnings(result.warnings)
       }
       // Navigate back to schedule page preserving the state
@@ -153,74 +160,61 @@ export default function NewScheduleSlotPage() {
     }
 
     setIsSubmitting(false)
-    setShowConfirmDialog(false)
-    setPendingData(null)
   }
 
-  const handleCancelCreate = () => {
-    setShowConfirmDialog(false)
-    setPendingData(null)
-  }
-
-  const handleCancelForm = () => {
+  const handleCancel = () => {
     const mode = searchParams.get("mode") || "classroom"
     const selectedId = searchParams.get("selectedId") || ""
     router.push(`/admin/schedule?mode=${mode}&selectedId=${selectedId}`)
   }
 
-  const getDisplayName = (classroom: { schoolGrade: { name: string }; section: string; schoolYear: string }) => {
-    return `${classroom.schoolGrade.name} ${classroom.section} (${classroom.schoolYear})`
+  if (loadError) {
+    return (
+      <div className="p-6 max-w-2xl">
+        <div className="p-4 bg-red-50 border border-red-200 rounded">
+          <p className="text-red-800">{loadError}</p>
+        </div>
+        <button onClick={() => router.back()} className="mt-4 text-sm text-blue-600 hover:underline">
+          ← Retour
+        </button>
+      </div>
+    )
   }
 
-  const getConfirmationMessage = () => {
-    if (!pendingData) return ""
-    const classroom = classrooms.find(c => c.id === pendingData.classroomId)
-    const subject = availableSubjects.find(s => s.id === pendingData.subjectId)
-    const teacher = availableTeachers.find(t => t.id === pendingData.teacherId)
-    const dayLabel = {
-      MONDAY: "Lundi",
-      TUESDAY: "Mardi", 
-      WEDNESDAY: "Mercredi",
-      THURSDAY: "Jeudi",
-      FRIDAY: "Vendredi",
-      SATURDAY: "Samedi"
-    }[pendingData.day]
-    
-    return `Créer le créneau "${subject?.name}" pour ${getDisplayName(classroom!)} le ${dayLabel} de ${pendingData.startTime} à ${pendingData.endTime} ?`
+  if (!slot) {
+    return (
+      <div className="p-6 text-center text-gray-500">Chargement du créneau...</div>
+    )
   }
-
-  // Get unique subjects from teacher-subject assignments for the selected classroom
-  const availableSubjects = Array.from(
-    new Map(teacherSubjects.map(ts => [ts.subject.id, ts.subject])).values()
-  )
-
-  // Get teachers for the selected subject in the selected classroom
-  const availableTeachers = watchedSubjectId
-    ? teacherSubjects
-        .filter(ts => ts.subject.id === watchedSubjectId)
-        .map(ts => ts.teacher)
-    : []
 
   return (
     <div className="p-6 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Créer un créneau d&apos;emploi du temps</h1>
+      <div className="flex items-center gap-3 mb-6">
+        <button
+          onClick={handleCancel}
+          className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          ← Retour
+        </button>
+        <h1 className="text-2xl font-bold">Modifier le créneau</h1>
+      </div>
 
       {warnings.length > 0 && (
         <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded">
           <p className="text-yellow-800 font-medium mb-2">Attention :</p>
           <ul className="text-yellow-800 text-sm list-disc list-inside">
-            {warnings.map((w, i) => <li key={i}>{w}</li>)}
+            {warnings.map((w, i) => (
+              <li key={i}>{w}</li>
+            ))}
           </ul>
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* Classroom */}
         <div>
           <label className="block text-sm font-medium mb-1">Classe</label>
-          <select
-            {...register("classroomId")}
-            className="w-full border rounded px-3 py-2"
-          >
+          <select {...register("classroomId")} className="w-full border rounded px-3 py-2">
             <option value="">Sélectionner une classe</option>
             {classrooms.map((classroom) => (
               <option key={classroom.id} value={classroom.id}>
@@ -231,12 +225,7 @@ export default function NewScheduleSlotPage() {
           {errors.classroomId && <p className="text-red-600 text-sm mt-1">{errors.classroomId.message}</p>}
         </div>
 
-        {noAssignmentsMessage && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded">
-            <p className="text-orange-800 text-sm">{noAssignmentsMessage}</p>
-          </div>
-        )}
-
+        {/* Subject */}
         <div>
           <label className="block text-sm font-medium mb-1">Matière</label>
           <select
@@ -254,6 +243,7 @@ export default function NewScheduleSlotPage() {
           {errors.subjectId && <p className="text-red-600 text-sm mt-1">{errors.subjectId.message}</p>}
         </div>
 
+        {/* Teacher */}
         <div>
           <label className="block text-sm font-medium mb-1">Enseignant</label>
           <select
@@ -271,12 +261,10 @@ export default function NewScheduleSlotPage() {
           {errors.teacherId && <p className="text-red-600 text-sm mt-1">{errors.teacherId.message}</p>}
         </div>
 
+        {/* Day */}
         <div>
           <label className="block text-sm font-medium mb-1">Jour</label>
-          <select
-            {...register("day")}
-            className="w-full border rounded px-3 py-2"
-          >
+          <select {...register("day")} className="w-full border rounded px-3 py-2">
             <option value="MONDAY">Lundi</option>
             <option value="TUESDAY">Mardi</option>
             <option value="WEDNESDAY">Mercredi</option>
@@ -287,53 +275,37 @@ export default function NewScheduleSlotPage() {
           {errors.day && <p className="text-red-600 text-sm mt-1">{errors.day.message}</p>}
         </div>
 
+        {/* Time */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Heure de début</label>
             {timeSlotsOptions.length > 0 ? (
-              <select
-                {...register("startTime")}
-                className="w-full border rounded px-3 py-2"
-              >
+              <select {...register("startTime")} className="w-full border rounded px-3 py-2">
                 <option value="">Sélectionner l&apos;heure</option>
                 {timeSlotsOptions.map((slot) => (
-                  <option
-                    key={slot.value}
-                    value={slot.value}
-                    disabled={slot.isBreak}
-                  >
+                  <option key={slot.value} value={slot.value} disabled={slot.isBreak}>
                     {slot.label} {slot.isBreak ? "(Pause repas)" : ""}
                   </option>
                 ))}
               </select>
             ) : (
-              <input
-                type="time"
-                {...register("startTime")}
-                className="w-full border rounded px-3 py-2"
-              />
+              <input type="time" {...register("startTime")} className="w-full border rounded px-3 py-2" />
             )}
             {errors.startTime && <p className="text-red-600 text-sm mt-1">{errors.startTime.message}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-1">Heure de fin</label>
-            <input
-              type="time"
-              {...register("endTime")}
-              className="w-full border rounded px-3 py-2"
-            />
+            <input type="time" {...register("endTime")} className="w-full border rounded px-3 py-2" />
             {errors.endTime && <p className="text-red-600 text-sm mt-1">{errors.endTime.message}</p>}
           </div>
         </div>
 
+        {/* Room (hidden for EPS) */}
         {!isEPS && (
           <div>
             <label className="block text-sm font-medium mb-1">Salle</label>
-            <select
-              {...register("roomId")}
-              className="w-full border rounded px-3 py-2"
-            >
+            <select {...register("roomId")} className="w-full border rounded px-3 py-2">
               <option value="">Sélectionner une salle</option>
               {rooms.map((room) => (
                 <option key={room.id} value={room.id}>
@@ -345,25 +317,20 @@ export default function NewScheduleSlotPage() {
           </div>
         )}
 
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={handleCancelForm} disabled={isSubmitting}>
+        <div className="flex gap-3 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push("/admin/schedule")}
+            disabled={isSubmitting}
+          >
             Annuler
           </Button>
-          <Button type="submit" disabled={isSubmitting || !watchedClassroomId || teacherSubjects.length === 0}>
-            {isSubmitting ? "Création..." : "Créer le créneau"}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Enregistrement..." : "Enregistrer les modifications"}
           </Button>
         </div>
       </form>
-
-      {showConfirmDialog && pendingData && (
-        <ConfirmDialog
-          variant="create"
-          message={getConfirmationMessage()}
-          onConfirm={handleConfirmCreate}
-          onCancel={handleCancelCreate}
-          isLoading={isSubmitting}
-        />
-      )}
     </div>
   )
 }

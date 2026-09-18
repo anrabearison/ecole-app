@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ConfirmActionButton } from "@/components/ConfirmDialog"
 import { Skeleton } from "@/components/Skeleton"
-import { useToast } from "@/components/Toast"
+import { useToast } from "@/lib/hooks/useToast"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, User, Briefcase, KeyRound, AlertTriangle } from "lucide-react"
 
@@ -21,7 +21,7 @@ export default function EditTeacherPage() {
   const params = useParams()
   const id = params.id as string | undefined
   const [error, setError] = useState<string | null>(null)
-  const { showToast } = useToast()
+  const { success, error: showError } = useToast()
   const queryClient = useQueryClient()
 
   // Fetch teacher data using TanStack Query
@@ -76,12 +76,12 @@ export default function EditTeacherPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["teacher", id] })
       queryClient.invalidateQueries({ queryKey: ["teachers"] })
-      showToast('success', 'Enseignant modifié avec succès')
+      success('Enseignant modifié avec succès')
       router.push(`/admin/users/teachers/${id}`)
     },
     onError: (error: Error) => {
       setError(error.message)
-      showToast('error', error.message)
+      showError(error.message)
     },
   })
 
